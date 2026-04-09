@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#2563eb">
+    <title>StockPro Cloud</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .syncing { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .task-done { border-left: 4px solid #10b981; background: #ecfdf5; }
+        .task-pending { border-left: 4px solid #f97316; background: #fff7ed; }
+        .mobile-bottom-nav { display: none; }
+        @media (max-width: 1024px) {
+            .desktop-sidebar { display: none; }
+            .mobile-bottom-nav { display: flex; position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #e5e7eb; z-index: 50; padding-bottom: env(safe-area-inset-bottom); }
+            main { padding-bottom: 80px; }
+        }
+        .loading-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.9); z-index: 100; display: flex; align-items: center; justify-content: center; }
+        .offline-badge { position: fixed; top: 10px; right: 10px; background: #ef4444; color: white; padding: 5px 10px; border-radius: 20px; font-size: 12px; display: none; }
+        .offline-badge.show { display: block; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <!-- CONFIGURACIÓN INICIAL -->
+    <div id="config-screen" class="fixed inset-0 bg-white z-50 flex items-center justify-center p-4">
+        <div class="max-w-md w-full space-y-6">
+            <div class="text-center">
+                <h1 class="text-3xl font-bold text-blue-600 mb-2">StockPro Cloud</h1>
+                <p class="text-gray-500">Sistema multiusuario sincronizado</p>
+            </div>
+            
+            <div class="bg-blue-50 p-6 rounded-2xl border border-blue-200">
+                <h3 class="font-semibold text-blue-800 mb-4">Configuración inicial</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">URL del Backend (Google Apps Script)</label>
+                        <input type="url" id="api-url" placeholder="https://script.google.com/macros/s/XXXX/exec" 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                        <p class="text-xs text-gray-500 mt-1">La URL que copiaste al implementar la Web App</p>
+                    </div>
+                    <button onclick="saveConfig()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-medium hover:bg-blue-700 transition-colors">
+                        Conectar y Continuar
+                    </button>
+                </div>
+            </div>
+            
+            <div class="text-center text-sm text-gray-500">
+                <p>¿No tienes backend configurado?</p>
+                <a href="#" onclick="showSetupInstructions()" class="text-blue-600 hover:underline">Ver instrucciones de configuración</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading -->
+    <div id="loading" class="loading-overlay hidden">
+        <div class="text-center">
+            <svg class="w-12 h-12 text-blue-600 syncing mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            <p class="text-gray-600">Sincronizando...</p>
+        </div>
+    </div>
+
+    <!-- Offline Badge -->
+    <div id="offline-badge" class="offline-badge">Sin conexión</div>
+
+    <!-- APP PRINCIPAL (oculta hasta configurar) -->
+    <div id="app-container" class="hidden">
+        <div class="flex h-screen overflow-hidden">
+            
+            <!-- Sidebar Desktop -->
+            <aside class="desktop-sidebar w-64 bg-white border-r border-gray-200 flex flex-col shadow-lg z-20">
+                <div class="p-6 border-b border-gray-100">
+                    <h1 class="text-2xl font-bold text-blue-600 flex items-center gap-2">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                        StockPro
+                    </h1>
+                    <div class="flex items-center gap-2 mt-2">
+                        <span class="w-2 h-2 rounded-full bg-green-500" id="connection-status"></span>
+                        <span class="text-xs text-gray-500" id="connection-text">Conectado</span>
+                    </div>
+                </div>
+                
+                <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
+                    <button onclick="showSection('dashboard')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-gray-700 hover:text-blue-600" id="nav-dashboard">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+                        Dashboard
+                    </button>
+                    
+                    <button onclick="showSection('planificador')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-gray-700 hover:text-blue-600" id="nav-planificador">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        Planificador
+                        <span id="badge-tareas" class="ml-auto bg-orange-100 text-orange-600 text-xs font-bold px-2 py-1 rounded-full hidden">0</span>
+                    </button>
+                    
+                    <button onclick="showSection('ordenes')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-gray-700 hover:text-blue-600" id="nav-ordenes">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+                        Órdenes
+                        <span id="badge-ordenes" class="ml-auto bg-blue-100 text-blue-600 text-xs font-bold px-2 py-1 rounded-full hidden">0</span>
+                    </button>
+                    
+                    <button onclick="showSection('stock')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-gray-700 hover:text-blue-600" id="nav-stock">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
+                        Stock
+                        <span id="badge-critical" class="ml-auto bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded-full hidden">0</span>
+                    </button>
+                    
+                    <button onclick="showSection('retiros')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-gray-700 hover:text-blue-600" id="nav-retiros">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                        Retiros
+                    </button>
+
+                    <button onclick="forceSync()" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-gray-700 hover:text-blue-600">
+                        <svg class="w-5 h-5 syncing hidden" id="sync-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        <svg class="w-5 h-5" id="sync-idle" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        Sincronizar Ahora
+                    </button>
+
+                    <button onclick="logout()" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-red-600 hover:bg-red-50">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                        Cambiar Backend
+                    </button>
+                </nav>
+                
+                <div class="p-4 border-t border-gray-100">
+                    <div class="bg-blue-50 rounded-xl p-4">
+                        <p class="text-sm font-semibold text-blue-800">Resumen</p>
+                        <div class="mt-2 space-y-1 text-xs text-blue-600">
+                            <div class="flex justify-between"><span>Stock:</span><span id="summary-stock" class="font-bold">0</span></div>
+                            <div class="flex justify-between"><span>Órdenes:</span><span id="summary-ordenes" class="font-bold">0</span></div>
+                            <div class="flex justify-between"><span>Tareas:</span><span id="summary-tareas" class="font-bold">0</span></div>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-2" id="last-sync">Última sync: --</p>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Contenido Principal -->
+            <main class="flex-1 overflow-y-auto bg-gray-50 p-4 md:p-8 pb-24 md:pb-8">
+                
+                <!-- DASHBOARD -->
+                <section id="dashboard" class="fade-in space-y-6">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                        <div>
+                            <h2 class="text-2xl md:text-3xl font-bold text-gray-800">Dashboard</h2>
+                            <p class="text-gray-500 mt-1">Datos sincronizados en tiempo real</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1">
+                                <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                                En vivo
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-8">
+                        <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100">
+                            <p class="text-xs text-gray-500">Órdenes Abiertas</p>
+                            <p class="text-2xl md:text-3xl font-bold text-blue-600 mt-1" id="dash-ordenes">0</p>
+                        </div>
+                        <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100 cursor-pointer" onclick="showSection('stock')">
+                            <p class="text-xs text-gray-500">Stock Crítico</p>
+                            <p class="text-2xl md:text-3xl font-bold text-red-600 mt-1" id="dash-critico">0</p>
+                        </div>
+                        <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100">
+                            <p class="text-xs text-gray-500">Materiales</p>
+                            <p class="text-2xl md:text-3xl font-bold text-green-600 mt-1" id="dash-total">0</p>
+                        </div>
+                        <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100 cursor-pointer" onclick="showSection('planificador')">
+                            <p class="text-xs text-gray-500">Tareas Pendientes</p>
+                            <p class="text-2xl md:text-3xl font-bold text-orange-600 mt-1" id="dash-tareas-pendientes">0</p>
+                        </div>
+                    </div>
+
+                    <!-- Calendario -->
+                    <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">Calendario de Actividades</h3>
+                        <div id="dashboard-calendar" class="grid grid-cols-7 gap-1 md:gap-2 text-center text-xs md:text-sm"></div>
+                    </div>
+                </section>
+
+                <!-- PLANIFICADOR -->
+                <section id="planificador" class="hidden fade-in space-y-6">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                        <h2 class="text-2xl md:text-3xl font-bold text-gray-800">Planificador</h2>
+                        <button onclick="openTaskModal()" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700">
+                            + Nueva Tarea
+                        </button>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                            <button onclick="changeMonth(-1)" class="p-2 hover:bg-white rounded-lg">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                            </button>
+                            <h3 class="text-lg font-bold capitalize" id="calendar-month-year"></h3>
+                            <button onclick="changeMonth(1)" class="p-2 hover:bg-white rounded-lg">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                            </button>
+                        </div>
+                        <div class="p-4">
+                            <div class="grid grid-cols-7 gap-px bg-gray-200 rounded-xl overflow-hidden">
+                                <div class="bg-gray-100 p-2 text-center text-xs font-semibold">Dom</div>
+                                <div class="bg-gray-100 p-2 text-center text-xs font-semibold">Lun</div>
+                                <div class="bg-gray-100 p-2 text-center text-xs font-semibold">Mar</div>
+                                <div class="bg-gray-100 p-2 text-center text-xs font-semibold">Mié</div>
+                                <div class="bg-gray-100 p-2 text-center text-xs font-semibold">Jue</div>
+                                <div class="bg-gray-100 p-2 text-center text-xs font-semibold">Vie</div>
+                                <div class="bg-gray-100 p-2 text-center text-xs font-semibold">Sáb</div>
+                                <div id="calendar-grid" class="col-span-7 grid grid-cols-7 gap-px bg-gray-200"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4" id="selected-date-title">Hoy</h3>
+                        <div id="day-tasks-list" class="space-y-3"></div>
+                    </div>
+                </section>
+
+                <!-- OTRAS SECCIONES -->
+                <section id="ordenes" class="hidden fade-in">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">Órdenes de Compra</h2>
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div class="p-4 border-b flex gap-2">
+                            <button onclick="filterOrders('all')" class="filter-btn active px-4 py-2 rounded-lg text-sm bg-blue-100 text-blue-700" data-filter="all">Todas</button>
+                            <button onclick="filterOrders('abierto')" class="filter-btn px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100" data-filter="abierto">Abiertas</button>
+                            <button onclick="filterOrders('cerrado')" class="filter-btn px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100" data-filter="cerrado">Cerradas</button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">N°</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Fecha</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Destino</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Estado</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ordenes-table" class="divide-y divide-gray-100"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="stock" class="hidden fade-in">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">Stock</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="stock-grid"></div>
+                </section>
+
+                <section id="retiros" class="hidden fade-in">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">Retiros</h2>
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Fecha</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Tipo</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Destino</th>
+                                </tr>
+                            </thead>
+                            <tbody id="retiros-table" class="divide-y divide-gray-100"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+            </main>
+
+            <!-- Mobile Bottom Nav -->
+            <nav class="mobile-bottom-nav">
+                <button onclick="showSection('dashboard')" class="flex-1 flex flex-col items-center py-3 text-gray-600" id="mobile-nav-dashboard">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+                    <span class="text-xs mt-1">Inicio</span>
+                </button>
+                <button onclick="showSection('planificador')" class="flex-1 flex flex-col items-center py-3 text-gray-600" id="mobile-nav-planificador">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    <span class="text-xs mt-1">Tareas</span>
+                </button>
+                <button onclick="forceSync()" class="flex-1 flex flex-col items-center py-3 text-gray-600">
+                    <div class="bg-blue-600 text-white rounded-full p-3 -mt-8 shadow-lg">
+                        <svg class="w-6 h-6 syncing hidden" id="mobile-sync-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        <svg class="w-6 h-6" id="mobile-sync-idle" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    </div>
+                    <span class="text-xs mt-1">Sync</span>
+                </button>
+                <button onclick="showSection('stock')" class="flex-1 flex flex-col items-center py-3 text-gray-600" id="mobile-nav-stock">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                    <span class="text-xs mt-1">Stock</span>
+                </button>
+                <button onclick="showSection('ordenes')" class="flex-1 flex flex-col items-center py-3 text-gray-600" id="mobile-nav-ordenes">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                    <span class="text-xs mt-1">Órdenes</span>
+                </button>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Modal Tarea -->
+    <div id="modal-nueva-tarea" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-blue-50">
+                <h3 class="text-xl font-bold" id="task-modal-title">Nueva Tarea</h3>
+                <button onclick="closeTaskModal()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <form id="form-tarea" onsubmit="saveTask(event)" class="p-6 space-y-4">
+                <input type="hidden" id="task-id">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Fecha</label>
+                    <input type="date" id="task-fecha" required class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Título</label>
+                    <input type="text" id="task-titulo" required class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ej: Viaje a obra Central">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Observaciones</label>
+                    <textarea id="task-notas" rows="3" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Estado</label>
+                    <select id="task-estado" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="pendiente">Pendiente (Naranja)</option>
+                        <option value="realizada">Realizada (Verde)</option>
+                    </select>
+                </div>
+                <div class="flex justify-end gap-3 pt-4 border-t">
+                    <button type="button" onclick="deleteTask()" id="btn-delete-task" class="hidden px-6 py-2 text-red-600 hover:bg-red-50 rounded-xl">Eliminar</button>
+                    <button type="button" onclick="closeTaskModal()" class="px-6 py-2 text-gray-600 hover:bg-gray-100 rounded-xl">Cancelar</button>
+                    <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // CONFIGURACIÓN
+        const CONFIG = {
+            apiUrl: localStorage.getItem('stockpro_api_url') || '',
+            syncInterval: 30000 // 30 segundos
+        };
+
+        // Estado
+        let state = {
+            ordenes: [],
+            stock: [],
+            retiros: [],
+            tareas: [],
+            currentDate: new Date(),
+            selectedDate: new Date().toISOString().split('T')[0],
+            currentFilter: 'all',
+            isOnline: true
+        };
+
+        let syncTimer;
+
+        // INICIALIZACIÓN
+        document.addEventListener('DOMContentLoaded', () => {
+            if (CONFIG.apiUrl) {
+                showApp();
+                loadAllData();
+                startAutoSync();
+            } else {
+                document.getElementById('config-screen').classList.remove('hidden');
+            }
+
+            // Detectar conexión
+            window.addEventListener('online', () => { state.isOnline = true; updateConnectionStatus(); });
+            window.addEventListener('offline', () => { state.isOnline = false; updateConnectionStatus(); });
+        });
+
+        function saveConfig() {
+            const url = document.getElementById('api-url').value.trim();
+            if (!url) return alert('Ingresa la URL del backend');
+            
+            localStorage.setItem('stockpro_api_url', url);
+            CONFIG.apiUrl = url;
+            showApp();
+            loadAllData();
+            startAutoSync();
+        }
+
+        function showApp() {
+            document.getElementById('config-screen').classList.add('hidden');
+            document.getElementById('app-container').classList.remove('hidden');
+            updateAll();
+        }
+
+        function logout() {
+            localStorage.removeItem('stockpro_api_url');
+            location.reload();
+        }
+
+        // API CALLS
+        async function apiCall(action, sheet, data = null, method = 'GET') {
+            if (!state.isOnline) {
+                throw new Error('Sin conexión');
+            }
+
+            const url = new URL(CONFIG.apiUrl);
+            url.searchParams.append('action', action);
+            if (sheet) url.searchParams.append('sheet', sheet);
+
+            const options = {
+                method: method,
+                headers: { 'Content-Type': 'application/json' }
+            };
+
+            if (data && method === 'POST') {
+                options.body = JSON.stringify(data);
+            }
+
+            showLoading(true);
+            try {
+                const response = await fetch(url, options);
+                const result = await response.json();
+                showLoading(false);
+                return result;
+            } catch (err) {
+                showLoading(false);
+                throw err;
+            }
+        }
+
+        async function loadAllData() {
+            try {
+                const data = await apiCall('getAll', null, null, 'GET');
+                state.stock = data.stock || [];
+                state.ordenes = data.ordenes || [];
+                state.retiros = data.retiros || [];
+                state.tareas = data.tareas || [];
+                updateAll();
+                updateLastSync();
+            } catch (err) {
+                console.error('Error cargando datos:', err);
+                showNotification('Error de conexión', 'error');
+            }
+        }
+
+        async function syncToCloud(sheet, data) {
+            try {
+                await apiCall('sync', sheet, data, 'POST');
+                updateLastSync();
+                return true;
+            } catch (err) {
+                console.error('Error sincronizando:', err);
+                return false;
+            }
+        }
+
+        // SINCRONIZACIÓN
+        function startAutoSync() {
+            syncTimer = setInterval(() => {
+                if (state.isOnline) {
+                    loadAllData();
+                }
+            }, CONFIG.syncInterval);
+        }
+
+        async function forceSync() {
+            if (!state.isOnline) {
+                showNotification('Sin conexión a internet', 'error');
+                return;
+            }
+            
+            document.getElementById('sync-icon').classList.remove('hidden');
+            document.getElementById('sync-idle').classList.add('hidden');
+            document.getElementById('mobile-sync-icon').classList.remove('hidden');
+            document.getElementById('mobile-sync-idle').classList.add('hidden');
+            
+            await loadAllData();
+            
+            document.getElementById('sync-icon').classList.add('hidden');
+            document.getElementById('sync-idle').classList.remove('hidden');
+            document.getElementById('mobile-sync-icon').classList.add('hidden');
+            document.getElementById('mobile-sync-idle').classList.remove('hidden');
+            
+            showNotification('Sincronizado correctamente');
+        }
+
+        function updateLastSync() {
+            const now = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('last-sync').textContent = `Última sync: ${now}`;
+        }
+
+        function updateConnectionStatus() {
+            const statusEl = document.getElementById('connection-status');
+            const textEl = document.getElementById('connection-text');
+            const badge = document.getElementById('offline-badge');
+            
+            if (state.isOnline) {
+                statusEl.classList.remove('bg-red-500');
+                statusEl.classList.add('bg-green-500');
+                textEl.textContent = 'Conectado';
+                badge.classList.remove('show');
+            } else {
+                statusEl.classList.remove('bg-green-500');
+                statusEl.classList.add('bg-red-500');
+                textEl.textContent = 'Sin conexión';
+                badge.classList.add('show');
+            }
+        }
+
+        // UI FUNCTIONS (similares a versión anterior pero con sync)
+        function showSection(sectionId) {
+            document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
+            document.getElementById(sectionId).classList.remove('hidden');
+            
+            // Update nav styles...
+            if (sectionId === 'planificador') renderPlanner();
+            if (sectionId === 'dashboard') updateDashboard();
+            if (sectionId === 'ordenes') renderOrdenes();
+            if (sectionId === 'stock') renderStock();
+            if (sectionId === 'retiros') renderRetiros();
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading').classList.toggle('hidden', !show);
+        }
+
+        function showNotification(message, type = 'success') {
+            // Implementar toast notification
+            const div = document.createElement('div');
+            div.className = `fixed top-4 right-4 px-6 py-3 rounded-xl text-white shadow-lg z-50 ${type === 'error' ? 'bg-red-500' : 'bg-green-500'}`;
+            div.textContent = message;
+            document.body.appendChild(div);
+            setTimeout(() => div.remove(), 3000);
+        }
+
+        // PLANIFICADOR
+        function renderPlanner() {
+            renderCalendarGrid();
+            showDayTasks(state.selectedDate);
+        }
+
+        function changeMonth(delta) {
+            state.currentDate.setMonth(state.currentDate.getMonth() + delta);
+            renderPlanner();
+        }
+
+        function renderCalendarGrid() {
+            const year = state.currentDate.getFullYear();
+            const month = state.currentDate.getMonth();
+            
+            document.getElementById('calendar-month-year').textContent = 
+                new Date(year, month).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+            
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const grid = document.getElementById('calendar-grid');
+            grid.innerHTML = '';
+            
+            for (let i = 0; i < firstDay; i++) {
+                grid.appendChild(document.createElement('div')).className = 'bg-white p-2 min-h-[60px]';
+            }
+            
+            const today = new Date().toISOString().split('T')[0];
+            
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const dayTasks = state.tareas.filter(t => t.fecha === dateStr);
+                
+                const cell = document.createElement('div');
+                cell.className = `bg-white p-2 min-h-[60px] border border-gray-100 cursor-pointer ${state.selectedDate === dateStr ? 'ring-2 ring-blue-500' : ''} ${dateStr === today ? 'bg-blue-50' : ''}`;
+                
+                let indicators = dayTasks.length > 0 ? `<div class="flex gap-0.5 mt-1 flex-wrap">
+                    ${dayTasks.slice(0, 3).map(t => `<div class="w-1.5 h-1.5 rounded-full ${t.estado === 'realizada' ? 'bg-green-500' : 'bg-orange-500'}"></div>`).join('')}
+                </div>` : '';
+                
+                cell.innerHTML = `<div class="font-semibold text-sm ${dateStr === today ? 'text-blue-600' : 'text-gray-700'}">${day}</div>${indicators}`;
+                cell.onclick = () => { state.selectedDate = dateStr; renderCalendarGrid(); showDayTasks(dateStr); };
+                grid.appendChild(cell);
+            }
+        }
+
+        function showDayTasks(dateStr) {
+            document.getElementById('selected-date-title').textContent = new Date(dateStr).toLocaleDateString('es-ES', { weekday: 'long', month: 'short', day: 'numeric' });
+            const dayTasks = state.tareas.filter(t => t.fecha === dateStr).sort((a, b) => (a.estado === b.estado ? 0 : a.estado === 'pendiente' ? -1 : 1));
+            
+            const list = document.getElementById('day-tasks-list');
+            list.innerHTML = dayTasks.length === 0 ? 
+                `<div class="text-center py-8 text-gray-400"><button onclick="openTaskModal('${dateStr}')" class="text-blue-600 hover:underline">+ Agregar tarea</button></div>` :
+                dayTasks.map(task => `
+                    <div class="p-4 rounded-xl ${task.estado === 'realizada' ? 'task-done' : 'task-pending'} cursor-pointer" onclick="editTask(${task.id})">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h4 class="font-semibold ${task.estado === 'realizada' ? 'text-green-800 line-through' : 'text-orange-800'}">${task.titulo}</h4>
+                                ${task.notas ? `<p class="text-sm mt-1 opacity-80">${task.notas}</p>` : ''}
+                            </div>
+                            <button onclick="event.stopPropagation(); toggleTaskStatus(${task.id})" class="p-1">
+                                <svg class="w-5 h-5 ${task.estado === 'realizada' ? 'text-green-600' : 'text-orange-600'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    ${task.estado === 'realizada' ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>' : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>'}
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+        }
+
+        function openTaskModal(date = null, editId = null) {
+            document.getElementById('modal-nueva-tarea').classList.remove('hidden');
+            document.getElementById('form-tarea').reset();
+            
+            if (editId) {
+                const task = state.tareas.find(t => t.id === editId);
+                document.getElementById('task-id').value = task.id;
+                document.getElementById('task-fecha').value = task.fecha;
+                document.getElementById('task-titulo').value = task.titulo;
+                document.getElementById('task-notas').value = task.notas || '';
+                document.getElementById('task-estado').value = task.estado;
+                document.getElementById('task-modal-title').textContent = 'Editar Tarea';
+                document.getElementById('btn-delete-task').classList.remove('hidden');
+            } else {
+                document.getElementById('task-fecha').value = date || state.selectedDate;
+                document.getElementById('task-modal-title').textContent = 'Nueva Tarea';
+                document.getElementById('btn-delete-task').classList.add('hidden');
+            }
+        }
+
+        function closeTaskModal() {
+            document.getElementById('modal-nueva-tarea').classList.add('hidden');
+        }
+
+        async function saveTask(e) {
+            e.preventDefault();
+            const id = document.getElementById('task-id').value;
+            const taskData = {
+                id: id ? parseInt(id) : Date.now(),
+                fecha: document.getElementById('task-fecha').value,
+                titulo: document.getElementById('task-titulo').value,
+                notas: document.getElementById('task-notas').value,
+                estado: document.getElementById('task-estado').value
+            };
+            
+            if (id) {
+                const idx = state.tareas.findIndex(t => t.id == id);
+                state.tareas[idx] = taskData;
+            } else {
+                state.tareas.push(taskData);
+            }
+            
+            // Sync to cloud
+            await syncToCloud('tareas', state.tareas);
+            
+            closeTaskModal();
+            renderPlanner();
+            updateDashboard();
+        }
+
+        async function deleteTask() {
+            const id = document.getElementById('task-id').value;
+            if (!confirm('¿Eliminar?')) return;
+            state.tareas = state.tareas.filter(t => t.id != id);
+            await syncToCloud('tareas', state.tareas);
+            closeTaskModal();
+            renderPlanner();
+            updateDashboard();
+        }
+
+        async function toggleTaskStatus(id) {
+            const task = state.tareas.find(t => t.id === id);
+            task.estado = task.estado === 'realizada' ? 'pendiente' : 'realizada';
+            await syncToCloud('tareas', state.tareas);
+            renderPlanner();
+            updateDashboard();
+        }
+
+        // DASHBOARD & OTHER SECTIONS
+        function updateDashboard() {
+            document.getElementById('dash-ordenes').textContent = state.ordenes.filter(o => o.estado === 'abierto').length;
+            document.getElementById('dash-critico').textContent = state.stock.filter(s => parseInt(s.cantidad) <= parseInt(s.stockMinimo || 3)).length;
+            document.getElementById('dash-total').textContent = state.stock.reduce((sum, s) => sum + (parseInt(s.cantidad) || 0), 0);
+            
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('dash-tareas-pendientes').textContent = state.tareas.filter(t => t.fecha === today && t.estado === 'pendiente').length;
+            
+            // Update badges
+            const setBadge = (id, count) => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.textContent = count;
+                    el.classList.toggle('hidden', count == 0);
+                }
+            };
+            setBadge('badge-ordenes', state.ordenes.filter(o => o.estado === 'abierto').length);
+            setBadge('badge-critical', state.stock.filter(s => parseInt(s.cantidad) <= 3).length);
+            setBadge('badge-tareas', state.tareas.filter(t => t.estado === 'pendiente').length);
+            
+            // Summary
+            document.getElementById('summary-stock').textContent = state.stock.length;
+            document.getElementById('summary-ordenes').textContent = state.ordenes.filter(o => o.estado === 'abierto').length;
+            document.getElementById('summary-tareas').textContent = state.tareas.filter(t => t.fecha === today).length;
+            
+            renderDashboardCalendar();
+        }
+
+        function renderDashboardCalendar() {
+            const calendar = document.getElementById('dashboard-calendar');
+            const today = new Date();
+            const currentMonth = today.getMonth();
+            const currentYear = today.getFullYear();
+            
+            const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+            
+            let html = `<div class="col-span-7 font-bold text-gray-800 mb-2">${new Date(currentYear, currentMonth).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}</div>`;
+            ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].forEach(d => html += `<div class="text-xs font-semibold text-gray-500 py-2">${d}</div>`);
+            
+            for (let i = 0; i < firstDay; i++) html += '<div></div>';
+            
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const dayTasks = state.tareas.filter(t => t.fecha === dateStr);
+                const isToday = day === today.getDate();
+                
+                let classes = "py-2 rounded-lg text-sm relative cursor-pointer " + (isToday ? "bg-blue-600 text-white font-bold " : "text-gray-700 hover:bg-gray-100 ");
+                let indicators = dayTasks.length > 0 ? `<div class="flex justify-center gap-0.5 mt-0.5">${dayTasks.some(t => t.estado === 'pendiente') ? '<span class="w-1 h-1 rounded-full bg-orange-500"></span>' : ''}${dayTasks.some(t => t.estado === 'realizada') ? '<span class="w-1 h-1 rounded-full bg-green-500"></span>' : ''}</div>` : '';
+                
+                html += `<div class="${classes}" onclick="showSection('planificador'); state.selectedDate='${dateStr}'; renderPlanner();">${day}${indicators}</div>`;
+            }
+            
+            calendar.innerHTML = html;
+        }
+
+        function renderOrdenes() {
+            const tbody = document.getElementById('ordenes-table');
+            const filtered = state.currentFilter === 'all' ? state.ordenes : state.ordenes.filter(o => o.estado === state.currentFilter);
+            
+            tbody.innerHTML = filtered.map(o => `
+                <tr class="border-b">
+                    <td class="px-4 py-3 text-sm">#${o.id}</td>
+                    <td class="px-4 py-3 text-sm">${new Date(o.fecha).toLocaleDateString('es-ES')}</td>
+                    <td class="px-4 py-3 text-sm">${o.destino}</td>
+                    <td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs ${o.estado === 'abierto' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}">${o.estado}</span></td>
+                    <td class="px-4 py-3 text-sm"><button onclick="verDetalleOrden(${o.id})" class="text-blue-600 hover:underline">Ver</button></td>
+                </tr>
+            `).join('');
+        }
+
+        function renderStock() {
+            const grid = document.getElementById('stock-grid');
+            grid.innerHTML = state.stock.map(s => {
+                const isCritical = parseInt(s.cantidad) <= parseInt(s.stockMinimo || 3);
+                return `
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border ${isCritical ? 'border-red-300 bg-red-50' : 'border-gray-100'}">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h4 class="font-bold text-lg">${s.descripcion}</h4>
+                                <p class="text-sm text-gray-500">${s.unidad}</p>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-2xl font-bold ${isCritical ? 'text-red-600' : 'text-blue-600'}">${s.cantidad}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderRetiros() {
+            document.getElementById('retiros-table').innerHTML = state.retiros.map(r => `
+                <tr class="border-b">
+                    <td class="px-4 py-3 text-sm">${new Date(r.fecha).toLocaleDateString('es-ES')}</td>
+                    <td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs ${r.tipo === 'obra' ? 'bg-purple-100 text-purple-800' : 'bg-orange-100 text-orange-800'}">${r.tipo}</span></td>
+                    <td class="px-4 py-3 text-sm">${r.destino}</td>
+                </tr>
+            `).join('');
+        }
+
+        function filterOrders(filter) {
+            state.currentFilter = filter;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                const isActive = btn.dataset.filter === filter;
+                btn.className = `filter-btn px-4 py-2 rounded-lg text-sm ${isActive ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}`;
+            });
+            renderOrdenes();
+        }
+
+        function updateAll() {
+            updateDashboard();
+            if (!document.getElementById('ordenes').classList.contains('hidden')) renderOrdenes();
+            if (!document.getElementById('stock').classList.contains('hidden')) renderStock();
+            if (!document.getElementById('retiros').classList.contains('hidden')) renderRetiros();
+            if (!document.getElementById('planificador').classList.contains('hidden')) renderPlanner();
+        }
+
+        function showSetupInstructions() {
+            alert('1. Crea un Google Sheet nuevo\n2. Ve a Extensiones > Apps Script\n3. Pega el código del backend\n4. Implementa como Web App\n5. Copia la URL y pégala aquí');
+        }
+
+        window.onclick = function(event) {
+            if (event.target.classList.contains('fixed')) {
+                event.target.classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
