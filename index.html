@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#2563eb">
-    <title>StockPro Cloud</title>
+    <title>StockPro Cloud - Completo</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -32,11 +32,11 @@
         <div class="max-w-md w-full space-y-6">
             <div class="text-center">
                 <h1 class="text-3xl font-bold text-blue-600 mb-2">StockPro Cloud</h1>
-                <p class="text-gray-500">Configuración JSONBin.io</p>
+                <p class="text-gray-500">Sistema Completo de Gestión</p>
             </div>
             
             <div class="bg-blue-50 p-6 rounded-2xl border border-blue-200">
-                <h3 class="font-semibold text-blue-800 mb-4">Conexión al Backend</h3>
+                <h3 class="font-semibold text-blue-800 mb-4">Configuración JSONBin.io</h3>
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">API Key de JSONBin.io</label>
@@ -48,7 +48,6 @@
                         <label class="block text-sm font-medium text-gray-700 mb-2">ID del Bin (opcional)</label>
                         <input type="text" id="bin-id" placeholder="Dejar vacío para crear nuevo" 
                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-                        <p class="text-xs text-gray-500 mt-1">Si ya tienes un bin guardado, pon el ID aquí</p>
                     </div>
                     <button onclick="saveConfig()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-medium hover:bg-blue-700 transition-colors">
                         Conectar
@@ -57,7 +56,6 @@
             </div>
             
             <div class="text-center text-sm text-gray-500">
-                <p>¿No tienes cuenta?</p>
                 <a href="https://jsonbin.io" target="_blank" class="text-blue-600 hover:underline">Crear cuenta gratis en jsonbin.io →</a>
             </div>
         </div>
@@ -100,10 +98,26 @@
                         <span id="badge-tareas" class="ml-auto bg-orange-100 text-orange-600 text-xs font-bold px-2 py-1 rounded-full hidden">0</span>
                     </button>
                     
+                    <button onclick="showSection('ordenes')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-gray-700 hover:text-blue-600" id="nav-ordenes">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+                        Órdenes Compra
+                        <span id="badge-ordenes" class="ml-auto bg-blue-100 text-blue-600 text-xs font-bold px-2 py-1 rounded-full hidden">0</span>
+                    </button>
+                    
                     <button onclick="showSection('stock')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-gray-700 hover:text-blue-600" id="nav-stock">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
                         Stock
                         <span id="badge-critical" class="ml-auto bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded-full hidden">0</span>
+                    </button>
+                    
+                    <button onclick="showSection('retiros')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-gray-700 hover:text-blue-600" id="nav-retiros">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                        Retiros
+                    </button>
+
+                    <button onclick="showSection('ingreso')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-gray-700 hover:text-blue-600" id="nav-ingreso">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        Ingreso Directo
                     </button>
 
                     <button onclick="forceSync()" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-gray-700 hover:text-blue-600">
@@ -123,6 +137,7 @@
                         <p class="text-sm font-semibold text-blue-800">Resumen</p>
                         <div class="mt-2 space-y-1 text-xs text-blue-600">
                             <div class="flex justify-between"><span>Stock:</span><span id="summary-stock" class="font-bold">0</span></div>
+                            <div class="flex justify-between"><span>Órdenes:</span><span id="summary-ordenes" class="font-bold">0</span></div>
                             <div class="flex justify-between"><span>Tareas:</span><span id="summary-tareas" class="font-bold">0</span></div>
                         </div>
                         <p class="text-xs text-gray-400 mt-2" id="last-sync">--</p>
@@ -138,21 +153,25 @@
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                         <div>
                             <h2 class="text-2xl md:text-3xl font-bold text-gray-800">Dashboard</h2>
-                            <p class="text-gray-500 mt-1">Sincronizado en la nube</p>
+                            <p class="text-gray-500 mt-1">Vista general del sistema</p>
                         </div>
                         <div class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">
                             ✓ En vivo
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                         <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100">
+                            <p class="text-xs text-gray-500">Órdenes Abiertas</p>
+                            <p class="text-2xl md:text-3xl font-bold text-blue-600 mt-1" id="dash-ordenes">0</p>
+                        </div>
+                        <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100 cursor-pointer" onclick="showSection('stock')">
                             <p class="text-xs text-gray-500">Stock Crítico</p>
                             <p class="text-2xl md:text-3xl font-bold text-red-600 mt-1" id="dash-critico">0</p>
                         </div>
                         <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100">
                             <p class="text-xs text-gray-500">Materiales</p>
-                            <p class="text-2xl md:text-3xl font-bold text-blue-600 mt-1" id="dash-total">0</p>
+                            <p class="text-2xl md:text-3xl font-bold text-green-600 mt-1" id="dash-total">0</p>
                         </div>
                         <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100 cursor-pointer" onclick="showSection('planificador')">
                             <p class="text-xs text-gray-500">Tareas Hoy</p>
@@ -163,6 +182,129 @@
                     <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100">
                         <h3 class="text-lg font-bold text-gray-800 mb-4">Calendario</h3>
                         <div id="dashboard-calendar" class="grid grid-cols-7 gap-1 md:gap-2 text-center text-xs md:text-sm"></div>
+                    </div>
+                </section>
+
+                <!-- ORDENES DE COMPRA -->
+                <section id="ordenes" class="hidden fade-in space-y-6">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                        <h2 class="text-2xl md:text-3xl font-bold text-gray-800">Órdenes de Compra</h2>
+                        <button onclick="openOrdenModal()" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700">
+                            + Nueva Orden
+                        </button>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div class="p-4 border-b border-gray-100 flex gap-2 overflow-x-auto">
+                            <button onclick="filterOrders('all')" class="filter-btn active px-4 py-2 rounded-lg text-sm bg-blue-100 text-blue-700 whitespace-nowrap" data-filter="all">Todas</button>
+                            <button onclick="filterOrders('abierto')" class="filter-btn px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 whitespace-nowrap" data-filter="abierto">Abiertas</button>
+                            <button onclick="filterOrders('cerrado')" class="filter-btn px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 whitespace-nowrap" data-filter="cerrado">Cerradas</button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">N°</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Fecha</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Destino</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Items</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Estado</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ordenes-table" class="divide-y divide-gray-100"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- STOCK -->
+                <section id="stock" class="hidden fade-in space-y-6">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                        <h2 class="text-2xl md:text-3xl font-bold text-gray-800">Inventario</h2>
+                        <div class="flex gap-2">
+                            <input type="text" id="search-stock" placeholder="Buscar..." class="px-4 py-2 border border-gray-200 rounded-xl text-sm" onkeyup="renderStock()">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="stock-grid"></div>
+                </section>
+
+                <!-- RETIROS -->
+                <section id="retiros" class="hidden fade-in space-y-6">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                        <h2 class="text-2xl md:text-3xl font-bold text-gray-800">Retiros de Material</h2>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                            <h3 class="text-lg font-bold text-gray-800 mb-2">Retiro por Obra</h3>
+                            <p class="text-sm text-gray-500 mb-4">Usar orden de compra cerrada</p>
+                            <button onclick="openRetiroObraModal()" class="w-full bg-purple-600 text-white py-3 rounded-xl hover:bg-purple-700">Iniciar Retiro por Obra</button>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                            <h3 class="text-lg font-bold text-gray-800 mb-2">Retiro Individual</h3>
+                            <p class="text-sm text-gray-500 mb-4">Material específico con destino</p>
+                            <button onclick="openRetiroIndividualModal()" class="w-full bg-orange-600 text-white py-3 rounded-xl hover:bg-orange-700">Iniciar Retiro Individual</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div class="p-4 border-b border-gray-100">
+                            <h3 class="text-lg font-bold text-gray-800">Historial de Retiros</h3>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Fecha</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Tipo</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Destino</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Materiales</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="retiros-table" class="divide-y divide-gray-100"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- INGRESO DIRECTO -->
+                <section id="ingreso" class="hidden fade-in space-y-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl md:text-3xl font-bold text-gray-800">Ingreso Directo</h2>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 max-w-2xl">
+                        <form id="form-ingreso" onsubmit="handleIngresoDirecto(event)" class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Descripción</label>
+                                    <input type="text" name="descripcion" required class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500" placeholder="Ej: Tornillos 3/4">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Cantidad</label>
+                                    <input type="number" name="cantidad" min="1" required class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500" placeholder="0">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Unidad</label>
+                                    <select name="unidad" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
+                                        <option value="unidades">Unidades</option>
+                                        <option value="kg">Kilogramos</option>
+                                        <option value="metros">Metros</option>
+                                        <option value="litros">Litros</option>
+                                        <option value="cajas">Cajas</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Stock Mínimo</label>
+                                    <input type="number" name="stockMinimo" min="1" value="3" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
+                                </div>
+                            </div>
+                            <div class="flex justify-end gap-3 pt-4 border-t">
+                                <button type="reset" class="px-6 py-2 text-gray-600 hover:bg-gray-100 rounded-xl">Limpiar</button>
+                                <button type="submit" class="px-6 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700">Agregar al Stock</button>
+                            </div>
+                        </form>
                     </div>
                 </section>
 
@@ -192,12 +334,6 @@
                     </div>
                 </section>
 
-                <!-- STOCK -->
-                <section id="stock" class="hidden fade-in">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-6">Stock</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="stock-grid"></div>
-                </section>
-
             </main>
 
             <!-- Mobile Bottom Nav -->
@@ -206,9 +342,9 @@
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
                     <span class="text-xs mt-1">Inicio</span>
                 </button>
-                <button onclick="showSection('planificador')" class="flex-1 flex flex-col items-center py-3 text-gray-600" id="mobile-nav-planificador">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                    <span class="text-xs mt-1">Tareas</span>
+                <button onclick="showSection('ordenes')" class="flex-1 flex flex-col items-center py-3 text-gray-600" id="mobile-nav-ordenes">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                    <span class="text-xs mt-1">Órdenes</span>
                 </button>
                 <button onclick="forceSync()" class="flex-1 flex flex-col items-center py-3 text-gray-600">
                     <div class="bg-blue-600 text-white rounded-full p-3 -mt-8 shadow-lg">
@@ -221,41 +357,139 @@
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
                     <span class="text-xs mt-1">Stock</span>
                 </button>
+                <button onclick="showSection('planificador')" class="flex-1 flex flex-col items-center py-3 text-gray-600" id="mobile-nav-planificador">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    <span class="text-xs mt-1">Tareas</span>
+                </button>
             </nav>
         </div>
     </div>
 
-    <!-- Modal Tarea -->
-    <div id="modal-nueva-tarea" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+    <!-- MODALES -->
+
+    <!-- Modal Nueva Orden -->
+    <div id="modal-orden" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-blue-50">
+                <h3 class="text-xl font-bold">Nueva Orden de Compra</h3>
+                <button onclick="closeModal('orden')" class="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Fecha</label>
+                        <input type="date" id="orden-fecha" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Destino</label>
+                        <input type="text" id="orden-destino" placeholder="Ej: Obra Central" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-sm font-medium text-gray-700">Materiales</label>
+                        <button onclick="addMaterialRow()" class="text-sm text-blue-600 hover:underline">+ Agregar material</button>
+                    </div>
+                    <div id="materiales-container" class="space-y-2"></div>
+                </div>
+                <div class="flex justify-end gap-3 pt-4 border-t">
+                    <button onclick="closeModal('orden')" class="px-6 py-2 text-gray-600 hover:bg-gray-100 rounded-xl">Cancelar</button>
+                    <button onclick="saveOrden()" class="px-6 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700">Guardar Orden (Abierta)</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Ver Orden -->
+    <div id="modal-ver-orden" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center">
+                <h3 class="text-xl font-bold" id="ver-orden-titulo">Detalle Orden</h3>
+                <button onclick="closeModal('ver-orden')" class="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
+            <div class="p-6" id="ver-orden-contenido"></div>
+            <div class="p-6 border-t flex justify-end gap-3" id="ver-orden-acciones"></div>
+        </div>
+    </div>
+
+    <!-- Modal Retiro por Obra -->
+    <div id="modal-retiro-obra" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+            <div class="p-6 border-b border-gray-100 bg-purple-50">
+                <h3 class="text-xl font-bold text-purple-900">Retiro por Obra</h3>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Seleccionar Orden</label>
+                    <select id="select-obra" onchange="loadMaterialesObra()" class="w-full px-4 py-2 border border-gray-200 rounded-xl">
+                        <option value="">Seleccione...</option>
+                    </select>
+                </div>
+                <div id="materiales-obra-container" class="hidden space-y-2"></div>
+                <div class="flex justify-end gap-3 pt-4 border-t">
+                    <button onclick="closeModal('retiro-obra')" class="px-6 py-2 text-gray-600 hover:bg-gray-100 rounded-xl">Cancelar</button>
+                    <button onclick="procesarRetiroObra()" class="px-6 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700">Procesar Retiro</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Retiro Individual -->
+    <div id="modal-retiro-individual" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+            <div class="p-6 border-b border-gray-100 bg-orange-50">
+                <h3 class="text-xl font-bold text-orange-900">Retiro Individual</h3>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Destino</label>
+                    <input type="text" id="retiro-destino" placeholder="Ej: Mantenimiento" class="w-full px-4 py-2 border border-gray-200 rounded-xl">
+                </div>
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-sm font-medium text-gray-700">Materiales</label>
+                        <button onclick="addRetiroRow()" class="text-sm text-orange-600 hover:underline">+ Agregar</button>
+                    </div>
+                    <div id="retiro-rows-container" class="space-y-2"></div>
+                </div>
+                <div class="flex justify-end gap-3 pt-4 border-t">
+                    <button onclick="closeModal('retiro-individual')" class="px-6 py-2 text-gray-600 hover:bg-gray-100 rounded-xl">Cancelar</button>
+                    <button onclick="procesarRetiroIndividual()" class="px-6 py-2 bg-orange-600 text-white rounded-xl hover:bg-orange-700">Procesar Retiro</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Tarea -->
+    <div id="modal-tarea" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+            <div class="p-6 border-b border-gray-100 bg-blue-50">
                 <h3 class="text-xl font-bold" id="task-modal-title">Nueva Tarea</h3>
-                <button onclick="closeTaskModal()" class="text-gray-400 hover:text-gray-600">✕</button>
             </div>
             <form id="form-tarea" onsubmit="saveTask(event)" class="p-6 space-y-4">
                 <input type="hidden" id="task-id">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Fecha</label>
-                    <input type="date" id="task-fecha" required class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="date" id="task-fecha" required class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Título</label>
-                    <input type="text" id="task-titulo" required class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ej: Viaje a obra Central">
+                    <input type="text" id="task-titulo" required class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Observaciones</label>
-                    <textarea id="task-notas" rows="3" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                    <textarea id="task-notas" rows="3" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500"></textarea>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Estado</label>
-                    <select id="task-estado" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <select id="task-estado" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
                         <option value="pendiente">Pendiente (Naranja)</option>
                         <option value="realizada">Realizada (Verde)</option>
                     </select>
                 </div>
                 <div class="flex justify-end gap-3 pt-4 border-t">
                     <button type="button" onclick="deleteTask()" id="btn-delete-task" class="hidden px-6 py-2 text-red-600 hover:bg-red-50 rounded-xl">Eliminar</button>
-                    <button type="button" onclick="closeTaskModal()" class="px-6 py-2 text-gray-600 hover:bg-gray-100 rounded-xl">Cancelar</button>
+                    <button type="button" onclick="closeModal('tarea')" class="px-6 py-2 text-gray-600 hover:bg-gray-100 rounded-xl">Cancelar</button>
                     <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700">Guardar</button>
                 </div>
             </form>
@@ -263,18 +497,22 @@
     </div>
 
     <script>
-        // CONFIGURACIÓN JSONBIN
+        // CONFIGURACIÓN
         const CONFIG = {
             apiKey: localStorage.getItem('stockpro_api_key') || '',
             binId: localStorage.getItem('stockpro_bin_id') || '',
             baseUrl: 'https://api.jsonbin.io/v3/b'
         };
 
+        // ESTADO
         let state = {
+            ordenes: [],
             stock: [],
+            retiros: [],
             tareas: [],
             currentDate: new Date(),
-            selectedDate: new Date().toISOString().split('T')[0]
+            selectedDate: new Date().toISOString().split('T')[0],
+            currentFilter: 'all'
         };
 
         // INICIALIZACIÓN
@@ -285,13 +523,18 @@
             } else {
                 document.getElementById('config-screen').classList.remove('hidden');
             }
+            
+            // Fecha default para ordenes
+            if (document.getElementById('orden-fecha')) {
+                document.getElementById('orden-fecha').valueAsDate = new Date();
+            }
         });
 
         function saveConfig() {
             const key = document.getElementById('api-key').value.trim();
             const binId = document.getElementById('bin-id').value.trim();
             
-            if (!key) return alert('Ingresa tu API Key de JSONBin.io');
+            if (!key) return alert('Ingresa tu API Key');
             
             localStorage.setItem('stockpro_api_key', key);
             localStorage.setItem('stockpro_bin_id', binId);
@@ -317,21 +560,19 @@
         async function loadData() {
             showLoading(true);
             try {
-                let data;
+                let data = { ordenes: [], stock: [], retiros: [], tareas: [] };
                 
                 if (CONFIG.binId) {
-                    // Cargar bin existente
                     const response = await fetch(`${CONFIG.baseUrl}/${CONFIG.binId}/latest`, {
                         headers: { 'X-Master-Key': CONFIG.apiKey }
                     });
                     const result = await response.json();
                     data = result.record;
-                } else {
-                    // Crear nuevo bin
-                    data = { stock: [], tareas: [] };
                 }
                 
+                state.ordenes = data.ordenes || [];
                 state.stock = data.stock || [];
+                state.retiros = data.retiros || [];
                 state.tareas = data.tareas || [];
                 
                 updateAll();
@@ -347,7 +588,9 @@
             showLoading(true);
             try {
                 const data = {
+                    ordenes: state.ordenes,
                     stock: state.stock,
+                    retiros: state.retiros,
                     tareas: state.tareas,
                     lastUpdate: new Date().toISOString()
                 };
@@ -355,7 +598,6 @@
                 let response;
                 
                 if (CONFIG.binId) {
-                    // Actualizar bin existente
                     response = await fetch(`${CONFIG.baseUrl}/${CONFIG.binId}`, {
                         method: 'PUT',
                         headers: {
@@ -365,7 +607,6 @@
                         body: JSON.stringify(data)
                     });
                 } else {
-                    // Crear nuevo bin
                     response = await fetch(`${CONFIG.baseUrl}`, {
                         method: 'POST',
                         headers: {
@@ -391,39 +632,441 @@
 
         function showLoading(show) {
             document.getElementById('loading').classList.toggle('hidden', !show);
-            document.getElementById('sync-icon').classList.toggle('hidden', !show);
-            document.getElementById('sync-idle').classList.toggle('hidden', show);
-            document.getElementById('mobile-sync-icon').classList.toggle('hidden', !show);
-            document.getElementById('mobile-sync-idle').classList.toggle('hidden', show);
+            document.getElementById('sync-icon')?.classList.toggle('hidden', !show);
+            document.getElementById('sync-idle')?.classList.toggle('hidden', show);
+            document.getElementById('mobile-sync-icon')?.classList.toggle('hidden', !show);
+            document.getElementById('mobile-sync-idle')?.classList.toggle('hidden', show);
         }
 
         function updateLastSync() {
             document.getElementById('last-sync').textContent = 'Sync: ' + new Date().toLocaleTimeString();
         }
 
-        // UI FUNCTIONS
+        // NAVEGACIÓN
         function showSection(id) {
             document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
             document.getElementById(id).classList.remove('hidden');
+            
+            // Update nav
+            document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('bg-blue-50', 'text-blue-600'));
+            document.getElementById('nav-' + id)?.classList.add('bg-blue-50', 'text-blue-600');
+            
+            if (id === 'ordenes') renderOrdenes();
+            if (id === 'stock') renderStock();
+            if (id === 'retiros') renderRetiros();
             if (id === 'planificador') renderPlanner();
             if (id === 'dashboard') updateDashboard();
-            if (id === 'stock') renderStock();
         }
 
         async function forceSync() {
             await saveToCloud();
         }
 
-        // PLANIFICADOR (igual que antes)
+        // ÓRDENES DE COMPRA
+        function openOrdenModal() {
+            document.getElementById('modal-orden').classList.remove('hidden');
+            document.getElementById('orden-fecha').valueAsDate = new Date();
+            document.getElementById('orden-destino').value = '';
+            document.getElementById('materiales-container').innerHTML = '';
+            addMaterialRow();
+        }
+
+        function addMaterialRow() {
+            const div = document.createElement('div');
+            div.className = 'flex gap-2 items-center bg-gray-50 p-2 rounded-lg';
+            div.innerHTML = `
+                <input type="text" placeholder="Descripción" class="material-desc flex-1 px-3 py-2 border rounded-lg text-sm">
+                <input type="number" placeholder="Cant" min="1" class="material-cant w-20 px-3 py-2 border rounded-lg text-sm">
+                <select class="material-unit w-24 px-3 py-2 border rounded-lg text-sm">
+                    <option value="unidades">Unid</option>
+                    <option value="kg">Kg</option>
+                    <option value="metros">m</option>
+                    <option value="litros">L</option>
+                </select>
+                <button onclick="this.parentElement.remove()" class="text-red-500 px-2">✕</button>
+            `;
+            document.getElementById('materiales-container').appendChild(div);
+        }
+
+        async function saveOrden() {
+            const fecha = document.getElementById('orden-fecha').value;
+            const destino = document.getElementById('orden-destino').value;
+            
+            if (!fecha || !destino) return alert('Complete fecha y destino');
+            
+            const materiales = [];
+            document.querySelectorAll('#materiales-container > div').forEach(row => {
+                const desc = row.querySelector('.material-desc').value;
+                const cant = row.querySelector('.material-cant').value;
+                const unit = row.querySelector('.material-unit').value;
+                if (desc && cant) {
+                    materiales.push({ descripcion: desc, cantidad: parseInt(cant), unidad: unit });
+                }
+            });
+            
+            if (materiales.length === 0) return alert('Agregue al menos un material');
+            
+            const orden = {
+                id: Date.now(),
+                fecha,
+                destino,
+                estado: 'abierto',
+                materiales,
+                fechaCreacion: new Date().toISOString()
+            };
+            
+            state.ordenes.push(orden);
+            await saveToCloud();
+            closeModal('orden');
+            renderOrdenes();
+            updateDashboard();
+        }
+
+        function renderOrdenes() {
+            const filtered = state.currentFilter === 'all' 
+                ? state.ordenes 
+                : state.ordenes.filter(o => o.estado === state.currentFilter);
+            
+            const sorted = filtered.sort((a, b) => new Date(b.fechaCreacion) - new Date(a.fechaCreacion));
+            
+            document.getElementById('ordenes-table').innerHTML = sorted.map(o => `
+                <tr class="border-b">
+                    <td class="px-4 py-3 text-sm">#${o.id}</td>
+                    <td class="px-4 py-3 text-sm">${new Date(o.fecha).toLocaleDateString('es-ES')}</td>
+                    <td class="px-4 py-3 text-sm">${o.destino}</td>
+                    <td class="px-4 py-3 text-sm">${o.materiales.length} items</td>
+                    <td class="px-4 py-3">
+                        <span class="px-2 py-1 rounded-full text-xs ${o.estado === 'abierto' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}">
+                            ${o.estado}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-sm">
+                        <button onclick="verOrden(${o.id})" class="text-blue-600 hover:underline mr-2">Ver</button>
+                        ${o.estado === 'abierto' ? `<button onclick="cerrarOrden(${o.id})" class="text-green-600 hover:underline">Autorizar</button>` : ''}
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function filterOrders(filter) {
+            state.currentFilter = filter;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                const isActive = btn.dataset.filter === filter;
+                btn.className = `filter-btn px-4 py-2 rounded-lg text-sm ${isActive ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'} whitespace-nowrap`;
+            });
+            renderOrdenes();
+        }
+
+        function verOrden(id) {
+            const orden = state.ordenes.find(o => o.id === id);
+            if (!orden) return;
+            
+            document.getElementById('ver-orden-titulo').textContent = `Orden #${id}`;
+            document.getElementById('ver-orden-contenido').innerHTML = `
+                <div class="space-y-3">
+                    <p><strong>Fecha:</strong> ${new Date(orden.fecha).toLocaleDateString('es-ES')}</p>
+                    <p><strong>Destino:</strong> ${orden.destino}</p>
+                    <p><strong>Estado:</strong> <span class="px-2 py-1 rounded-full text-xs ${orden.estado === 'abierto' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}">${orden.estado}</span></p>
+                    <div class="mt-4">
+                        <strong>Materiales:</strong>
+                        <div class="mt-2 space-y-2">
+                            ${orden.materiales.map(m => `
+                                <div class="bg-gray-50 p-2 rounded-lg flex justify-between">
+                                    <span>${m.descripcion}</span>
+                                    <span class="text-gray-600">${m.cantidad} ${m.unidad}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('ver-orden-acciones').innerHTML = orden.estado === 'abierto' 
+                ? `<button onclick="cerrarOrden(${orden.id}); closeModal('ver-orden');" class="px-6 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700">Autorizar y Cerrar</button>`
+                : '<span class="text-gray-500">Orden procesada</span>';
+            
+            document.getElementById('modal-ver-orden').classList.remove('hidden');
+        }
+
+        async function cerrarOrden(id) {
+            const orden = state.ordenes.find(o => o.id === id);
+            if (!orden || orden.estado === 'cerrado') return;
+            
+            if (!confirm('¿Autorizar esta orden? Los materiales pasarán al stock.')) return;
+            
+            // Agregar materiales al stock
+            orden.materiales.forEach(m => {
+                const existente = state.stock.find(s => s.descripcion.toLowerCase() === m.descripcion.toLowerCase() && s.unidad === m.unidad);
+                if (existente) {
+                    existente.cantidad = parseInt(existente.cantidad) + m.cantidad;
+                } else {
+                    state.stock.push({
+                        id: Date.now() + Math.random(),
+                        descripcion: m.descripcion,
+                        cantidad: m.cantidad,
+                        unidad: m.unidad,
+                        stockMinimo: 3
+                    });
+                }
+            });
+            
+            orden.estado = 'cerrado';
+            orden.fechaCierre = new Date().toISOString();
+            
+            await saveToCloud();
+            renderOrdenes();
+            updateDashboard();
+        }
+
+        // INGRESO DIRECTO
+        async function handleIngresoDirecto(e) {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            
+            const existente = state.stock.find(s => 
+                s.descripcion.toLowerCase() === formData.get('descripcion').toLowerCase() && 
+                s.unidad === formData.get('unidad')
+            );
+            
+            if (existente) {
+                existente.cantidad = parseInt(existente.cantidad) + parseInt(formData.get('cantidad'));
+            } else {
+                state.stock.push({
+                    id: Date.now(),
+                    descripcion: formData.get('descripcion'),
+                    cantidad: parseInt(formData.get('cantidad')),
+                    unidad: formData.get('unidad'),
+                    stockMinimo: parseInt(formData.get('stockMinimo'))
+                });
+            }
+            
+            await saveToCloud();
+            e.target.reset();
+            alert('Material agregado correctamente');
+            updateDashboard();
+        }
+
+        // STOCK
+        function renderStock() {
+            const search = document.getElementById('search-stock')?.value.toLowerCase() || '';
+            const filtered = state.stock.filter(s => s.descripcion.toLowerCase().includes(search));
+            
+            document.getElementById('stock-grid').innerHTML = filtered.map(s => {
+                const isCritical = parseInt(s.cantidad) <= parseInt(s.stockMinimo || 3);
+                return `
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border ${isCritical ? 'border-red-300 bg-red-50' : 'border-gray-100'}">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h4 class="font-bold text-lg">${s.descripcion}</h4>
+                                <p class="text-sm text-gray-500">${s.unidad}</p>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-2xl font-bold ${isCritical ? 'text-red-600' : 'text-blue-600'}">${s.cantidad}</span>
+                                <p class="text-xs ${isCritical ? 'text-red-500' : 'text-gray-400'}">${isCritical ? '¡Crítico!' : 'OK'}</p>
+                            </div>
+                        </div>
+                        <div class="mt-3 pt-3 border-t flex justify-between items-center">
+                            <span class="text-xs text-gray-500">Mín: ${s.stockMinimo || 3}</span>
+                            <button onclick="ajustarStock(${s.id})" class="text-sm text-blue-600 hover:underline">Ajustar</button>
+                        </div>
+                    </div>
+                `;
+            }).join('') || '<div class="col-span-3 text-center text-gray-400 py-8">Sin stock registrado</div>';
+        }
+
+        async function ajustarStock(id) {
+            const item = state.stock.find(s => s.id === id);
+            if (!item) return;
+            
+            const nuevaCantidad = prompt(`Ajustar "${item.descripcion}"\nActual: ${item.cantidad}\n\nNueva cantidad:`, item.cantidad);
+            if (nuevaCantidad !== null && !isNaN(nuevaCantidad) && nuevaCantidad >= 0) {
+                item.cantidad = parseInt(nuevaCantidad);
+                await saveToCloud();
+                renderStock();
+                updateDashboard();
+            }
+        }
+
+        // RETIROS
+        function openRetiroObraModal() {
+            const ordenesCerradas = state.ordenes.filter(o => o.estado === 'cerrado');
+            if (ordenesCerradas.length === 0) {
+                alert('No hay órdenes cerradas disponibles');
+                return;
+            }
+            
+            const select = document.getElementById('select-obra');
+            select.innerHTML = '<option value="">Seleccione...</option>';
+            ordenesCerradas.forEach(o => {
+                select.innerHTML += `<option value="${o.id}">#${o.id} - ${o.destino}</option>`;
+            });
+            
+            document.getElementById('materiales-obra-container').classList.add('hidden');
+            document.getElementById('modal-retiro-obra').classList.remove('hidden');
+        }
+
+        function loadMaterialesObra() {
+            const ordenId = document.getElementById('select-obra').value;
+            const container = document.getElementById('materiales-obra-container');
+            
+            if (!ordenId) {
+                container.classList.add('hidden');
+                return;
+            }
+            
+            const orden = state.ordenes.find(o => o.id == ordenId);
+            container.innerHTML = '<h4 class="font-medium text-gray-700 mb-2">Materiales a retirar:</h4>';
+            
+            orden.materiales.forEach((m, idx) => {
+                const stockItem = state.stock.find(s => s.descripcion.toLowerCase() === m.descripcion.toLowerCase());
+                const disponible = stockItem ? stockItem.cantidad : 0;
+                
+                container.innerHTML += `
+                    <div class="flex items-center justify-between bg-gray-50 p-3 rounded-lg mb-2">
+                        <div>
+                            <p class="font-medium">${m.descripcion}</p>
+                            <p class="text-xs text-gray-500">Disp: ${disponible} ${m.unidad}</p>
+                        </div>
+                        <input type="number" min="0" max="${Math.min(m.cantidad, disponible)}" value="0" 
+                               class="retiro-cant-obra w-20 px-2 py-1 border rounded text-center" 
+                               data-desc="${m.descripcion}" data-unit="${m.unidad}">
+                    </div>
+                `;
+            });
+            
+            container.classList.remove('hidden');
+        }
+
+        async function procesarRetiroObra() {
+            const ordenId = document.getElementById('select-obra').value;
+            if (!ordenId) return alert('Seleccione una orden');
+            
+            const orden = state.ordenes.find(o => o.id == ordenId);
+            const materialesRetiro = [];
+            
+            document.querySelectorAll('.retiro-cant-obra').forEach(input => {
+                const cantidad = parseInt(input.value);
+                if (cantidad > 0) {
+                    const desc = input.dataset.desc;
+                    const unidad = input.dataset.unit;
+                    
+                    const stockItem = state.stock.find(s => s.descripcion.toLowerCase() === desc.toLowerCase());
+                    if (stockItem && stockItem.cantidad >= cantidad) {
+                        stockItem.cantidad -= cantidad;
+                        materialesRetiro.push({ descripcion: desc, cantidad, unidad });
+                    } else {
+                        alert(`Stock insuficiente para ${desc}`);
+                        return;
+                    }
+                }
+            });
+            
+            if (materialesRetiro.length === 0) return alert('Ingrese cantidades a retirar');
+            
+            state.retiros.push({
+                id: Date.now(),
+                fecha: new Date().toISOString(),
+                tipo: 'obra',
+                destino: orden.destino,
+                ordenId: orden.id,
+                materiales: materialesRetiro
+            });
+            
+            await saveToCloud();
+            closeModal('retiro-obra');
+            renderRetiros();
+            updateDashboard();
+            alert('Retiro procesado correctamente');
+        }
+
+        function openRetiroIndividualModal() {
+            document.getElementById('retiro-destino').value = '';
+            document.getElementById('retiro-rows-container').innerHTML = '';
+            addRetiroRow();
+            document.getElementById('modal-retiro-individual').classList.remove('hidden');
+        }
+
+        function addRetiroRow() {
+            const container = document.getElementById('retiro-rows-container');
+            const div = document.createElement('div');
+            div.className = 'flex gap-2 items-center bg-gray-50 p-2 rounded-lg';
+            div.innerHTML = `
+                <select class="retiro-material flex-1 px-3 py-2 border rounded-lg text-sm">
+                    ${state.stock.map(s => `<option value="${s.id}">${s.descripcion} (Disp: ${s.cantidad})</option>`).join('')}
+                </select>
+                <input type="number" min="1" value="1" class="retiro-cant w-20 px-3 py-2 border rounded-lg text-sm">
+                <button onclick="this.parentElement.remove()" class="text-red-500 px-2">✕</button>
+            `;
+            container.appendChild(div);
+        }
+
+        async function procesarRetiroIndividual() {
+            const destino = document.getElementById('retiro-destino').value;
+            if (!destino) return alert('Ingrese el destino');
+            
+            const materiales = [];
+            
+            document.querySelectorAll('#retiro-rows-container > div').forEach(row => {
+                const materialId = row.querySelector('.retiro-material').value;
+                const cantidad = parseInt(row.querySelector('.retiro-cant').value);
+                
+                const stockItem = state.stock.find(s => s.id == materialId);
+                if (stockItem && stockItem.cantidad >= cantidad) {
+                    stockItem.cantidad -= cantidad;
+                    materiales.push({
+                        descripcion: stockItem.descripcion,
+                        cantidad,
+                        unidad: stockItem.unidad
+                    });
+                } else {
+                    alert(`Stock insuficiente para ${stockItem?.descripcion || 'material'}`);
+                    return;
+                }
+            });
+            
+            if (materiales.length === 0) return;
+            
+            state.retiros.push({
+                id: Date.now(),
+                fecha: new Date().toISOString(),
+                tipo: 'individual',
+                destino,
+                materiales
+            });
+            
+            await saveToCloud();
+            closeModal('retiro-individual');
+            renderRetiros();
+            updateDashboard();
+            alert('Retiro procesado correctamente');
+        }
+
+        function renderRetiros() {
+            const sorted = [...state.retiros].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+            
+            document.getElementById('retiros-table').innerHTML = sorted.map(r => `
+                <tr class="border-b">
+                    <td class="px-4 py-3 text-sm">${new Date(r.fecha).toLocaleDateString('es-ES')}</td>
+                    <td class="px-4 py-3">
+                        <span class="px-2 py-1 rounded-full text-xs ${r.tipo === 'obra' ? 'bg-purple-100 text-purple-800' : 'bg-orange-100 text-orange-800'}">
+                            ${r.tipo}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-sm">${r.destino}</td>
+                    <td class="px-4 py-3 text-sm">
+                        ${r.materiales.map(m => `${m.descripcion} (${m.cantidad})`).join(', ')}
+                    </td>
+                </tr>
+            `).join('') || '<tr><td colspan="4" class="px-4 py-8 text-center text-gray-400">Sin retiros registrados</td></tr>';
+        }
+
+        // PLANIFICADOR (TAREAS)
         function renderPlanner() {
             const year = state.currentDate.getFullYear();
             const month = state.currentDate.getMonth();
             
             document.getElementById('calendar-month-year').textContent = 
                 new Date(year, month).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
-            
-            const firstDay = new Date(year, month, 1).getDay();
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
             
             let html = `
                 <div class="bg-gray-100 p-2 text-center text-xs font-semibold">Dom</div>
@@ -435,10 +1078,12 @@
                 <div class="bg-gray-100 p-2 text-center text-xs font-semibold">Sáb</div>
             `;
             
+            const firstDay = new Date(year, month, 1).getDay();
             for (let i = 0; i < firstDay; i++) {
                 html += '<div class="bg-white p-2 min-h-[60px]"></div>';
             }
             
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
             const today = new Date().toISOString().split('T')[0];
             
             for (let day = 1; day <= daysInMonth; day++) {
@@ -446,7 +1091,6 @@
                 const dayTasks = state.tareas.filter(t => t.fecha === dateStr);
                 
                 let classes = `bg-white p-2 min-h-[60px] border border-gray-100 cursor-pointer ${state.selectedDate === dateStr ? 'ring-2 ring-blue-500' : ''} ${dateStr === today ? 'bg-blue-50' : ''}`;
-                
                 let indicators = dayTasks.length > 0 ? `<div class="flex gap-0.5 mt-1 flex-wrap justify-center">${dayTasks.slice(0, 3).map(t => `<div class="w-1.5 h-1.5 rounded-full ${t.estado === 'realizada' ? 'bg-green-500' : 'bg-orange-500'}"></div>`).join('')}</div>` : '';
                 
                 html += `<div class="${classes}" onclick="selectDate('${dateStr}')"><div class="font-semibold text-sm ${dateStr === today ? 'text-blue-600' : 'text-gray-700'}">${day}</div>${indicators}</div>`;
@@ -490,7 +1134,7 @@
         }
 
         function openTaskModal(date = null, editId = null) {
-            document.getElementById('modal-nueva-tarea').classList.remove('hidden');
+            document.getElementById('modal-tarea').classList.remove('hidden');
             document.getElementById('form-tarea').reset();
             
             if (editId) {
@@ -503,14 +1147,11 @@
                 document.getElementById('task-modal-title').textContent = 'Editar Tarea';
                 document.getElementById('btn-delete-task').classList.remove('hidden');
             } else {
+                document.getElementById('task-id').value = '';
                 document.getElementById('task-fecha').value = date || state.selectedDate;
                 document.getElementById('task-modal-title').textContent = 'Nueva Tarea';
                 document.getElementById('btn-delete-task').classList.add('hidden');
             }
-        }
-
-        function closeTaskModal() {
-            document.getElementById('modal-nueva-tarea').classList.add('hidden');
         }
 
         async function saveTask(e) {
@@ -532,7 +1173,7 @@
             }
             
             await saveToCloud();
-            closeTaskModal();
+            closeModal('tarea');
             renderPlanner();
             updateDashboard();
         }
@@ -542,7 +1183,7 @@
             if (!confirm('¿Eliminar?')) return;
             state.tareas = state.tareas.filter(t => t.id != id);
             await saveToCloud();
-            closeTaskModal();
+            closeModal('tarea');
             renderPlanner();
             updateDashboard();
         }
@@ -555,20 +1196,23 @@
             updateDashboard();
         }
 
+        // DASHBOARD
         function updateDashboard() {
-            const critico = state.stock.filter(s => parseInt(s.cantidad) <= 3).length;
+            const abiertas = state.ordenes.filter(o => o.estado === 'abierto').length;
+            const critico = state.stock.filter(s => parseInt(s.cantidad) <= parseInt(s.stockMinimo || 3)).length;
             const total = state.stock.reduce((sum, s) => sum + (parseInt(s.cantidad) || 0), 0);
             const today = new Date().toISOString().split('T')[0];
             const tareasHoy = state.tareas.filter(t => t.fecha === today && t.estado === 'pendiente').length;
             
+            document.getElementById('dash-ordenes').textContent = abiertas;
             document.getElementById('dash-critico').textContent = critico;
             document.getElementById('dash-total').textContent = total;
             document.getElementById('dash-tareas-pendientes').textContent = tareasHoy;
             
             document.getElementById('summary-stock').textContent = state.stock.length;
+            document.getElementById('summary-ordenes').textContent = abiertas;
             document.getElementById('summary-tareas').textContent = state.tareas.filter(t => t.fecha === today).length;
             
-            // Badges
             const setBadge = (id, count) => {
                 const el = document.getElementById(id);
                 if (el) {
@@ -576,6 +1220,7 @@
                     el.classList.toggle('hidden', count == 0);
                 }
             };
+            setBadge('badge-ordenes', abiertas);
             setBadge('badge-critical', critico);
             setBadge('badge-tareas', state.tareas.filter(t => t.estado === 'pendiente').length);
             
@@ -605,28 +1250,17 @@
             calendar.innerHTML = html;
         }
 
-        function renderStock() {
-            document.getElementById('stock-grid').innerHTML = state.stock.map(s => {
-                const isCritical = parseInt(s.cantidad) <= 3;
-                return `
-                    <div class="bg-white p-4 rounded-2xl shadow-sm border ${isCritical ? 'border-red-300 bg-red-50' : 'border-gray-100'}">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <h4 class="font-bold text-lg">${s.descripcion}</h4>
-                                <p class="text-sm text-gray-500">${s.unidad}</p>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-2xl font-bold ${isCritical ? 'text-red-600' : 'text-blue-600'}">${s.cantidad}</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('') || '<div class="col-span-3 text-center text-gray-400 py-8">Sin stock registrado</div>';
-        }
-
         function updateAll() {
             updateDashboard();
+            if (!document.getElementById('ordenes').classList.contains('hidden')) renderOrdenes();
             if (!document.getElementById('stock').classList.contains('hidden')) renderStock();
+            if (!document.getElementById('retiros').classList.contains('hidden')) renderRetiros();
+            if (!document.getElementById('planificador').classList.contains('hidden')) renderPlanner();
+        }
+
+        // UTILIDADES
+        function closeModal(id) {
+            document.getElementById('modal-' + id).classList.add('hidden');
         }
 
         window.onclick = function(event) {
