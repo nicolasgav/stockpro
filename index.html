@@ -23,46 +23,43 @@
         }
         .offline-badge { position: fixed; top: 10px; right: 10px; background: #ef4444; color: white; padding: 5px 10px; border-radius: 20px; font-size: 12px; display: none; }
         .offline-badge.show { display: block; }
+        .autocomplete-results { position: absolute; z-index: 100; width: 100%; background: white; border: 1px solid #e5e7eb; border-radius: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); max-height: 200px; overflow-y: auto; margin-top: 2px; }
+        .autocomplete-item { padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f3f4f6; }
+        .autocomplete-item:hover { background-color: #eff6ff; }
+        .autocomplete-item:last-child { border-bottom: none; }
+        .drop-zone { border: 2px dashed #d1d5db; transition: all 0.2s; }
+        .drop-zone.dragover { border-color: #3b82f6; background-color: #eff6ff; }
     </style>
 <base target="_blank">
 </head>
 <body class="bg-gray-50 text-gray-800">
-
-    <!-- CONFIGURACIÓN INICIAL -->
     <div id="config-screen" class="fixed inset-0 bg-white z-50 flex items-center justify-center p-4">
         <div class="max-w-md w-full space-y-6">
             <div class="text-center">
                 <h1 class="text-3xl font-bold text-blue-600 mb-2">StockPro Cloud</h1>
                 <p class="text-gray-500">Sistema Completo de Gestión</p>
             </div>
-
             <div class="bg-blue-50 p-6 rounded-2xl border border-blue-200">
                 <h3 class="font-semibold text-blue-800 mb-4">Configuración JSONBin.io</h3>
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">API Key de JSONBin.io</label>
-                        <input type="password" id="api-key" placeholder="$2b$10$..." 
-                               class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-                        <p class="text-xs text-gray-500 mt-1">Consíguela gratis en jsonbin.io/api-keys</p>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">API Key</label>
+                        <input type="password" id="api-key" placeholder="$2b$10$..." class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                        <p class="text-xs text-gray-500 mt-1">Consíguela en jsonbin.io/api-keys</p>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">ID del Bin (opcional)</label>
-                        <input type="text" id="bin-id" placeholder="Dejar vacío para crear nuevo" 
-                               class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                        <input type="text" id="bin-id" placeholder="Dejar vacío para crear nuevo" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
                     </div>
-                    <button onclick="saveConfig()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-medium hover:bg-blue-700 transition-colors">
-                        Conectar
-                    </button>
+                    <button onclick="saveConfig()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-medium hover:bg-blue-700 transition-colors">Conectar</button>
                 </div>
             </div>
-
             <div class="text-center text-sm text-gray-500">
-                <a href="https://jsonbin.io" target="_blank" class="text-blue-600 hover:underline">Crear cuenta gratis en jsonbin.io →</a>
+                <a href="https://jsonbin.io" target="_blank" class="text-blue-600 hover:underline">Crear cuenta gratis →</a>
             </div>
         </div>
     </div>
 
-    <!-- Loading -->
     <div id="loading" class="fixed inset-0 bg-white bg-opacity-90 z-50 flex items-center justify-center hidden">
         <div class="text-center">
             <svg class="w-12 h-12 text-blue-600 syncing mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
@@ -70,14 +67,10 @@
         </div>
     </div>
 
-    <!-- Offline Badge -->
     <div id="offline-badge" class="offline-badge">Sin conexión</div>
 
-    <!-- APP PRINCIPAL -->
     <div id="app-container" class="hidden">
         <div class="flex h-screen overflow-hidden">
-
-            <!-- Sidebar Desktop -->
             <aside class="desktop-sidebar w-64 bg-white border-r border-gray-200 flex flex-col shadow-lg z-20">
                 <div class="p-6 border-b border-gray-100">
                     <h1 class="text-2xl font-bold text-blue-600">StockPro</h1>
@@ -86,58 +79,54 @@
                         <span class="text-xs text-gray-500" id="connection-text">Conectado</span>
                     </div>
                 </div>
-
                 <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
                     <button onclick="showSection('dashboard')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-gray-700 hover:text-blue-600" id="nav-dashboard">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
                         Dashboard
                     </button>
-
+                    <button onclick="showSection('catalogo')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-gray-700 hover:text-blue-600" id="nav-catalogo">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        Catálogo
+                    </button>
                     <button onclick="showSection('planificador')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-gray-700 hover:text-blue-600" id="nav-planificador">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                         Planificador
                         <span id="badge-tareas" class="ml-auto bg-orange-100 text-orange-600 text-xs font-bold px-2 py-1 rounded-full hidden">0</span>
                     </button>
-
                     <button onclick="showSection('ordenes')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-gray-700 hover:text-blue-600" id="nav-ordenes">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
-                        Órdenes Compra
+                        Órdenes
                         <span id="badge-ordenes" class="ml-auto bg-blue-100 text-blue-600 text-xs font-bold px-2 py-1 rounded-full hidden">0</span>
                     </button>
-
                     <button onclick="showSection('stock')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-gray-700 hover:text-blue-600" id="nav-stock">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
                         Stock
                         <span id="badge-critical" class="ml-auto bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded-full hidden">0</span>
                     </button>
-
                     <button onclick="showSection('retiros')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-gray-700 hover:text-blue-600" id="nav-retiros">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
                         Retiros
                     </button>
-
                     <button onclick="showSection('ingreso')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-gray-700 hover:text-blue-600" id="nav-ingreso">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         Ingreso Directo
                     </button>
-
                     <button onclick="forceSync()" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-gray-700 hover:text-blue-600">
                         <svg class="w-5 h-5 syncing hidden" id="sync-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                         <svg class="w-5 h-5" id="sync-idle" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                         Sincronizar
                     </button>
-
                     <button onclick="logout()" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-red-600 hover:bg-red-50">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
                         Cambiar Cuenta
                     </button>
                 </nav>
-
                 <div class="p-4 border-t border-gray-100">
                     <div class="bg-blue-50 rounded-xl p-4">
                         <p class="text-sm font-semibold text-blue-800">Resumen</p>
                         <div class="mt-2 space-y-1 text-xs text-blue-600">
                             <div class="flex justify-between"><span>Stock:</span><span id="summary-stock" class="font-bold">0</span></div>
+                            <div class="flex justify-between"><span>Catálogo:</span><span id="summary-catalogo" class="font-bold">0</span></div>
                             <div class="flex justify-between"><span>Órdenes:</span><span id="summary-ordenes" class="font-bold">0</span></div>
                             <div class="flex justify-between"><span>Tareas:</span><span id="summary-tareas" class="font-bold">0</span></div>
                         </div>
@@ -146,37 +135,37 @@
                 </div>
             </aside>
 
-            <!-- Contenido Principal -->
             <main class="flex-1 overflow-y-auto bg-gray-50 p-4 md:p-8 pb-24 md:pb-8">
-
-                <!-- DASHBOARD -->
+                <!-- DASHBOARD CORREGIDO -->
                 <section id="dashboard" class="fade-in space-y-6">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                         <div>
                             <h2 class="text-2xl md:text-3xl font-bold text-gray-800">Dashboard</h2>
                             <p class="text-gray-500 mt-1">Vista general del sistema</p>
                         </div>
-                        <div class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">
-                            ✓ En vivo
-                        </div>
+                        <div class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">✓ En vivo</div>
                     </div>
 
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                        <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100">
+                        <div onclick="showOrdenesAbiertas()" class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-shadow">
                             <p class="text-xs text-gray-500">Órdenes Abiertas</p>
                             <p class="text-2xl md:text-3xl font-bold text-blue-600 mt-1" id="dash-ordenes">0</p>
+                            <p class="text-xs text-blue-500 mt-1">Click para ver →</p>
                         </div>
-                        <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100 cursor-pointer" onclick="showSection('stock')">
+                        <div onclick="showSection('stock')" class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-shadow">
                             <p class="text-xs text-gray-500">Stock Crítico</p>
                             <p class="text-2xl md:text-3xl font-bold text-red-600 mt-1" id="dash-critico">0</p>
+                            <p class="text-xs text-red-500 mt-1">Click para ver →</p>
                         </div>
-                        <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100">
+                        <div onclick="showSection('catalogo')" class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-shadow">
                             <p class="text-xs text-gray-500">Materiales</p>
                             <p class="text-2xl md:text-3xl font-bold text-green-600 mt-1" id="dash-total">0</p>
+                            <p class="text-xs text-green-500 mt-1">Click para ver →</p>
                         </div>
-                        <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100 cursor-pointer" onclick="showSection('planificador')">
+                        <div onclick="showSection('planificador')" class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-shadow">
                             <p class="text-xs text-gray-500">Tareas Hoy</p>
                             <p class="text-2xl md:text-3xl font-bold text-orange-600 mt-1" id="dash-tareas-pendientes">0</p>
+                            <p class="text-xs text-orange-500 mt-1">Click para ver →</p>
                         </div>
                     </div>
 
@@ -186,13 +175,58 @@
                     </div>
                 </section>
 
+                <!-- CATÁLOGO DE MATERIALES -->
+                <section id="catalogo" class="hidden fade-in space-y-6">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                        <h2 class="text-2xl md:text-3xl font-bold text-gray-800">Catálogo de Materiales</h2>
+                        <div class="flex gap-2">
+                            <button onclick="openImportModal()" class="bg-green-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-green-700 flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                                Importar CSV
+                            </button>
+                            <button onclick="openCatalogoModal()" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700">+ Nuevo Material</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div class="p-4 border-b border-gray-100">
+                            <input type="text" id="search-catalogo" placeholder="Buscar por código, nombre o descripción..." class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500" onkeyup="renderCatalogo()">
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Código</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Descripción</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Unidad</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Stock Mín.</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Estado</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="catalogo-table" class="divide-y divide-gray-100"></tbody>
+                            </table>
+                        </div>
+                        <div id="catalogo-empty" class="hidden p-8 text-center text-gray-500">
+                            <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            <p>No hay materiales en el catálogo.</p>
+                            <button onclick="openImportModal()" class="text-blue-600 hover:underline mt-2">Importar desde CSV</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                        <h4 class="font-semibold text-blue-800 mb-2">💡 Tip de Importación</h4>
+                        <p class="text-sm text-blue-700 mb-1">Formato CSV: <code>codigo,descripcion,unidad,stock_minimo</code></p>
+                        <p class="text-xs text-blue-600">Ejemplo: <code>MAT001,Tornillos 3/4 pulgada,unidades,10</code></p>
+                        <p class="text-xs text-blue-600 mt-2">✅ También podés copiar desde Excel y pegar en un archivo .csv</p>
+                    </div>
+                </section>
+
                 <!-- ORDENES DE COMPRA -->
                 <section id="ordenes" class="hidden fade-in space-y-6">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                         <h2 class="text-2xl md:text-3xl font-bold text-gray-800">Órdenes de Compra</h2>
-                        <button onclick="openOrdenModal()" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700">
-                            + Nueva Orden
-                        </button>
+                        <button onclick="openOrdenModal()" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700">+ Nueva Orden</button>
                     </div>
 
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -313,9 +347,7 @@
                 <section id="planificador" class="hidden fade-in space-y-6">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                         <h2 class="text-2xl md:text-3xl font-bold text-gray-800">Planificador</h2>
-                        <button onclick="openTaskModal()" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700">
-                            + Nueva Tarea
-                        </button>
+                        <button onclick="openTaskModal()" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700">+ Nueva Tarea</button>
                     </div>
 
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -334,18 +366,16 @@
                         <div id="day-tasks-list" class="space-y-3"></div>
                     </div>
                 </section>
-
             </main>
 
-            <!-- Mobile Bottom Nav -->
             <nav class="mobile-bottom-nav">
                 <button onclick="showSection('dashboard')" class="flex-1 flex flex-col items-center py-3 text-gray-600" id="mobile-nav-dashboard">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
                     <span class="text-xs mt-1">Inicio</span>
                 </button>
-                <button onclick="showSection('ordenes')" class="flex-1 flex flex-col items-center py-3 text-gray-600" id="mobile-nav-ordenes">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                    <span class="text-xs mt-1">Órdenes</span>
+                <button onclick="showSection('catalogo')" class="flex-1 flex flex-col items-center py-3 text-gray-600" id="mobile-nav-catalogo">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    <span class="text-xs mt-1">Catálogo</span>
                 </button>
                 <button onclick="forceSync()" class="flex-1 flex flex-col items-center py-3 text-gray-600">
                     <div class="bg-blue-600 text-white rounded-full p-3 -mt-8 shadow-lg">
@@ -354,21 +384,98 @@
                     </div>
                     <span class="text-xs mt-1">Sync</span>
                 </button>
+                <button onclick="showSection('ordenes')" class="flex-1 flex flex-col items-center py-3 text-gray-600" id="mobile-nav-ordenes">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                    <span class="text-xs mt-1">Órdenes</span>
+                </button>
                 <button onclick="showSection('stock')" class="flex-1 flex flex-col items-center py-3 text-gray-600" id="mobile-nav-stock">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
                     <span class="text-xs mt-1">Stock</span>
-                </button>
-                <button onclick="showSection('planificador')" class="flex-1 flex flex-col items-center py-3 text-gray-600" id="mobile-nav-planificador">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                    <span class="text-xs mt-1">Tareas</span>
                 </button>
             </nav>
         </div>
     </div>
 
     <!-- MODALES -->
+    <div id="modal-catalogo" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-blue-50">
+                <h3 class="text-xl font-bold" id="catalogo-modal-title">Nuevo Material</h3>
+                <button onclick="closeModal('catalogo')" class="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
+            <form id="form-catalogo" onsubmit="saveCatalogoItem(event)" class="p-6 space-y-4">
+                <input type="hidden" id="catalogo-edit-id">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Código *</label>
+                    <input type="text" id="catalogo-codigo" required class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 uppercase" placeholder="Ej: MAT001">
+                    <p class="text-xs text-gray-500 mt-1">Identificador único (se convertirá a mayúsculas)</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Descripción *</label>
+                    <input type="text" id="catalogo-descripcion" required class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500" placeholder="Ej: Tornillos hexagonales 3/4">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Unidad Default *</label>
+                        <select id="catalogo-unidad" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
+                            <option value="unidades">Unidades</option>
+                            <option value="kg">Kilogramos</option>
+                            <option value="metros">Metros</option>
+                            <option value="litros">Litros</option>
+                            <option value="cajas">Cajas</option>
+                            <option value="metros2">Metros²</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Stock Mínimo</label>
+                        <input type="number" id="catalogo-stock-min" min="1" value="3" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Observaciones</label>
+                    <textarea id="catalogo-notas" rows="2" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500"></textarea>
+                </div>
+                <div class="flex justify-end gap-3 pt-4 border-t">
+                    <button type="button" onclick="closeModal('catalogo')" class="px-6 py-2 text-gray-600 hover:bg-gray-100 rounded-xl">Cancelar</button>
+                    <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700">Guardar Material</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-    <!-- Modal Nueva Orden -->
+    <div id="modal-import" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-green-50">
+                <h3 class="text-xl font-bold text-green-800">Importar Materiales</h3>
+                <button onclick="closeModal('import')" class="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div id="drop-zone" class="drop-zone border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer" onclick="document.getElementById('csv-file').click()">
+                    <svg class="w-12 h-12 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                    <p class="text-gray-600 mb-2">Arrastra un archivo CSV aquí o haz clic para seleccionar</p>
+                    <p class="text-xs text-gray-400">Formato: código,descripción,unidad,stock_mínimo</p>
+                    <input type="file" id="csv-file" accept=".csv,.txt" class="hidden" onchange="handleFileSelect(event)">
+                </div>
+
+                <div class="bg-gray-50 p-4 rounded-xl">
+                    <h4 class="font-semibold text-sm text-gray-700 mb-2">Vista previa:</h4>
+                    <div id="csv-preview" class="max-h-40 overflow-y-auto text-sm space-y-1">
+                        <p class="text-gray-400 italic">Selecciona un archivo para ver vista previa...</p>
+                    </div>
+                </div>
+
+                <div id="import-stats" class="hidden bg-blue-50 p-3 rounded-lg text-sm text-blue-800">
+                    <span id="import-count">0</span> materiales listos para importar
+                </div>
+
+                <div class="flex justify-end gap-3 pt-4 border-t">
+                    <button onclick="closeModal('import')" class="px-6 py-2 text-gray-600 hover:bg-gray-100 rounded-xl">Cancelar</button>
+                    <button onclick="processImport()" id="btn-import" class="px-6 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed" disabled>Importar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="modal-orden" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-blue-50">
@@ -388,10 +495,11 @@
                 </div>
                 <div>
                     <div class="flex justify-between items-center mb-2">
-                        <label class="block text-sm font-medium text-gray-700">Materiales</label>
+                        <label class="block text-sm font-medium text-gray-700">Materiales (escribí para buscar)</label>
                         <button onclick="addMaterialRow()" class="text-sm text-blue-600 hover:underline">+ Agregar material</button>
                     </div>
                     <div id="materiales-container" class="space-y-2"></div>
+                    <p class="text-xs text-gray-500 mt-2">💡 Escribí el nombre del material y seleccioná del catálogo para autocompletar</p>
                 </div>
                 <div class="flex justify-end gap-3 pt-4 border-t">
                     <button onclick="closeModal('orden')" class="px-6 py-2 text-gray-600 hover:bg-gray-100 rounded-xl">Cancelar</button>
@@ -401,7 +509,6 @@
         </div>
     </div>
 
-    <!-- Modal Editar Orden -->
     <div id="modal-editar-orden" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-yellow-50">
@@ -433,7 +540,7 @@
                 </div>
                 <div>
                     <div class="flex justify-between items-center mb-2">
-                        <label class="block text-sm font-medium text-gray-700">Materiales</label>
+                        <label class="block text-sm font-medium text-gray-700">Materiales (escribí para buscar)</label>
                         <button onclick="addEditMaterialRow()" class="text-sm text-blue-600 hover:underline">+ Agregar material</button>
                     </div>
                     <div id="edit-materiales-container" class="space-y-2"></div>
@@ -446,7 +553,6 @@
         </div>
     </div>
 
-    <!-- Modal Ver Orden -->
     <div id="modal-ver-orden" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
             <div class="p-6 border-b border-gray-100 flex justify-between items-center">
@@ -458,7 +564,6 @@
         </div>
     </div>
 
-    <!-- Modal Retiro por Obra -->
     <div id="modal-retiro-obra" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
             <div class="p-6 border-b border-gray-100 bg-purple-50">
@@ -480,7 +585,6 @@
         </div>
     </div>
 
-    <!-- Modal Retiro Individual -->
     <div id="modal-retiro-individual" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
             <div class="p-6 border-b border-gray-100 bg-orange-50">
@@ -506,7 +610,6 @@
         </div>
     </div>
 
-    <!-- Modal Tarea -->
     <div id="modal-tarea" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
             <div class="p-6 border-b border-gray-100 bg-blue-50">
@@ -544,25 +647,24 @@
 
     <script>
 
-        // CONFIGURACIÓN
         const CONFIG = {
             apiKey: localStorage.getItem('stockpro_api_key') || '',
             binId: localStorage.getItem('stockpro_bin_id') || '',
             baseUrl: 'https://api.jsonbin.io/v3/b'
         };
 
-        // ESTADO
         let state = {
             ordenes: [],
             stock: [],
             retiros: [],
             tareas: [],
+            catalogo: [],
             currentDate: new Date(),
             selectedDate: new Date().toISOString().split('T')[0],
-            currentFilter: 'all'
+            currentFilter: 'all',
+            pendingImport: []
         };
 
-        // INICIALIZACIÓN
         document.addEventListener('DOMContentLoaded', () => {
             if (CONFIG.apiKey) {
                 showApp();
@@ -571,10 +673,11 @@
                 document.getElementById('config-screen').classList.remove('hidden');
             }
 
-            // Fecha default para ordenes
             if (document.getElementById('orden-fecha')) {
                 document.getElementById('orden-fecha').valueAsDate = new Date();
             }
+
+            setupDragAndDrop();
         });
 
         function saveConfig() {
@@ -603,11 +706,10 @@
             location.reload();
         }
 
-        // API JSONBIN
         async function loadData() {
             showLoading(true);
             try {
-                let data = { ordenes: [], stock: [], retiros: [], tareas: [] };
+                let data = { ordenes: [], stock: [], retiros: [], tareas: [], catalogo: [] };
 
                 if (CONFIG.binId) {
                     const response = await fetch(`${CONFIG.baseUrl}/${CONFIG.binId}/latest`, {
@@ -621,6 +723,7 @@
                 state.stock = data.stock || [];
                 state.retiros = data.retiros || [];
                 state.tareas = data.tareas || [];
+                state.catalogo = data.catalogo || [];
 
                 updateAll();
                 updateLastSync();
@@ -639,6 +742,7 @@
                     stock: state.stock,
                     retiros: state.retiros,
                     tareas: state.tareas,
+                    catalogo: state.catalogo,
                     lastUpdate: new Date().toISOString()
                 };
 
@@ -689,30 +793,262 @@
             document.getElementById('last-sync').textContent = 'Sync: ' + new Date().toLocaleTimeString();
         }
 
-        // NAVEGACIÓN
         function showSection(id) {
             document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
             document.getElementById(id).classList.remove('hidden');
 
-            // Update nav
             document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('bg-blue-50', 'text-blue-600'));
             document.getElementById('nav-' + id)?.classList.add('bg-blue-50', 'text-blue-600');
 
+            if (id === 'dashboard') updateDashboard();
+            if (id === 'catalogo') renderCatalogo();
             if (id === 'ordenes') renderOrdenes();
             if (id === 'stock') renderStock();
             if (id === 'retiros') renderRetiros();
             if (id === 'planificador') renderPlanner();
-            if (id === 'dashboard') updateDashboard();
+        }
+
+        // CORREGIDO: Función para ir a órdenes abiertas desde dashboard
+        function showOrdenesAbiertas() {
+            showSection('ordenes');
+            // Esperar a que la sección se renderice y luego aplicar filtro
+            setTimeout(() => {
+                filterOrders('abierto');
+            }, 100);
         }
 
         async function forceSync() {
             await saveToCloud();
         }
 
-        // ============================================
-        // ÓRDENES DE COMPRA - CON EDITAR Y ELIMINAR
-        // ============================================
+        // CATÁLOGO DE MATERIALES
+        function renderCatalogo() {
+            const search = document.getElementById('search-catalogo')?.value.toLowerCase() || '';
+            const filtered = state.catalogo.filter(c => 
+                c.codigo.toLowerCase().includes(search) || 
+                c.descripcion.toLowerCase().includes(search)
+            ).sort((a, b) => a.codigo.localeCompare(b.codigo));
 
+            const tbody = document.getElementById('catalogo-table');
+            const empty = document.getElementById('catalogo-empty');
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+
+            empty.classList.add('hidden');
+            tbody.innerHTML = filtered.map(c => `
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="px-4 py-3 text-sm font-mono font-medium text-blue-600">${c.codigo}</td>
+                    <td class="px-4 py-3 text-sm">${c.descripcion}</td>
+                    <td class="px-4 py-3 text-sm capitalize">${c.unidad}</td>
+                    <td class="px-4 py-3 text-sm">${c.stockMinimo}</td>
+                    <td class="px-4 py-3">
+                        <span class="px-2 py-1 rounded-full text-xs ${c.activo !== false ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}">
+                            ${c.activo !== false ? 'Activo' : 'Inactivo'}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-sm">
+                        <button onclick="openCatalogoModal('${c.id}')" class="text-yellow-600 hover:text-yellow-800 mr-2" title="Editar">✏️</button>
+                        <button onclick="toggleCatalogoItem('${c.id}')" class="text-gray-600 hover:text-gray-800" title="${c.activo !== false ? 'Desactivar' : 'Activar'}">
+                            ${c.activo !== false ? '🚫' : '✓'}
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+
+            document.getElementById('dash-total').textContent = state.catalogo.filter(c => c.activo !== false).length;
+            document.getElementById('summary-catalogo').textContent = state.catalogo.length;
+        }
+
+        function openCatalogoModal(id = null) {
+            document.getElementById('modal-catalogo').classList.remove('hidden');
+            document.getElementById('form-catalogo').reset();
+            document.getElementById('catalogo-edit-id').value = '';
+
+            if (id) {
+                const item = state.catalogo.find(c => c.id === id);
+                document.getElementById('catalogo-modal-title').textContent = 'Editar Material';
+                document.getElementById('catalogo-edit-id').value = item.id;
+                document.getElementById('catalogo-codigo').value = item.codigo;
+                document.getElementById('catalogo-descripcion').value = item.descripcion;
+                document.getElementById('catalogo-unidad').value = item.unidad;
+                document.getElementById('catalogo-stock-min').value = item.stockMinimo;
+                document.getElementById('catalogo-notas').value = item.notas || '';
+            } else {
+                document.getElementById('catalogo-modal-title').textContent = 'Nuevo Material';
+                const nextNum = state.catalogo.length + 1;
+                document.getElementById('catalogo-codigo').value = 'MAT' + String(nextNum).padStart(3, '0');
+            }
+        }
+
+        async function saveCatalogoItem(e) {
+            e.preventDefault();
+            const id = document.getElementById('catalogo-edit-id').value;
+            const codigo = document.getElementById('catalogo-codigo').value.trim().toUpperCase();
+
+            const existente = state.catalogo.find(c => c.codigo === codigo && c.id !== id);
+            if (existente) {
+                alert('Ya existe un material con ese código');
+                return;
+            }
+
+            const item = {
+                id: id || Date.now().toString(),
+                codigo: codigo,
+                descripcion: document.getElementById('catalogo-descripcion').value.trim(),
+                unidad: document.getElementById('catalogo-unidad').value,
+                stockMinimo: parseInt(document.getElementById('catalogo-stock-min').value) || 3,
+                notas: document.getElementById('catalogo-notas').value,
+                activo: true,
+                fechaCreacion: id ? undefined : new Date().toISOString()
+            };
+
+            if (id) {
+                const idx = state.catalogo.findIndex(c => c.id === id);
+                state.catalogo[idx] = { ...state.catalogo[idx], ...item };
+            } else {
+                state.catalogo.push(item);
+            }
+
+            await saveToCloud();
+            closeModal('catalogo');
+            renderCatalogo();
+            updateDashboard();
+        }
+
+        async function toggleCatalogoItem(id) {
+            const item = state.catalogo.find(c => c.id === id);
+            item.activo = item.activo === false ? true : false;
+            await saveToCloud();
+            renderCatalogo();
+        }
+
+        // IMPORTACIÓN CSV - VERIFICADA
+        function openImportModal() {
+            document.getElementById('modal-import').classList.remove('hidden');
+            document.getElementById('csv-file').value = '';
+            document.getElementById('csv-preview').innerHTML = '<p class="text-gray-400 italic">Selecciona un archivo para ver vista previa...</p>';
+            document.getElementById('import-stats').classList.add('hidden');
+            document.getElementById('btn-import').disabled = true;
+            state.pendingImport = [];
+        }
+
+        function setupDragAndDrop() {
+            const dropZone = document.getElementById('drop-zone');
+            if (!dropZone) return;
+
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('dragover');
+            });
+
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('dragover');
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length) {
+                    handleFile(files[0]);
+                }
+            });
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) handleFile(file);
+        }
+
+        function handleFile(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                parseCSV(e.target.result);
+            };
+            reader.readAsText(file);
+        }
+
+        function parseCSV(text) {
+            const lines = text.split('\n').filter(line => line.trim());
+            const preview = document.getElementById('csv-preview');
+            const stats = document.getElementById('import-stats');
+            const count = document.getElementById('import-count');
+            const btn = document.getElementById('btn-import');
+
+            state.pendingImport = [];
+            let html = '';
+
+            // Mostrar primeros 10 en preview
+            lines.slice(0, 10).forEach((line) => {
+                const cols = line.split(',').map(c => c.trim());
+                if (cols.length >= 2 && cols[0]) {
+                    html += `<div class="flex gap-2 text-xs items-center py-1 border-b border-gray-100">
+                        <span class="font-mono text-blue-600 w-24 truncate">${cols[0]}</span>
+                        <span class="flex-1 truncate">${cols[1]}</span>
+                        <span class="text-gray-500 w-16">${cols[2] || 'unidades'}</span>
+                    </div>`;
+                }
+            });
+
+            if (lines.length > 10) {
+                html += `<div class="text-xs text-gray-400 mt-2">... y ${lines.length - 10} más</div>`;
+            }
+
+            // Procesar todos los datos válidos
+            lines.forEach(line => {
+                const cols = line.split(',').map(c => c.trim());
+                if (cols.length >= 2 && cols[0] && cols[1]) {
+                    state.pendingImport.push({
+                        codigo: cols[0].toUpperCase(),
+                        descripcion: cols[1],
+                        unidad: cols[2] || 'unidades',
+                        stockMinimo: parseInt(cols[3]) || 3
+                    });
+                }
+            });
+
+            preview.innerHTML = html || '<p class="text-red-400">No se encontraron datos válidos</p>';
+            count.textContent = state.pendingImport.length;
+            stats.classList.remove('hidden');
+            btn.disabled = state.pendingImport.length === 0;
+        }
+
+        async function processImport() {
+            if (state.pendingImport.length === 0) return;
+
+            let importados = 0;
+            let actualizados = 0;
+
+            state.pendingImport.forEach(item => {
+                const existente = state.catalogo.find(c => c.codigo === item.codigo);
+                if (existente) {
+                    existente.descripcion = item.descripcion;
+                    existente.unidad = item.unidad;
+                    existente.stockMinimo = item.stockMinimo;
+                    actualizados++;
+                } else {
+                    state.catalogo.push({
+                        id: Date.now().toString() + Math.random(),
+                        ...item,
+                        activo: true,
+                        fechaCreacion: new Date().toISOString()
+                    });
+                    importados++;
+                }
+            });
+
+            await saveToCloud();
+            closeModal('import');
+            renderCatalogo();
+            updateDashboard();
+            alert(`Importación completada:\n✅ ${importados} nuevos\n📝 ${actualizados} actualizados`);
+        }
+
+        // ÓRDENES DE COMPRA CON AUTOCOMPLETADO
         function openOrdenModal() {
             document.getElementById('modal-orden').classList.remove('hidden');
             document.getElementById('orden-fecha').valueAsDate = new Date();
@@ -721,21 +1057,87 @@
             addMaterialRow();
         }
 
-        function addMaterialRow() {
+        function createAutocompleteInput(container, initialData = null) {
             const div = document.createElement('div');
-            div.className = 'flex gap-2 items-center bg-gray-50 p-2 rounded-lg';
+            div.className = 'material-row flex gap-2 items-start bg-gray-50 p-2 rounded-lg relative';
+
             div.innerHTML = `
-                <input type="text" placeholder="Descripción" class="material-desc flex-1 px-3 py-2 border rounded-lg text-sm">
-                <input type="number" placeholder="Cant" min="1" class="material-cant w-20 px-3 py-2 border rounded-lg text-sm">
+                <div class="flex-1 relative">
+                    <input type="text" placeholder="Escribí para buscar..." 
+                           class="material-autocomplete w-full px-3 py-2 border rounded-lg text-sm" 
+                           value="${initialData ? initialData.descripcion : ''}"
+                           autocomplete="off">
+                    <div class="autocomplete-results hidden"></div>
+                    <input type="hidden" class="material-codigo" value="${initialData ? initialData.codigo || '' : ''}">
+                </div>
+                <input type="number" placeholder="Cant" min="1" value="${initialData ? initialData.cantidad : '1'}" class="material-cant w-20 px-3 py-2 border rounded-lg text-sm">
                 <select class="material-unit w-24 px-3 py-2 border rounded-lg text-sm">
-                    <option value="unidades">Unid</option>
-                    <option value="kg">Kg</option>
-                    <option value="metros">m</option>
-                    <option value="litros">L</option>
+                    <option value="unidades" ${initialData?.unidad === 'unidades' ? 'selected' : ''}>Unid</option>
+                    <option value="kg" ${initialData?.unidad === 'kg' ? 'selected' : ''}>Kg</option>
+                    <option value="metros" ${initialData?.unidad === 'metros' ? 'selected' : ''}>m</option>
+                    <option value="litros" ${initialData?.unidad === 'litros' ? 'selected' : ''}>L</option>
+                    <option value="cajas" ${initialData?.unidad === 'cajas' ? 'selected' : ''}>Caja</option>
                 </select>
-                <button onclick="this.parentElement.remove()" class="text-red-500 px-2">✕</button>
+                <button onclick="this.closest('.material-row').remove()" class="text-red-500 px-2 hover:bg-red-50 rounded">✕</button>
             `;
-            document.getElementById('materiales-container').appendChild(div);
+
+            const input = div.querySelector('.material-autocomplete');
+            const resultsDiv = div.querySelector('.autocomplete-results');
+            const unitSelect = div.querySelector('.material-unit');
+            const codigoInput = div.querySelector('.material-codigo');
+
+            input.addEventListener('input', (e) => {
+                const value = e.target.value.toLowerCase();
+                if (value.length < 1) {
+                    resultsDiv.classList.add('hidden');
+                    return;
+                }
+
+                const matches = state.catalogo.filter(c => 
+                    c.activo !== false && (
+                        c.codigo.toLowerCase().includes(value) || 
+                        c.descripcion.toLowerCase().includes(value)
+                    )
+                ).slice(0, 5);
+
+                if (matches.length > 0) {
+                    resultsDiv.innerHTML = matches.map(m => `
+                        <div class="autocomplete-item" data-codigo="${m.codigo}" data-desc="${m.descripcion}" data-unit="${m.unidad}">
+                            <div class="font-medium">${m.descripcion}</div>
+                            <div class="text-xs text-gray-500">${m.codigo} • ${m.unidad}</div>
+                        </div>
+                    `).join('');
+                    resultsDiv.classList.remove('hidden');
+
+                    resultsDiv.querySelectorAll('.autocomplete-item').forEach(item => {
+                        item.addEventListener('click', () => {
+                            input.value = item.dataset.desc;
+                            codigoInput.value = item.dataset.codigo;
+                            unitSelect.value = item.dataset.unit;
+                            resultsDiv.classList.add('hidden');
+                        });
+                    });
+                } else {
+                    resultsDiv.classList.add('hidden');
+                }
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!div.contains(e.target)) {
+                    resultsDiv.classList.add('hidden');
+                }
+            });
+
+            container.appendChild(div);
+        }
+
+        function addMaterialRow() {
+            createAutocompleteInput(document.getElementById('materiales-container'));
+        }
+
+        function addEditMaterialRow(data = null) {
+            const container = document.getElementById('edit-materiales-container');
+            createAutocompleteInput(container, data);
         }
 
         async function saveOrden() {
@@ -745,12 +1147,20 @@
             if (!fecha || !destino) return alert('Complete fecha y destino');
 
             const materiales = [];
-            document.querySelectorAll('#materiales-container > div').forEach(row => {
-                const desc = row.querySelector('.material-desc').value;
+            document.querySelectorAll('#materiales-container .material-row').forEach(row => {
+                const input = row.querySelector('.material-autocomplete');
+                const codigo = row.querySelector('.material-codigo').value;
+                const desc = input.value;
                 const cant = row.querySelector('.material-cant').value;
                 const unit = row.querySelector('.material-unit').value;
+
                 if (desc && cant) {
-                    materiales.push({ descripcion: desc, cantidad: parseInt(cant), unidad: unit });
+                    materiales.push({ 
+                        codigo: codigo,
+                        descripcion: desc, 
+                        cantidad: parseInt(cant), 
+                        unidad: unit 
+                    });
                 }
             });
 
@@ -772,7 +1182,6 @@
             updateDashboard();
         }
 
-        // NUEVA FUNCIÓN: Abrir modal de edición
         function editarOrden(id) {
             const orden = state.ordenes.find(o => o.id === id);
             if (!orden) return alert('Orden no encontrada');
@@ -783,44 +1192,13 @@
             document.getElementById('edit-orden-destino').value = orden.destino;
             document.getElementById('edit-orden-estado').value = orden.estado;
 
-            // Cargar materiales
             const container = document.getElementById('edit-materiales-container');
             container.innerHTML = '';
             orden.materiales.forEach(m => {
-                const div = document.createElement('div');
-                div.className = 'flex gap-2 items-center bg-gray-50 p-2 rounded-lg';
-                div.innerHTML = `
-                    <input type="text" value="${m.descripcion}" class="edit-material-desc flex-1 px-3 py-2 border rounded-lg text-sm">
-                    <input type="number" value="${m.cantidad}" min="1" class="edit-material-cant w-20 px-3 py-2 border rounded-lg text-sm">
-                    <select class="edit-material-unit w-24 px-3 py-2 border rounded-lg text-sm">
-                        <option value="unidades" ${m.unidad === 'unidades' ? 'selected' : ''}>Unid</option>
-                        <option value="kg" ${m.unidad === 'kg' ? 'selected' : ''}>Kg</option>
-                        <option value="metros" ${m.unidad === 'metros' ? 'selected' : ''}>m</option>
-                        <option value="litros" ${m.unidad === 'litros' ? 'selected' : ''}>L</option>
-                    </select>
-                    <button onclick="this.parentElement.remove()" class="text-red-500 px-2">✕</button>
-                `;
-                container.appendChild(div);
+                addEditMaterialRow(m);
             });
 
             document.getElementById('modal-editar-orden').classList.remove('hidden');
-        }
-
-        function addEditMaterialRow() {
-            const div = document.createElement('div');
-            div.className = 'flex gap-2 items-center bg-gray-50 p-2 rounded-lg';
-            div.innerHTML = `
-                <input type="text" placeholder="Descripción" class="edit-material-desc flex-1 px-3 py-2 border rounded-lg text-sm">
-                <input type="number" placeholder="Cant" min="1" class="edit-material-cant w-20 px-3 py-2 border rounded-lg text-sm">
-                <select class="edit-material-unit w-24 px-3 py-2 border rounded-lg text-sm">
-                    <option value="unidades">Unid</option>
-                    <option value="kg">Kg</option>
-                    <option value="metros">m</option>
-                    <option value="litros">L</option>
-                </select>
-                <button onclick="this.parentElement.remove()" class="text-red-500 px-2">✕</button>
-            `;
-            document.getElementById('edit-materiales-container').appendChild(div);
         }
 
         async function saveEditOrden() {
@@ -834,12 +1212,10 @@
 
             if (!fecha || !destino) return alert('Complete fecha y destino');
 
-            // Validar cambio de estado a cerrado
             if (estado === 'cerrado' && orden.estado === 'abierto') {
                 if (!confirm('¿Cerrar esta orden? Los materiales se agregarán al stock.')) {
                     return;
                 }
-                // Agregar materiales al stock al cerrar
                 orden.materiales.forEach(m => {
                     const existente = state.stock.find(s => s.descripcion.toLowerCase() === m.descripcion.toLowerCase() && s.unidad === m.unidad);
                     if (existente) {
@@ -857,20 +1233,26 @@
                 orden.fechaCierre = new Date().toISOString();
             }
 
-            // Recopilar materiales editados
             const materiales = [];
-            document.querySelectorAll('#edit-materiales-container > div').forEach(row => {
-                const desc = row.querySelector('.edit-material-desc').value;
-                const cant = row.querySelector('.edit-material-cant').value;
-                const unit = row.querySelector('.edit-material-unit').value;
+            document.querySelectorAll('#edit-materiales-container .material-row').forEach(row => {
+                const input = row.querySelector('.material-autocomplete');
+                const codigo = row.querySelector('.material-codigo').value;
+                const desc = input.value;
+                const cant = row.querySelector('.material-cant').value;
+                const unit = row.querySelector('.material-unit').value;
+
                 if (desc && cant) {
-                    materiales.push({ descripcion: desc, cantidad: parseInt(cant), unidad: unit });
+                    materiales.push({ 
+                        codigo: codigo,
+                        descripcion: desc, 
+                        cantidad: parseInt(cant), 
+                        unidad: unit 
+                    });
                 }
             });
 
             if (materiales.length === 0) return alert('Debe tener al menos un material');
 
-            // Actualizar orden
             orden.fecha = fecha;
             orden.destino = destino;
             orden.estado = estado;
@@ -884,15 +1266,13 @@
             alert('Orden actualizada correctamente');
         }
 
-        // NUEVA FUNCIÓN: Eliminar orden
         async function eliminarOrden(id) {
             const orden = state.ordenes.find(o => o.id === id);
             if (!orden) return;
 
-            // Verificar si la orden está cerrada (ya ingresó al stock)
             let mensajeAdicional = '';
             if (orden.estado === 'cerrado') {
-                mensajeAdicional = '\n\n⚠️ ADVERTENCIA: Esta orden ya fue cerrada y sus materiales están en el stock. Eliminarla no revertirá el stock.';
+                mensajeAdicional = '\n\n⚠️ ADVERTENCIA: Esta orden ya fue cerrada y sus materiales están en el stock.';
             }
 
             const mensaje = `¿Estás seguro de eliminar la orden #${id}?\n\n` +
@@ -915,7 +1295,7 @@
                 ? state.ordenes 
                 : state.ordenes.filter(o => o.estado === state.currentFilter);
 
-            const sorted = filtered.sort((a, b) => new Date(b.fechaCreacion) - new Date(a.fechaCreacion));
+            const sorted = filtered.sort((a, b) => new Date(b.fechaCreacion || b.id) - new Date(a.fechaCreacion || a.id));
 
             document.getElementById('ordenes-table').innerHTML = sorted.map(o => `
                 <tr class="border-b hover:bg-gray-50">
@@ -963,8 +1343,11 @@
                         <strong>Materiales:</strong>
                         <div class="mt-2 space-y-2">
                             ${orden.materiales.map(m => `
-                                <div class="bg-gray-50 p-2 rounded-lg flex justify-between">
-                                    <span>${m.descripcion}</span>
+                                <div class="bg-gray-50 p-2 rounded-lg flex justify-between items-center">
+                                    <div>
+                                        <span class="font-medium">${m.descripcion}</span>
+                                        ${m.codigo ? `<span class="text-xs text-blue-600 ml-2">(${m.codigo})</span>` : ''}
+                                    </div>
                                     <span class="text-gray-600">${m.cantidad} ${m.unidad}</span>
                                 </div>
                             `).join('')}
@@ -986,7 +1369,6 @@
 
             if (!confirm('¿Autorizar esta orden? Los materiales pasarán al stock.')) return;
 
-            // Agregar materiales al stock
             orden.materiales.forEach(m => {
                 const existente = state.stock.find(s => s.descripcion.toLowerCase() === m.descripcion.toLowerCase() && s.unidad === m.unidad);
                 if (existente) {
@@ -1252,7 +1634,7 @@
             `).join('') || '<tr><td colspan="4" class="px-4 py-8 text-center text-gray-400">Sin retiros registrados</td></tr>';
         }
 
-        // PLANIFICADOR (TAREAS)
+        // PLANIFICADOR
         function renderPlanner() {
             const year = state.currentDate.getFullYear();
             const month = state.currentDate.getMonth();
@@ -1307,7 +1689,7 @@
             const dayTasks = state.tareas.filter(t => t.fecha === dateStr).sort((a, b) => (a.estado === b.estado ? 0 : a.estado === 'pendiente' ? -1 : 1));
 
             document.getElementById('day-tasks-list').innerHTML = dayTasks.length === 0 ? 
-                `<div class="text-center py-8 text-gray-400"><button onclick="openTaskModal('${dateStr}')" class="text-blue-600">+ Agregar tarea</button></div>` :
+                `<div class="text-center py-8 text-gray-400"><button onclick="openTaskModal('${dateStr}')" class="text-blue-600 hover:underline">+ Agregar tarea</button></div>` :
                 dayTasks.map(task => `
                     <div class="p-4 rounded-xl ${task.estado === 'realizada' ? 'task-done' : 'task-pending'} cursor-pointer" onclick="editTask(${task.id})">
                         <div class="flex justify-between items-start">
@@ -1317,7 +1699,7 @@
                             </div>
                             <button onclick="event.stopPropagation(); toggleTask(${task.id})" class="p-1">
                                 <svg class="w-5 h-5 ${task.estado === 'realizada' ? 'text-green-600' : 'text-orange-600'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    ${task.estado === 'realizada' ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>' : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>'}
+                                    ${task.estado === 'realizada' ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>' : '<circle cx="12" cy="12" r="10" stroke-width="2"/>'}
                                 </svg>
                             </button>
                         </div>
@@ -1392,16 +1774,17 @@
         function updateDashboard() {
             const abiertas = state.ordenes.filter(o => o.estado === 'abierto').length;
             const critico = state.stock.filter(s => parseInt(s.cantidad) <= parseInt(s.stockMinimo || 3)).length;
-            const total = state.stock.reduce((sum, s) => sum + (parseInt(s.cantidad) || 0), 0);
+            const totalMateriales = state.catalogo.filter(c => c.activo !== false).length;
             const today = new Date().toISOString().split('T')[0];
             const tareasHoy = state.tareas.filter(t => t.fecha === today && t.estado === 'pendiente').length;
 
             document.getElementById('dash-ordenes').textContent = abiertas;
             document.getElementById('dash-critico').textContent = critico;
-            document.getElementById('dash-total').textContent = total;
+            document.getElementById('dash-total').textContent = totalMateriales;
             document.getElementById('dash-tareas-pendientes').textContent = tareasHoy;
 
             document.getElementById('summary-stock').textContent = state.stock.length;
+            document.getElementById('summary-catalogo').textContent = state.catalogo.length;
             document.getElementById('summary-ordenes').textContent = abiertas;
             document.getElementById('summary-tareas').textContent = state.tareas.filter(t => t.fecha === today).length;
 
@@ -1444,13 +1827,13 @@
 
         function updateAll() {
             updateDashboard();
+            if (!document.getElementById('catalogo').classList.contains('hidden')) renderCatalogo();
             if (!document.getElementById('ordenes').classList.contains('hidden')) renderOrdenes();
             if (!document.getElementById('stock').classList.contains('hidden')) renderStock();
             if (!document.getElementById('retiros').classList.contains('hidden')) renderRetiros();
             if (!document.getElementById('planificador').classList.contains('hidden')) renderPlanner();
         }
 
-        // UTILIDADES
         function closeModal(id) {
             document.getElementById('modal-' + id).classList.add('hidden');
         }
