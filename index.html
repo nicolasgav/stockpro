@@ -24,6 +24,7 @@
         .offline-badge { position: fixed; top: 10px; right: 10px; background: #ef4444; color: white; padding: 5px 10px; border-radius: 20px; font-size: 12px; display: none; }
         .offline-badge.show { display: block; }
     </style>
+<base target="_blank">
 </head>
 <body class="bg-gray-50 text-gray-800">
 
@@ -34,7 +35,7 @@
                 <h1 class="text-3xl font-bold text-blue-600 mb-2">StockPro Cloud</h1>
                 <p class="text-gray-500">Sistema Completo de Gestión</p>
             </div>
-            
+
             <div class="bg-blue-50 p-6 rounded-2xl border border-blue-200">
                 <h3 class="font-semibold text-blue-800 mb-4">Configuración JSONBin.io</h3>
                 <div class="space-y-4">
@@ -54,7 +55,7 @@
                     </button>
                 </div>
             </div>
-            
+
             <div class="text-center text-sm text-gray-500">
                 <a href="https://jsonbin.io" target="_blank" class="text-blue-600 hover:underline">Crear cuenta gratis en jsonbin.io →</a>
             </div>
@@ -75,7 +76,7 @@
     <!-- APP PRINCIPAL -->
     <div id="app-container" class="hidden">
         <div class="flex h-screen overflow-hidden">
-            
+
             <!-- Sidebar Desktop -->
             <aside class="desktop-sidebar w-64 bg-white border-r border-gray-200 flex flex-col shadow-lg z-20">
                 <div class="p-6 border-b border-gray-100">
@@ -85,31 +86,31 @@
                         <span class="text-xs text-gray-500" id="connection-text">Conectado</span>
                     </div>
                 </div>
-                
+
                 <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
                     <button onclick="showSection('dashboard')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-gray-700 hover:text-blue-600" id="nav-dashboard">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
                         Dashboard
                     </button>
-                    
+
                     <button onclick="showSection('planificador')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-gray-700 hover:text-blue-600" id="nav-planificador">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                         Planificador
                         <span id="badge-tareas" class="ml-auto bg-orange-100 text-orange-600 text-xs font-bold px-2 py-1 rounded-full hidden">0</span>
                     </button>
-                    
+
                     <button onclick="showSection('ordenes')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-gray-700 hover:text-blue-600" id="nav-ordenes">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
                         Órdenes Compra
                         <span id="badge-ordenes" class="ml-auto bg-blue-100 text-blue-600 text-xs font-bold px-2 py-1 rounded-full hidden">0</span>
                     </button>
-                    
+
                     <button onclick="showSection('stock')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-gray-700 hover:text-blue-600" id="nav-stock">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
                         Stock
                         <span id="badge-critical" class="ml-auto bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded-full hidden">0</span>
                     </button>
-                    
+
                     <button onclick="showSection('retiros')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-gray-700 hover:text-blue-600" id="nav-retiros">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
                         Retiros
@@ -131,7 +132,7 @@
                         Cambiar Cuenta
                     </button>
                 </nav>
-                
+
                 <div class="p-4 border-t border-gray-100">
                     <div class="bg-blue-50 rounded-xl p-4">
                         <p class="text-sm font-semibold text-blue-800">Resumen</p>
@@ -147,7 +148,7 @@
 
             <!-- Contenido Principal -->
             <main class="flex-1 overflow-y-auto bg-gray-50 p-4 md:p-8 pb-24 md:pb-8">
-                
+
                 <!-- DASHBOARD -->
                 <section id="dashboard" class="fade-in space-y-6">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
@@ -400,6 +401,51 @@
         </div>
     </div>
 
+    <!-- Modal Editar Orden -->
+    <div id="modal-editar-orden" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-yellow-50">
+                <h3 class="text-xl font-bold">Editar Orden de Compra</h3>
+                <button onclick="closeModal('editar-orden')" class="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="edit-orden-id">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">N° Orden</label>
+                        <input type="text" id="edit-orden-numero" class="w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-100" readonly>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Fecha</label>
+                        <input type="date" id="edit-orden-fecha" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Destino</label>
+                    <input type="text" id="edit-orden-destino" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Estado</label>
+                    <select id="edit-orden-estado" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
+                        <option value="abierto">Abierto</option>
+                        <option value="cerrado">Cerrado</option>
+                    </select>
+                </div>
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-sm font-medium text-gray-700">Materiales</label>
+                        <button onclick="addEditMaterialRow()" class="text-sm text-blue-600 hover:underline">+ Agregar material</button>
+                    </div>
+                    <div id="edit-materiales-container" class="space-y-2"></div>
+                </div>
+                <div class="flex justify-end gap-3 pt-4 border-t">
+                    <button onclick="closeModal('editar-orden')" class="px-6 py-2 text-gray-600 hover:bg-gray-100 rounded-xl">Cancelar</button>
+                    <button onclick="saveEditOrden()" class="px-6 py-2 bg-yellow-600 text-white rounded-xl hover:bg-yellow-700">Guardar Cambios</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal Ver Orden -->
     <div id="modal-ver-orden" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
@@ -497,6 +543,7 @@
     </div>
 
     <script>
+
         // CONFIGURACIÓN
         const CONFIG = {
             apiKey: localStorage.getItem('stockpro_api_key') || '',
@@ -523,7 +570,7 @@
             } else {
                 document.getElementById('config-screen').classList.remove('hidden');
             }
-            
+
             // Fecha default para ordenes
             if (document.getElementById('orden-fecha')) {
                 document.getElementById('orden-fecha').valueAsDate = new Date();
@@ -533,14 +580,14 @@
         function saveConfig() {
             const key = document.getElementById('api-key').value.trim();
             const binId = document.getElementById('bin-id').value.trim();
-            
+
             if (!key) return alert('Ingresa tu API Key');
-            
+
             localStorage.setItem('stockpro_api_key', key);
             localStorage.setItem('stockpro_bin_id', binId);
             CONFIG.apiKey = key;
             CONFIG.binId = binId;
-            
+
             showApp();
             loadData();
         }
@@ -561,7 +608,7 @@
             showLoading(true);
             try {
                 let data = { ordenes: [], stock: [], retiros: [], tareas: [] };
-                
+
                 if (CONFIG.binId) {
                     const response = await fetch(`${CONFIG.baseUrl}/${CONFIG.binId}/latest`, {
                         headers: { 'X-Master-Key': CONFIG.apiKey }
@@ -569,12 +616,12 @@
                     const result = await response.json();
                     data = result.record;
                 }
-                
+
                 state.ordenes = data.ordenes || [];
                 state.stock = data.stock || [];
                 state.retiros = data.retiros || [];
                 state.tareas = data.tareas || [];
-                
+
                 updateAll();
                 updateLastSync();
                 showLoading(false);
@@ -594,9 +641,9 @@
                     tareas: state.tareas,
                     lastUpdate: new Date().toISOString()
                 };
-                
+
                 let response;
-                
+
                 if (CONFIG.binId) {
                     response = await fetch(`${CONFIG.baseUrl}/${CONFIG.binId}`, {
                         method: 'PUT',
@@ -619,7 +666,7 @@
                     CONFIG.binId = result.metadata.id;
                     localStorage.setItem('stockpro_bin_id', CONFIG.binId);
                 }
-                
+
                 updateLastSync();
                 showLoading(false);
                 return true;
@@ -646,11 +693,11 @@
         function showSection(id) {
             document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
             document.getElementById(id).classList.remove('hidden');
-            
+
             // Update nav
             document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('bg-blue-50', 'text-blue-600'));
             document.getElementById('nav-' + id)?.classList.add('bg-blue-50', 'text-blue-600');
-            
+
             if (id === 'ordenes') renderOrdenes();
             if (id === 'stock') renderStock();
             if (id === 'retiros') renderRetiros();
@@ -662,7 +709,10 @@
             await saveToCloud();
         }
 
-        // ÓRDENES DE COMPRA
+        // ============================================
+        // ÓRDENES DE COMPRA - CON EDITAR Y ELIMINAR
+        // ============================================
+
         function openOrdenModal() {
             document.getElementById('modal-orden').classList.remove('hidden');
             document.getElementById('orden-fecha').valueAsDate = new Date();
@@ -691,9 +741,9 @@
         async function saveOrden() {
             const fecha = document.getElementById('orden-fecha').value;
             const destino = document.getElementById('orden-destino').value;
-            
+
             if (!fecha || !destino) return alert('Complete fecha y destino');
-            
+
             const materiales = [];
             document.querySelectorAll('#materiales-container > div').forEach(row => {
                 const desc = row.querySelector('.material-desc').value;
@@ -703,9 +753,9 @@
                     materiales.push({ descripcion: desc, cantidad: parseInt(cant), unidad: unit });
                 }
             });
-            
+
             if (materiales.length === 0) return alert('Agregue al menos un material');
-            
+
             const orden = {
                 id: Date.now(),
                 fecha,
@@ -714,7 +764,7 @@
                 materiales,
                 fechaCreacion: new Date().toISOString()
             };
-            
+
             state.ordenes.push(orden);
             await saveToCloud();
             closeModal('orden');
@@ -722,16 +772,154 @@
             updateDashboard();
         }
 
+        // NUEVA FUNCIÓN: Abrir modal de edición
+        function editarOrden(id) {
+            const orden = state.ordenes.find(o => o.id === id);
+            if (!orden) return alert('Orden no encontrada');
+
+            document.getElementById('edit-orden-id').value = orden.id;
+            document.getElementById('edit-orden-numero').value = '#' + orden.id;
+            document.getElementById('edit-orden-fecha').value = orden.fecha;
+            document.getElementById('edit-orden-destino').value = orden.destino;
+            document.getElementById('edit-orden-estado').value = orden.estado;
+
+            // Cargar materiales
+            const container = document.getElementById('edit-materiales-container');
+            container.innerHTML = '';
+            orden.materiales.forEach(m => {
+                const div = document.createElement('div');
+                div.className = 'flex gap-2 items-center bg-gray-50 p-2 rounded-lg';
+                div.innerHTML = `
+                    <input type="text" value="${m.descripcion}" class="edit-material-desc flex-1 px-3 py-2 border rounded-lg text-sm">
+                    <input type="number" value="${m.cantidad}" min="1" class="edit-material-cant w-20 px-3 py-2 border rounded-lg text-sm">
+                    <select class="edit-material-unit w-24 px-3 py-2 border rounded-lg text-sm">
+                        <option value="unidades" ${m.unidad === 'unidades' ? 'selected' : ''}>Unid</option>
+                        <option value="kg" ${m.unidad === 'kg' ? 'selected' : ''}>Kg</option>
+                        <option value="metros" ${m.unidad === 'metros' ? 'selected' : ''}>m</option>
+                        <option value="litros" ${m.unidad === 'litros' ? 'selected' : ''}>L</option>
+                    </select>
+                    <button onclick="this.parentElement.remove()" class="text-red-500 px-2">✕</button>
+                `;
+                container.appendChild(div);
+            });
+
+            document.getElementById('modal-editar-orden').classList.remove('hidden');
+        }
+
+        function addEditMaterialRow() {
+            const div = document.createElement('div');
+            div.className = 'flex gap-2 items-center bg-gray-50 p-2 rounded-lg';
+            div.innerHTML = `
+                <input type="text" placeholder="Descripción" class="edit-material-desc flex-1 px-3 py-2 border rounded-lg text-sm">
+                <input type="number" placeholder="Cant" min="1" class="edit-material-cant w-20 px-3 py-2 border rounded-lg text-sm">
+                <select class="edit-material-unit w-24 px-3 py-2 border rounded-lg text-sm">
+                    <option value="unidades">Unid</option>
+                    <option value="kg">Kg</option>
+                    <option value="metros">m</option>
+                    <option value="litros">L</option>
+                </select>
+                <button onclick="this.parentElement.remove()" class="text-red-500 px-2">✕</button>
+            `;
+            document.getElementById('edit-materiales-container').appendChild(div);
+        }
+
+        async function saveEditOrden() {
+            const id = parseInt(document.getElementById('edit-orden-id').value);
+            const orden = state.ordenes.find(o => o.id === id);
+            if (!orden) return;
+
+            const fecha = document.getElementById('edit-orden-fecha').value;
+            const destino = document.getElementById('edit-orden-destino').value;
+            const estado = document.getElementById('edit-orden-estado').value;
+
+            if (!fecha || !destino) return alert('Complete fecha y destino');
+
+            // Validar cambio de estado a cerrado
+            if (estado === 'cerrado' && orden.estado === 'abierto') {
+                if (!confirm('¿Cerrar esta orden? Los materiales se agregarán al stock.')) {
+                    return;
+                }
+                // Agregar materiales al stock al cerrar
+                orden.materiales.forEach(m => {
+                    const existente = state.stock.find(s => s.descripcion.toLowerCase() === m.descripcion.toLowerCase() && s.unidad === m.unidad);
+                    if (existente) {
+                        existente.cantidad = parseInt(existente.cantidad) + m.cantidad;
+                    } else {
+                        state.stock.push({
+                            id: Date.now() + Math.random(),
+                            descripcion: m.descripcion,
+                            cantidad: m.cantidad,
+                            unidad: m.unidad,
+                            stockMinimo: 3
+                        });
+                    }
+                });
+                orden.fechaCierre = new Date().toISOString();
+            }
+
+            // Recopilar materiales editados
+            const materiales = [];
+            document.querySelectorAll('#edit-materiales-container > div').forEach(row => {
+                const desc = row.querySelector('.edit-material-desc').value;
+                const cant = row.querySelector('.edit-material-cant').value;
+                const unit = row.querySelector('.edit-material-unit').value;
+                if (desc && cant) {
+                    materiales.push({ descripcion: desc, cantidad: parseInt(cant), unidad: unit });
+                }
+            });
+
+            if (materiales.length === 0) return alert('Debe tener al menos un material');
+
+            // Actualizar orden
+            orden.fecha = fecha;
+            orden.destino = destino;
+            orden.estado = estado;
+            orden.materiales = materiales;
+            orden.fechaModificacion = new Date().toISOString();
+
+            await saveToCloud();
+            closeModal('editar-orden');
+            renderOrdenes();
+            updateDashboard();
+            alert('Orden actualizada correctamente');
+        }
+
+        // NUEVA FUNCIÓN: Eliminar orden
+        async function eliminarOrden(id) {
+            const orden = state.ordenes.find(o => o.id === id);
+            if (!orden) return;
+
+            // Verificar si la orden está cerrada (ya ingresó al stock)
+            let mensajeAdicional = '';
+            if (orden.estado === 'cerrado') {
+                mensajeAdicional = '\n\n⚠️ ADVERTENCIA: Esta orden ya fue cerrada y sus materiales están en el stock. Eliminarla no revertirá el stock.';
+            }
+
+            const mensaje = `¿Estás seguro de eliminar la orden #${id}?\n\n` +
+                           `Destino: ${orden.destino}\n` +
+                           `Materiales: ${orden.materiales.length} items\n` +
+                           `Estado: ${orden.estado}${mensajeAdicional}\n\n` +
+                           `Esta acción no se puede deshacer.`;
+
+            if (confirm(mensaje)) {
+                state.ordenes = state.ordenes.filter(o => o.id !== id);
+                await saveToCloud();
+                renderOrdenes();
+                updateDashboard();
+                alert('Orden eliminada correctamente');
+            }
+        }
+
         function renderOrdenes() {
             const filtered = state.currentFilter === 'all' 
                 ? state.ordenes 
                 : state.ordenes.filter(o => o.estado === state.currentFilter);
-            
+
             const sorted = filtered.sort((a, b) => new Date(b.fechaCreacion) - new Date(a.fechaCreacion));
-            
+
             document.getElementById('ordenes-table').innerHTML = sorted.map(o => `
-                <tr class="border-b">
-                    <td class="px-4 py-3 text-sm">#${o.id}</td>
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="px-4 py-3 text-sm font-medium">#${o.id}</td>
                     <td class="px-4 py-3 text-sm">${new Date(o.fecha).toLocaleDateString('es-ES')}</td>
                     <td class="px-4 py-3 text-sm">${o.destino}</td>
                     <td class="px-4 py-3 text-sm">${o.materiales.length} items</td>
@@ -741,8 +929,12 @@
                         </span>
                     </td>
                     <td class="px-4 py-3 text-sm">
-                        <button onclick="verOrden(${o.id})" class="text-blue-600 hover:underline mr-2">Ver</button>
-                        ${o.estado === 'abierto' ? `<button onclick="cerrarOrden(${o.id})" class="text-green-600 hover:underline">Autorizar</button>` : ''}
+                        <div class="flex gap-2">
+                            <button onclick="verOrden(${o.id})" class="text-blue-600 hover:text-blue-800" title="Ver">👁️</button>
+                            <button onclick="editarOrden(${o.id})" class="text-yellow-600 hover:text-yellow-800" title="Editar">✏️</button>
+                            ${o.estado === 'abierto' ? `<button onclick="cerrarOrden(${o.id})" class="text-green-600 hover:text-green-800" title="Autorizar">✓</button>` : ''}
+                            <button onclick="eliminarOrden(${o.id})" class="text-red-600 hover:text-red-800" title="Eliminar">🗑️</button>
+                        </div>
                     </td>
                 </tr>
             `).join('');
@@ -760,7 +952,7 @@
         function verOrden(id) {
             const orden = state.ordenes.find(o => o.id === id);
             if (!orden) return;
-            
+
             document.getElementById('ver-orden-titulo').textContent = `Orden #${id}`;
             document.getElementById('ver-orden-contenido').innerHTML = `
                 <div class="space-y-3">
@@ -780,20 +972,20 @@
                     </div>
                 </div>
             `;
-            
+
             document.getElementById('ver-orden-acciones').innerHTML = orden.estado === 'abierto' 
                 ? `<button onclick="cerrarOrden(${orden.id}); closeModal('ver-orden');" class="px-6 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700">Autorizar y Cerrar</button>`
                 : '<span class="text-gray-500">Orden procesada</span>';
-            
+
             document.getElementById('modal-ver-orden').classList.remove('hidden');
         }
 
         async function cerrarOrden(id) {
             const orden = state.ordenes.find(o => o.id === id);
             if (!orden || orden.estado === 'cerrado') return;
-            
+
             if (!confirm('¿Autorizar esta orden? Los materiales pasarán al stock.')) return;
-            
+
             // Agregar materiales al stock
             orden.materiales.forEach(m => {
                 const existente = state.stock.find(s => s.descripcion.toLowerCase() === m.descripcion.toLowerCase() && s.unidad === m.unidad);
@@ -809,10 +1001,10 @@
                     });
                 }
             });
-            
+
             orden.estado = 'cerrado';
             orden.fechaCierre = new Date().toISOString();
-            
+
             await saveToCloud();
             renderOrdenes();
             updateDashboard();
@@ -822,12 +1014,12 @@
         async function handleIngresoDirecto(e) {
             e.preventDefault();
             const formData = new FormData(e.target);
-            
+
             const existente = state.stock.find(s => 
                 s.descripcion.toLowerCase() === formData.get('descripcion').toLowerCase() && 
                 s.unidad === formData.get('unidad')
             );
-            
+
             if (existente) {
                 existente.cantidad = parseInt(existente.cantidad) + parseInt(formData.get('cantidad'));
             } else {
@@ -839,7 +1031,7 @@
                     stockMinimo: parseInt(formData.get('stockMinimo'))
                 });
             }
-            
+
             await saveToCloud();
             e.target.reset();
             alert('Material agregado correctamente');
@@ -850,7 +1042,7 @@
         function renderStock() {
             const search = document.getElementById('search-stock')?.value.toLowerCase() || '';
             const filtered = state.stock.filter(s => s.descripcion.toLowerCase().includes(search));
-            
+
             document.getElementById('stock-grid').innerHTML = filtered.map(s => {
                 const isCritical = parseInt(s.cantidad) <= parseInt(s.stockMinimo || 3);
                 return `
@@ -877,7 +1069,7 @@
         async function ajustarStock(id) {
             const item = state.stock.find(s => s.id === id);
             if (!item) return;
-            
+
             const nuevaCantidad = prompt(`Ajustar "${item.descripcion}"\nActual: ${item.cantidad}\n\nNueva cantidad:`, item.cantidad);
             if (nuevaCantidad !== null && !isNaN(nuevaCantidad) && nuevaCantidad >= 0) {
                 item.cantidad = parseInt(nuevaCantidad);
@@ -894,13 +1086,13 @@
                 alert('No hay órdenes cerradas disponibles');
                 return;
             }
-            
+
             const select = document.getElementById('select-obra');
             select.innerHTML = '<option value="">Seleccione...</option>';
             ordenesCerradas.forEach(o => {
                 select.innerHTML += `<option value="${o.id}">#${o.id} - ${o.destino}</option>`;
             });
-            
+
             document.getElementById('materiales-obra-container').classList.add('hidden');
             document.getElementById('modal-retiro-obra').classList.remove('hidden');
         }
@@ -908,19 +1100,19 @@
         function loadMaterialesObra() {
             const ordenId = document.getElementById('select-obra').value;
             const container = document.getElementById('materiales-obra-container');
-            
+
             if (!ordenId) {
                 container.classList.add('hidden');
                 return;
             }
-            
+
             const orden = state.ordenes.find(o => o.id == ordenId);
             container.innerHTML = '<h4 class="font-medium text-gray-700 mb-2">Materiales a retirar:</h4>';
-            
+
             orden.materiales.forEach((m, idx) => {
                 const stockItem = state.stock.find(s => s.descripcion.toLowerCase() === m.descripcion.toLowerCase());
                 const disponible = stockItem ? stockItem.cantidad : 0;
-                
+
                 container.innerHTML += `
                     <div class="flex items-center justify-between bg-gray-50 p-3 rounded-lg mb-2">
                         <div>
@@ -933,23 +1125,23 @@
                     </div>
                 `;
             });
-            
+
             container.classList.remove('hidden');
         }
 
         async function procesarRetiroObra() {
             const ordenId = document.getElementById('select-obra').value;
             if (!ordenId) return alert('Seleccione una orden');
-            
+
             const orden = state.ordenes.find(o => o.id == ordenId);
             const materialesRetiro = [];
-            
+
             document.querySelectorAll('.retiro-cant-obra').forEach(input => {
                 const cantidad = parseInt(input.value);
                 if (cantidad > 0) {
                     const desc = input.dataset.desc;
                     const unidad = input.dataset.unit;
-                    
+
                     const stockItem = state.stock.find(s => s.descripcion.toLowerCase() === desc.toLowerCase());
                     if (stockItem && stockItem.cantidad >= cantidad) {
                         stockItem.cantidad -= cantidad;
@@ -960,9 +1152,9 @@
                     }
                 }
             });
-            
+
             if (materialesRetiro.length === 0) return alert('Ingrese cantidades a retirar');
-            
+
             state.retiros.push({
                 id: Date.now(),
                 fecha: new Date().toISOString(),
@@ -971,7 +1163,7 @@
                 ordenId: orden.id,
                 materiales: materialesRetiro
             });
-            
+
             await saveToCloud();
             closeModal('retiro-obra');
             renderRetiros();
@@ -1003,13 +1195,13 @@
         async function procesarRetiroIndividual() {
             const destino = document.getElementById('retiro-destino').value;
             if (!destino) return alert('Ingrese el destino');
-            
+
             const materiales = [];
-            
+
             document.querySelectorAll('#retiro-rows-container > div').forEach(row => {
                 const materialId = row.querySelector('.retiro-material').value;
                 const cantidad = parseInt(row.querySelector('.retiro-cant').value);
-                
+
                 const stockItem = state.stock.find(s => s.id == materialId);
                 if (stockItem && stockItem.cantidad >= cantidad) {
                     stockItem.cantidad -= cantidad;
@@ -1023,9 +1215,9 @@
                     return;
                 }
             });
-            
+
             if (materiales.length === 0) return;
-            
+
             state.retiros.push({
                 id: Date.now(),
                 fecha: new Date().toISOString(),
@@ -1033,7 +1225,7 @@
                 destino,
                 materiales
             });
-            
+
             await saveToCloud();
             closeModal('retiro-individual');
             renderRetiros();
@@ -1043,7 +1235,7 @@
 
         function renderRetiros() {
             const sorted = [...state.retiros].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-            
+
             document.getElementById('retiros-table').innerHTML = sorted.map(r => `
                 <tr class="border-b">
                     <td class="px-4 py-3 text-sm">${new Date(r.fecha).toLocaleDateString('es-ES')}</td>
@@ -1064,10 +1256,10 @@
         function renderPlanner() {
             const year = state.currentDate.getFullYear();
             const month = state.currentDate.getMonth();
-            
+
             document.getElementById('calendar-month-year').textContent = 
                 new Date(year, month).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
-            
+
             let html = `
                 <div class="bg-gray-100 p-2 text-center text-xs font-semibold">Dom</div>
                 <div class="bg-gray-100 p-2 text-center text-xs font-semibold">Lun</div>
@@ -1077,25 +1269,25 @@
                 <div class="bg-gray-100 p-2 text-center text-xs font-semibold">Vie</div>
                 <div class="bg-gray-100 p-2 text-center text-xs font-semibold">Sáb</div>
             `;
-            
+
             const firstDay = new Date(year, month, 1).getDay();
             for (let i = 0; i < firstDay; i++) {
                 html += '<div class="bg-white p-2 min-h-[60px]"></div>';
             }
-            
+
             const daysInMonth = new Date(year, month + 1, 0).getDate();
             const today = new Date().toISOString().split('T')[0];
-            
+
             for (let day = 1; day <= daysInMonth; day++) {
                 const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 const dayTasks = state.tareas.filter(t => t.fecha === dateStr);
-                
+
                 let classes = `bg-white p-2 min-h-[60px] border border-gray-100 cursor-pointer ${state.selectedDate === dateStr ? 'ring-2 ring-blue-500' : ''} ${dateStr === today ? 'bg-blue-50' : ''}`;
                 let indicators = dayTasks.length > 0 ? `<div class="flex gap-0.5 mt-1 flex-wrap justify-center">${dayTasks.slice(0, 3).map(t => `<div class="w-1.5 h-1.5 rounded-full ${t.estado === 'realizada' ? 'bg-green-500' : 'bg-orange-500'}"></div>`).join('')}</div>` : '';
-                
+
                 html += `<div class="${classes}" onclick="selectDate('${dateStr}')"><div class="font-semibold text-sm ${dateStr === today ? 'text-blue-600' : 'text-gray-700'}">${day}</div>${indicators}</div>`;
             }
-            
+
             document.getElementById('calendar-grid').innerHTML = html;
             showDayTasks(state.selectedDate);
         }
@@ -1113,7 +1305,7 @@
         function showDayTasks(dateStr) {
             document.getElementById('selected-date-title').textContent = new Date(dateStr).toLocaleDateString('es-ES', { weekday: 'long', month: 'short', day: 'numeric' });
             const dayTasks = state.tareas.filter(t => t.fecha === dateStr).sort((a, b) => (a.estado === b.estado ? 0 : a.estado === 'pendiente' ? -1 : 1));
-            
+
             document.getElementById('day-tasks-list').innerHTML = dayTasks.length === 0 ? 
                 `<div class="text-center py-8 text-gray-400"><button onclick="openTaskModal('${dateStr}')" class="text-blue-600">+ Agregar tarea</button></div>` :
                 dayTasks.map(task => `
@@ -1136,7 +1328,7 @@
         function openTaskModal(date = null, editId = null) {
             document.getElementById('modal-tarea').classList.remove('hidden');
             document.getElementById('form-tarea').reset();
-            
+
             if (editId) {
                 const task = state.tareas.find(t => t.id === editId);
                 document.getElementById('task-id').value = task.id;
@@ -1164,14 +1356,14 @@
                 notas: document.getElementById('task-notas').value,
                 estado: document.getElementById('task-estado').value
             };
-            
+
             if (id) {
                 const idx = state.tareas.findIndex(t => t.id == id);
                 state.tareas[idx] = taskData;
             } else {
                 state.tareas.push(taskData);
             }
-            
+
             await saveToCloud();
             closeModal('tarea');
             renderPlanner();
@@ -1203,16 +1395,16 @@
             const total = state.stock.reduce((sum, s) => sum + (parseInt(s.cantidad) || 0), 0);
             const today = new Date().toISOString().split('T')[0];
             const tareasHoy = state.tareas.filter(t => t.fecha === today && t.estado === 'pendiente').length;
-            
+
             document.getElementById('dash-ordenes').textContent = abiertas;
             document.getElementById('dash-critico').textContent = critico;
             document.getElementById('dash-total').textContent = total;
             document.getElementById('dash-tareas-pendientes').textContent = tareasHoy;
-            
+
             document.getElementById('summary-stock').textContent = state.stock.length;
             document.getElementById('summary-ordenes').textContent = abiertas;
             document.getElementById('summary-tareas').textContent = state.tareas.filter(t => t.fecha === today).length;
-            
+
             const setBadge = (id, count) => {
                 const el = document.getElementById(id);
                 if (el) {
@@ -1223,30 +1415,30 @@
             setBadge('badge-ordenes', abiertas);
             setBadge('badge-critical', critico);
             setBadge('badge-tareas', state.tareas.filter(t => t.estado === 'pendiente').length);
-            
+
             // Calendario dashboard
             const calendar = document.getElementById('dashboard-calendar');
             const currentMonth = new Date().getMonth();
             const currentYear = new Date().getFullYear();
             const firstDay = new Date(currentYear, currentMonth, 1).getDay();
             const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-            
+
             let html = `<div class="col-span-7 font-bold text-gray-800 mb-2">${new Date(currentYear, currentMonth).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}</div>`;
             ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].forEach(d => html += `<div class="text-xs font-semibold text-gray-500 py-2">${d}</div>`);
-            
+
             for (let i = 0; i < firstDay; i++) html += '<div></div>';
-            
+
             for (let day = 1; day <= daysInMonth; day++) {
                 const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 const dayTasks = state.tareas.filter(t => t.fecha === dateStr);
                 const isToday = day === new Date().getDate();
-                
+
                 let classes = "py-2 rounded-lg text-sm relative cursor-pointer " + (isToday ? "bg-blue-600 text-white font-bold " : "text-gray-700 hover:bg-gray-100 ");
                 let indicators = dayTasks.length > 0 ? `<div class="flex justify-center gap-0.5 mt-0.5">${dayTasks.some(t => t.estado === 'pendiente') ? '<span class="w-1 h-1 rounded-full bg-orange-500"></span>' : ''}${dayTasks.some(t => t.estado === 'realizada') ? '<span class="w-1 h-1 rounded-full bg-green-500"></span>' : ''}</div>` : '';
-                
+
                 html += `<div class="${classes}" onclick="showSection('planificador'); selectDate('${dateStr}')">${day}${indicators}</div>`;
             }
-            
+
             calendar.innerHTML = html;
         }
 
