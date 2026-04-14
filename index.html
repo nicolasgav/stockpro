@@ -36,8 +36,6 @@
         .user-badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
     </style>
 <base target="_blank">
-<base target="_blank">
-<base target="_blank">
 </head>
 <body class="bg-gray-50 text-gray-800">
     <!-- CONFIGURACIÓN JSONBin -->
@@ -870,15 +868,10 @@
             document.getElementById('login-screen').classList.add('hidden');
             document.getElementById('app-container').classList.remove('hidden');
 
-            // Actualizar UI con usuario actual - con verificación de nulos
-            const userNameDisplay = document.getElementById('user-name-display');
-            if (userNameDisplay && CONFIG.currentUser) userNameDisplay.textContent = CONFIG.currentUser;
-
-            const userAvatar = document.getElementById('user-avatar');
-            if (userAvatar && CONFIG.currentUser) userAvatar.textContent = CONFIG.currentUser.charAt(0).toUpperCase();
-
-            const welcomeUser = document.getElementById('welcome-user');
-            if (welcomeUser && CONFIG.currentUser) welcomeUser.textContent = CONFIG.currentUser;
+            // Actualizar UI con usuario actual
+            document.getElementById('user-name-display').textContent = CONFIG.currentUser;
+            document.getElementById('user-avatar').textContent = CONFIG.currentUser.charAt(0).toUpperCase();
+            document.getElementById('welcome-user').textContent = CONFIG.currentUser;
         }
 
         function logout() {
@@ -1078,8 +1071,8 @@
                 </tr>
             `}).join('');
 
-            document.getElementById('dash-total').textContent = state.catalogo.filter(c => c.activo !== false).length;
-            document.getElementById('summary-catalogo').textContent = state.catalogo.length;
+            const elDashTotal = document.getElementById('dash-total'); if (elDashTotal) elDashTotal.textContent = state.catalogo.filter(c => c.activo !== false).length;
+            const elSumCat = document.getElementById('summary-catalogo'); if (elSumCat) elSumCat.textContent = state.catalogo.length;
         }
 
         function openCatalogoModal(id = null) {
@@ -2034,8 +2027,9 @@
                 </tr>
             `).join('');
 
-            document.getElementById('dash-ordenes').textContent = state.ordenes.filter(o => o.estado === 'abierto').length;
-            document.getElementById('summary-ordenes').textContent = state.ordenes.filter(o => o.estado === 'abierto').length;
+            const openCount = state.ordenes.filter(o => o.estado === 'abierto').length;
+            const elDashOrd = document.getElementById('dash-ordenes'); if (elDashOrd) elDashOrd.textContent = openCount;
+            const elSumOrd = document.getElementById('summary-ordenes'); if (elSumOrd) elSumOrd.textContent = openCount;
         }
 
         function filterOrders(filter) {
@@ -2343,30 +2337,15 @@
             const today = new Date().toISOString().split('T')[0];
             const tareasHoy = state.tareas.filter(t => t.fecha === today && t.estado === 'pendiente').length;
 
-            // Verificar que los elementos existan antes de modificar
-            const dashOrdenes = document.getElementById('dash-ordenes');
-            if (dashOrdenes) dashOrdenes.textContent = abiertas;
-
-            const dashCritico = document.getElementById('dash-critico');
-            if (dashCritico) dashCritico.textContent = critico;
-
-            const dashTotal = document.getElementById('dash-total');
-            if (dashTotal) dashTotal.textContent = totalMateriales;
-
-            const dashTareas = document.getElementById('dash-tareas-pendientes');
-            if (dashTareas) dashTareas.textContent = tareasHoy;
-
-            const summaryStock = document.getElementById('summary-stock');
-            if (summaryStock) summaryStock.textContent = state.stock.length + state.retazos.filter(r => r.estado === 'disponible').length;
-
-            const summaryCatalogo = document.getElementById('summary-catalogo');
-            if (summaryCatalogo) summaryCatalogo.textContent = state.catalogo.length;
-
-            const summaryOrdenes = document.getElementById('summary-ordenes');
-            if (summaryOrdenes) summaryOrdenes.textContent = abiertas;
-
-            const summaryTareas = document.getElementById('summary-tareas');
-            if (summaryTareas) summaryTareas.textContent = state.tareas.filter(t => t.fecha === today).length;
+            const setTC = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+            setTC('dash-ordenes', abiertas);
+            setTC('dash-critico', critico);
+            setTC('dash-total', totalMateriales);
+            setTC('dash-tareas-pendientes', tareasHoy);
+            setTC('summary-stock', state.stock.length + state.retazos.filter(r => r.estado === 'disponible').length);
+            setTC('summary-catalogo', state.catalogo.length);
+            setTC('summary-ordenes', abiertas);
+            setTC('summary-tareas', state.tareas.filter(t => t.fecha === today).length);
 
             const setBadge = (id, count) => {
                 const el = document.getElementById(id);
@@ -2381,8 +2360,7 @@
 
             // Calendario dashboard
             const calendar = document.getElementById('dashboard-calendar');
-            if (!calendar) return; // Salir si el calendario no existe
-
+            if (!calendar) return;
             const currentMonth = new Date().getMonth();
             const currentYear = new Date().getFullYear();
             const firstDay = new Date(currentYear, currentMonth, 1).getDay();
