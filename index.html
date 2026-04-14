@@ -35,7 +35,6 @@
         .audit-item { border-left: 3px solid #6366f1; }
         .user-badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
     </style>
-<base target="_blank">
 </head>
 <body class="bg-gray-50 text-gray-800">
     <!-- CONFIGURACIÓN JSONBin -->
@@ -771,9 +770,9 @@
             retiros: [],
             tareas: [],
             catalogo: [],
-            retazos: [],  // NUEVO: Array de retazos individuales
-            usuarios: [], // NUEVO: Array de usuarios
-            audit_log: [], // NUEVO: Registro de auditoría
+            retazos: [],
+            usuarios: [],
+            audit_log: [],
             currentDate: new Date(),
             selectedDate: new Date().toISOString().split('T')[0],
             currentFilter: 'all',
@@ -800,7 +799,6 @@
 
         // FUNCIONES DE USUARIO
         function loadUsers() {
-            // Cargar usuarios desde localStorage temporalmente hasta que se sincronice
             const savedUsers = localStorage.getItem('stockpro_users');
             if (savedUsers) {
                 state.usuarios = JSON.parse(savedUsers);
@@ -868,10 +866,14 @@
             document.getElementById('login-screen').classList.add('hidden');
             document.getElementById('app-container').classList.remove('hidden');
 
-            // Actualizar UI con usuario actual
-            document.getElementById('user-name-display').textContent = CONFIG.currentUser;
-            document.getElementById('user-avatar').textContent = CONFIG.currentUser.charAt(0).toUpperCase();
-            document.getElementById('welcome-user').textContent = CONFIG.currentUser;
+            const userNameDisplay = document.getElementById('user-name-display');
+            if (userNameDisplay && CONFIG.currentUser) userNameDisplay.textContent = CONFIG.currentUser;
+
+            const userAvatar = document.getElementById('user-avatar');
+            if (userAvatar && CONFIG.currentUser) userAvatar.textContent = CONFIG.currentUser.charAt(0).toUpperCase();
+
+            const welcomeUser = document.getElementById('welcome-user');
+            if (welcomeUser && CONFIG.currentUser) welcomeUser.textContent = CONFIG.currentUser;
         }
 
         function logout() {
@@ -892,17 +894,17 @@
                 entidadId: entidadId,
                 detalle: detalle
             };
-            state.audit_log.unshift(log); // Agregar al principio
-            // Mantener solo los últimos 500 registros para no sobrecargar
+            state.audit_log.unshift(log);
             if (state.audit_log.length > 500) {
                 state.audit_log = state.audit_log.slice(0, 500);
             }
         }
 
-        // CARGAR Y GUARDAR DATOS
+        // CARGAR Y GUARDAR DATOS - CORREGIDO
         async function loadData() {
             showLoading(true);
             try {
+                // Datos por defecto en caso de error o bin vacío
                 let data = { 
                     ordenes: [], 
                     stock: [], 
@@ -915,28 +917,57 @@
                 };
 
                 if (CONFIG.binId) {
-                    const response = await fetch(`${CONFIG.baseUrl}/${CONFIG.binId}/latest`, {
-                        headers: { 'X-Master-Key': CONFIG.apiKey }
-                    });
-                    const result = await response.json();
-                    data = result.record;
+                    try {
+                        const response = await fetch(`${CONFIG.baseUrl}/${CONFIG.binId}/latest`, {
+                            headers: { 'X-Master-Key': CONFIG.apiKey }
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        
+                        const result = await response.json();
+                        
+                        // Verificar que result.record exista y sea un objeto
+                        if (result && result.record && typeof result.record === 'object') {
+                            data = result.record;
+                        } else {
+                            console.warn('El bin existe pero está vacío o tiene formato incorrecto. Usando datos por defecto.');
+                        }
+                    } catch (fetchError) {
+                        console.warn('Error al cargar desde JSONBin:', fetchError);
+                        // Si falla el fetch, usamos los datos por defecto (vacíos)
+                        // Esto permite crear un nuevo bin si es necesario
+                    }
                 }
 
-                state.ordenes = data.ordenes || [];
-                state.stock = data.stock || [];
-                state.retiros = data.retiros || [];
-                state.tareas = data.tareas || [];
-                state.catalogo = data.catalogo || [];
-                state.retazos = data.retazos || [];
-                state.usuarios = data.usuarios || state.usuarios;
-                state.audit_log = data.audit_log || [];
+                // Asegurar que cada propiedad exista con valor por defecto
+                state.ordenes = Array.isArray(data.ordenes) ? data.ordenes : [];
+                state.stock = Array.isArray(data.stock) ? data.stock : [];
+                state.retiros = Array.isArray(data.retiros) ? data.retiros : [];
+                state.tareas = Array.isArray(data.tareas) ? data.tareas : [];
+                state.catalogo = Array.isArray(data.catalogo) ? data.catalogo : [];
+                state.retazos = Array.isArray(data.retazos) ? data.retazos : [];
+                state.usuarios = Array.isArray(data.usuarios) ? data.usuarios : (state.usuarios || []);
+                state.audit_log = Array.isArray(data.audit_log) ? data.audit_log : [];
 
                 updateAll();
                 updateLastSync();
                 showLoading(false);
             } catch (err) {
                 showLoading(false);
-                alert('Error al cargar: ' + err.message);
+                console.error('Error en loadData:', err);
+                alert('Error al cargar datos: ' + err.message + '\n\nSe usará una base de datos vacía.');
+                
+                // En caso de error fatal, inicializar todo vacío
+                state.ordenes = [];
+                state.stock = [];
+                state.retiros = [];
+                state.tareas = [];
+                state.catalogo = [];
+                state.retazos = [];
+                state.audit_log = [];
+                updateAll();
             }
         }
 
@@ -1071,8 +1102,8 @@
                 </tr>
             `}).join('');
 
-            const elDashTotal = document.getElementById('dash-total'); if (elDashTotal) elDashTotal.textContent = state.catalogo.filter(c => c.activo !== false).length;
-            const elSumCat = document.getElementById('summary-catalogo'); if (elSumCat) elSumCat.textContent = state.catalogo.length;
+            document.getElementById('dash-total').textContent = state.catalogo.filter(c => c.activo !== false).length;
+            document.getElementById('summary-catalogo').textContent = state.catalogo.length;
         }
 
         function openCatalogoModal(id = null) {
@@ -1297,7 +1328,6 @@
             const observaciones = document.getElementById('ingreso-observaciones').value;
 
             if (material.tipoControl === 'retazos') {
-                // Ingreso por retazos
                 const retazos = [];
                 document.querySelectorAll('#retazos-container > div').forEach(div => {
                     const medida = parseFloat(div.querySelector('.retazo-medida').value);
@@ -1327,7 +1357,6 @@
                 addAuditLog('INGRESO', 'RETAZOS', materialId, `Ingresados ${retazos.length} retazos de ${material.codigo}`);
                 alert(`✅ Ingresados ${retazos.length} retazos de ${material.descripcion}`);
             } else {
-                // Ingreso normal
                 const cantidad = parseInt(document.getElementById('ingreso-cantidad').value);
                 if (!cantidad || cantidad < 1) return alert('Ingresa una cantidad válida');
 
@@ -1365,7 +1394,6 @@
             const search = document.getElementById('search-stock')?.value.toLowerCase() || '';
             const container = document.getElementById('stock-grid');
 
-            // Filtrar materiales del catálogo que coincidan con la búsqueda
             const materialesFiltrados = state.catalogo.filter(c => {
                 if (c.activo === false) return false;
                 return c.codigo.toLowerCase().includes(search) || 
@@ -1379,7 +1407,6 @@
 
             container.innerHTML = materialesFiltrados.map(m => {
                 if (m.tipoControl === 'retazos') {
-                    // Render para retazos
                     const retazosMaterial = state.retazos.filter(r => r.materialId === m.id && r.estado === 'disponible');
                     const totalMedida = retazosMaterial.reduce((sum, r) => sum + r.medida, 0);
                     const isCritical = retazosMaterial.length <= (m.stockMinimo || 3);
@@ -1413,7 +1440,6 @@
                     </div>
                     `;
                 } else {
-                    // Render normal
                     const stockItem = state.stock.find(s => s.materialId === m.id);
                     const cantidad = stockItem ? stockItem.cantidad : 0;
                     const isCritical = cantidad <= (m.stockMinimo || 3);
@@ -1441,7 +1467,6 @@
                 }
             }).join('');
 
-            // Actualizar contador de stock crítico
             const critico = state.catalogo.filter(c => {
                 if (c.activo === false) return false;
                 if (c.tipoControl === 'retazos') {
@@ -1547,7 +1572,6 @@
                     const material = state.catalogo.find(c => c.codigo === codigo || c.descripcion === desc);
 
                     if (material && material.tipoControl === 'retazos') {
-                        // Retirar retazos (FIFO - primero ingresado, primero retirado)
                         const retazosDisp = state.retazos.filter(r => r.materialId === material.id && r.estado === 'disponible')
                             .sort((a, b) => new Date(a.fechaIngreso) - new Date(b.fechaIngreso));
 
@@ -1571,7 +1595,6 @@
                             });
                         }
                     } else {
-                        // Retiro normal
                         const stockItem = state.stock.find(s => s.descripcion.toLowerCase() === desc.toLowerCase());
                         if (stockItem && stockItem.cantidad >= cantidad) {
                             stockItem.cantidad -= cantidad;
@@ -1610,7 +1633,6 @@
             document.getElementById('retiro-normal-section').classList.add('hidden');
             document.getElementById('retiro-retazos-section').classList.add('hidden');
 
-            // Cargar materiales activos
             const select = document.getElementById('retiro-material-tipo');
             select.innerHTML = '<option value="">Seleccionar material...</option>';
 
@@ -1753,7 +1775,7 @@
             `).join('') || '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-400">Sin retiros registrados</td></tr>';
         }
 
-        // ÓRDENES (actualizadas con usuario)
+        // ÓRDENES
         function openOrdenModal() {
             document.getElementById('modal-orden').classList.remove('hidden');
             document.getElementById('orden-fecha').valueAsDate = new Date();
@@ -1918,25 +1940,23 @@
                     const material = state.catalogo.find(c => c.codigo === m.codigo || c.descripcion === m.descripcion);
 
                     if (material && material.tipoControl === 'retazos') {
-                        // Para retazos, creamos N retazos individuales
                         for (let i = 0; i < m.cantidad; i++) {
                             state.retazos.push({
                                 id: 'RET-' + Date.now().toString(36).toUpperCase() + i,
                                 materialId: material.id,
                                 codigoMaterial: material.codigo,
                                 descripcionMaterial: material.descripcion,
-                                medida: 1, // Por defecto 1 unidad, se puede ajustar después
+                                medida: 1,
                                 unidad: m.unidad,
                                 estado: 'disponible',
                                 ubicacion: 'Ingreso por orden',
                                 usuarioIngreso: CONFIG.currentUser,
                                 fechaIngreso: new Date().toISOString(),
                                 origen: `Orden #${orden.id} - ${orden.destino}`,
-                                observaciones: `Ingresado desde orden cerrada`
+                                observaciones: 'Ingresado desde orden cerrada'
                             });
                         }
                     } else {
-                        // Stock normal
                         const existente = state.stock.find(s => s.descripcion.toLowerCase() === m.descripcion.toLowerCase() && s.unidad === m.unidad);
                         if (existente) {
                             existente.cantidad += m.cantidad;
@@ -2027,9 +2047,8 @@
                 </tr>
             `).join('');
 
-            const openCount = state.ordenes.filter(o => o.estado === 'abierto').length;
-            const elDashOrd = document.getElementById('dash-ordenes'); if (elDashOrd) elDashOrd.textContent = openCount;
-            const elSumOrd = document.getElementById('summary-ordenes'); if (elSumOrd) elSumOrd.textContent = openCount;
+            document.getElementById('dash-ordenes').textContent = state.ordenes.filter(o => o.estado === 'abierto').length;
+            document.getElementById('summary-ordenes').textContent = state.ordenes.filter(o => o.estado === 'abierto').length;
         }
 
         function filterOrders(filter) {
@@ -2127,7 +2146,7 @@
             updateDashboard();
         }
 
-        // PLANIFICADOR (sin cambios mayores, solo auditoría opcional)
+        // PLANIFICADOR
         function renderPlanner() {
             const year = state.currentDate.getFullYear();
             const month = state.currentDate.getMonth();
@@ -2269,7 +2288,6 @@
             const filterUser = document.getElementById('audit-filter-user').value;
             const filterAction = document.getElementById('audit-filter-action').value;
 
-            // Actualizar opciones de usuarios en el filtro
             const userSelect = document.getElementById('audit-filter-user');
             if (userSelect.options.length <= 1) {
                 state.usuarios.forEach(u => {
@@ -2337,15 +2355,29 @@
             const today = new Date().toISOString().split('T')[0];
             const tareasHoy = state.tareas.filter(t => t.fecha === today && t.estado === 'pendiente').length;
 
-            const setTC = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-            setTC('dash-ordenes', abiertas);
-            setTC('dash-critico', critico);
-            setTC('dash-total', totalMateriales);
-            setTC('dash-tareas-pendientes', tareasHoy);
-            setTC('summary-stock', state.stock.length + state.retazos.filter(r => r.estado === 'disponible').length);
-            setTC('summary-catalogo', state.catalogo.length);
-            setTC('summary-ordenes', abiertas);
-            setTC('summary-tareas', state.tareas.filter(t => t.fecha === today).length);
+            const dashOrdenes = document.getElementById('dash-ordenes');
+            if (dashOrdenes) dashOrdenes.textContent = abiertas;
+
+            const dashCritico = document.getElementById('dash-critico');
+            if (dashCritico) dashCritico.textContent = critico;
+
+            const dashTotal = document.getElementById('dash-total');
+            if (dashTotal) dashTotal.textContent = totalMateriales;
+
+            const dashTareas = document.getElementById('dash-tareas-pendientes');
+            if (dashTareas) dashTareas.textContent = tareasHoy;
+
+            const summaryStock = document.getElementById('summary-stock');
+            if (summaryStock) summaryStock.textContent = state.stock.length + state.retazos.filter(r => r.estado === 'disponible').length;
+
+            const summaryCatalogo = document.getElementById('summary-catalogo');
+            if (summaryCatalogo) summaryCatalogo.textContent = state.catalogo.length;
+
+            const summaryOrdenes = document.getElementById('summary-ordenes');
+            if (summaryOrdenes) summaryOrdenes.textContent = abiertas;
+
+            const summaryTareas = document.getElementById('summary-tareas');
+            if (summaryTareas) summaryTareas.textContent = state.tareas.filter(t => t.fecha === today).length;
 
             const setBadge = (id, count) => {
                 const el = document.getElementById(id);
@@ -2358,9 +2390,9 @@
             setBadge('badge-critical', critico);
             setBadge('badge-tareas', state.tareas.filter(t => t.estado === 'pendiente').length);
 
-            // Calendario dashboard
             const calendar = document.getElementById('dashboard-calendar');
             if (!calendar) return;
+
             const currentMonth = new Date().getMonth();
             const currentYear = new Date().getFullYear();
             const firstDay = new Date(currentYear, currentMonth, 1).getDay();
