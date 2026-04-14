@@ -663,6 +663,34 @@
         </div>
     </div>
 
+    <!-- NUEVO MODAL PARA CONFIGURAR RETAZOS AL CERRAR ORDEN -->
+    <div id="modal-config-retazos" class="fixed inset-0 bg-black bg-opacity-50 hidden z-[60] flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-100 bg-purple-50">
+                <h3 class="text-xl font-bold text-purple-900">Configurar Retazos</h3>
+                <p class="text-sm text-purple-700 mt-1">Definí cómo se dividen los metros en retazos individuales</p>
+            </div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="config-retazos-orden-id">
+                <div id="config-retazos-list" class="space-y-4">
+                    <!-- Se genera dinámicamente -->
+                </div>
+                <div class="bg-blue-50 p-4 rounded-xl text-sm text-blue-800">
+                    <p>💡 <strong>Ejemplo:</strong> Si la orden dice "32 metros", podés crear:</p>
+                    <ul class="list-disc ml-5 mt-1 space-y-1">
+                        <li>Un retazo de 32 metros</li>
+                        <li>Dos retazos de 16 metros cada uno</li>
+                        <li>Varios retazos de medidas diferentes (10m, 15m, 7m)</li>
+                    </ul>
+                </div>
+                <div class="flex justify-end gap-3 pt-4 border-t">
+                    <button onclick="closeModal('config-retazos')" class="px-6 py-2 text-gray-600 hover:bg-gray-100 rounded-xl">Cancelar</button>
+                    <button onclick="confirmarCierreConRetazos()" class="px-6 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700">Confirmar y Cerrar Orden</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="modal-retiro-obra" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
             <div class="p-6 border-b border-gray-100 bg-purple-50">
@@ -784,7 +812,8 @@
             currentDate: new Date(),
             selectedDate: new Date().toISOString().split('T')[0],
             currentFilter: 'all',
-            pendingImport: []
+            pendingImport: [],
+            pendingRetazosConfig: [] // Para configurar retazos antes de cerrar orden
         };
 
         // INICIALIZACIÓN
@@ -1052,7 +1081,7 @@
             tbody.innerHTML = filtered.map(c => {
                 const tipoLabel = c.tipoControl === 'retazos' 
                     ? '<span class="px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">📏 Por Retazos</span>' 
-                    : '<span class="px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-600">Suma Normal</span>';
+                    : '<span class="px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-600">∑ Suma Normal</span>';
 
                 return `
                 <tr class="border-b hover:bg-gray-50">
@@ -1506,7 +1535,7 @@
 
                 if (material && material.tipoControl === 'retazos') {
                     const retazosDisp = state.retazos.filter(r => r.materialId === material.id && r.estado === 'disponible');
-                    disponibleHtml = `<p class="text-xs text-gray-500">${retazosDisp.length} retazos disponibles</p>`;
+                    disponibleHtml = `<p class="text-xs text-gray-500">${retazosDisp.length} retazos disponibles (Total: ${retazosDisp.reduce((a,b)=>a+b.medida,0)} ${m.unidad})</p>`;
                 } else {
                     const stockItem = state.stock.find(s => s.descripcion.toLowerCase() === m.descripcion.toLowerCase());
                     disponibleHtml = `<p class="text-xs text-gray-500">Disp: ${stockItem ? stockItem.cantidad : 0} ${m.unidad}</p>`;
@@ -1536,7 +1565,7 @@
             const materialesRetiro = [];
 
             document.querySelectorAll('.retiro-cant-obra').forEach(input => {
-                const cantidad = parseInt(input.value);
+                const cantidad = parseFloat(input.value);
                 if (cantidad > 0) {
                     const desc = input.dataset.desc;
                     const unidad = input.dataset.unit;
@@ -1545,16 +1574,16 @@
                     const material = state.catalogo.find(c => c.codigo === codigo || c.descripcion === desc);
 
                     if (material && material.tipoControl === 'retazos') {
+                        // Para retazos, buscar los que sumen esa cantidad o usar el FIFO
                         const retazosDisp = state.retazos.filter(r => r.materialId === material.id && r.estado === 'disponible')
                             .sort((a, b) => new Date(a.fechaIngreso) - new Date(b.fechaIngreso));
 
-                        if (retazosDisp.length < cantidad) {
-                            alert(`No hay suficientes retazos de ${desc}. Disponibles: ${retazosDisp.length}`);
-                            return;
-                        }
-
-                        for (let i = 0; i < cantidad; i++) {
-                            const retazo = retazosDisp[i];
+                        let medidaAcumulada = 0;
+                        let retazosUsados = 0;
+                        
+                        for (let retazo of retazosDisp) {
+                            if (medidaAcumulada >= cantidad) break;
+                            
                             retazo.estado = 'usado';
                             retazo.fechaRetiro = new Date().toISOString();
                             retazo.usuarioRetiro = CONFIG.currentUser;
@@ -1566,6 +1595,12 @@
                                 medida: retazo.medida,
                                 unidad: unidad
                             });
+                            medidaAcumulada += retazo.medida;
+                            retazosUsados++;
+                        }
+                        
+                        if (medidaAcumulada < cantidad) {
+                            alert(`No hay suficientes metros de ${desc}. Se retiraron ${medidaAcumulada} de ${cantidad} solicitados`);
                         }
                     } else {
                         const stockItem = state.stock.find(s => s.descripcion.toLowerCase() === desc.toLowerCase());
@@ -1854,7 +1889,7 @@
                 const unit = row.querySelector('.material-unit').value;
 
                 if (desc && cant) {
-                    materiales.push({ codigo, descripcion: desc, cantidad: parseInt(cant), unidad: unit });
+                    materiales.push({ codigo, descripcion: desc, cantidad: parseFloat(cant), unidad: unit });
                 }
             });
 
@@ -1906,48 +1941,54 @@
 
             if (!fecha || !destino) return alert('Complete fecha y destino');
 
+            // Si se está cerrando la orden, procesar materiales
             if (estado === 'cerrado' && orden.estado === 'abierto') {
                 if (!confirm('¿Cerrar esta orden? Los materiales se agregarán al stock.')) return;
+                
+                // Verificar si hay materiales tipo retazos
+                const materialesRetazos = [];
+                let tieneRetazos = false;
+                
+                const materiales = [];
+                document.querySelectorAll('#edit-materiales-container .material-row').forEach(row => {
+                    const input = row.querySelector('.material-autocomplete');
+                    const codigo = row.querySelector('.material-codigo').value;
+                    const desc = input.value;
+                    const cant = row.querySelector('.material-cant').value;
+                    const unit = row.querySelector('.material-unit').value;
 
-                orden.materiales.forEach(m => {
-                    const material = state.catalogo.find(c => c.codigo === m.codigo || c.descripcion === m.descripcion);
-
-                    if (material && material.tipoControl === 'retazos') {
-                        for (let i = 0; i < m.cantidad; i++) {
-                            state.retazos.push({
-                                id: 'RET-' + Date.now().toString(36).toUpperCase() + i,
-                                materialId: material.id,
-                                codigoMaterial: material.codigo,
-                                descripcionMaterial: material.descripcion,
-                                medida: 1,
-                                unidad: m.unidad,
-                                estado: 'disponible',
-                                ubicacion: 'Ingreso por orden',
-                                usuarioIngreso: CONFIG.currentUser,
-                                fechaIngreso: new Date().toISOString(),
-                                origen: `Orden #${orden.id} - ${orden.destino}`,
-                                observaciones: 'Ingresado desde orden cerrada'
-                            });
-                        }
-                    } else {
-                        const existente = state.stock.find(s => s.descripcion.toLowerCase() === m.descripcion.toLowerCase() && s.unidad === m.unidad);
-                        if (existente) {
-                            existente.cantidad += m.cantidad;
-                        } else {
-                            state.stock.push({
-                                id: Date.now() + Math.random(),
-                                descripcion: m.descripcion,
-                                cantidad: m.cantidad,
-                                unidad: m.unidad,
-                                stockMinimo: 3
+                    if (desc && cant) {
+                        const material = state.catalogo.find(c => 
+                            (codigo && c.codigo === codigo) || 
+                            c.descripcion.toLowerCase().trim() === desc.toLowerCase().trim()
+                        );
+                        
+                        materiales.push({ codigo, descripcion: desc, cantidad: parseFloat(cant), unidad: unit });
+                        
+                        if (material && material.tipoControl === 'retazos') {
+                            tieneRetazos = true;
+                            materialesRetazos.push({
+                                material,
+                                cantidadSolicitada: parseFloat(cant),
+                                descripcion,
+                                unidad: unit
                             });
                         }
                     }
                 });
-                orden.fechaCierre = new Date().toISOString();
-                addAuditLog('CIERRE', 'ORDEN', id, `Orden cerrada por ${CONFIG.currentUser}`);
+
+                if (tieneRetazos) {
+                    // Mostrar modal para configurar retazos
+                    mostrarModalConfigRetazos(id, materialesRetazos, materiales);
+                    return; // No cerrar todavía, esperar confirmación
+                } else {
+                    // Procesar normalmente si no hay retazos
+                    procesarCierreOrdenNormal(id, materiales);
+                    return;
+                }
             }
 
+            // Solo actualizar datos sin cerrar
             const materiales = [];
             document.querySelectorAll('#edit-materiales-container .material-row').forEach(row => {
                 const input = row.querySelector('.material-autocomplete');
@@ -1957,7 +1998,7 @@
                 const unit = row.querySelector('.material-unit').value;
 
                 if (desc && cant) {
-                    materiales.push({ codigo, descripcion: desc, cantidad: parseInt(cant), unidad: unit });
+                    materiales.push({ codigo, descripcion: desc, cantidad: parseFloat(cant), unidad: unit });
                 }
             });
 
@@ -1973,6 +2014,208 @@
             closeModal('editar-orden');
             renderOrdenes();
             updateDashboard();
+        }
+
+        // NUEVA FUNCIÓN: Mostrar modal para configurar retazos
+        function mostrarModalConfigRetazos(ordenId, materialesRetazos, todosMateriales) {
+            state.pendingRetazosConfig = {
+                ordenId,
+                materiales: todosMateriales,
+                retazos: []
+            };
+
+            const container = document.getElementById('config-retazos-list');
+            container.innerHTML = '';
+
+            materialesRetazos.forEach((item, idx) => {
+                const div = document.createElement('div');
+                div.className = 'border rounded-xl p-4 bg-gray-50';
+                div.innerHTML = `
+                    <div class="flex justify-between items-center mb-3">
+                        <div>
+                            <h4 class="font-bold text-gray-800">${item.material.descripcion}</h4>
+                            <p class="text-sm text-gray-600">Total a ingresar: <span class="font-bold text-blue-600">${item.cantidadSolicitada} ${item.unidad}</span></p>
+                        </div>
+                        <span class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">📏 Por Retazos</span>
+                    </div>
+                    <div class="space-y-2" id="retazos-config-${idx}">
+                        <div class="flex gap-2 items-center">
+                            <input type="number" step="0.01" min="0.01" placeholder="Metros" 
+                                   class="retazo-medida-config w-24 px-3 py-2 border rounded-lg text-sm" 
+                                   data-material-id="${item.material.id}"
+                                   data-material-desc="${item.material.descripcion}"
+                                   data-material-codigo="${item.material.codigo}"
+                                   data-unidad="${item.unidad}">
+                            <span class="text-sm text-gray-500">${item.unidad}</span>
+                            <input type="text" placeholder="Observaciones (opcional)" 
+                                   class="retazo-obs-config flex-1 px-3 py-2 border rounded-lg text-sm">
+                        </div>
+                    </div>
+                    <button onclick="agregarFilaRetazoConfig(${idx})" class="mt-2 text-sm text-blue-600 hover:underline">
+                        + Agregar otro retazo de este material
+                    </button>
+                `;
+                container.appendChild(div);
+            });
+
+            document.getElementById('config-retazos-orden-id').value = ordenId;
+            document.getElementById('modal-config-retazos').classList.remove('hidden');
+        }
+
+        function agregarFilaRetazoConfig(idx) {
+            const container = document.getElementById(`retazos-config-${idx}`);
+            const primeraFila = container.querySelector('.flex');
+            const materialId = primeraFila.querySelector('.retazo-medida-config').dataset.materialId;
+            const materialDesc = primeraFila.querySelector('.retazo-medida-config').dataset.materialDesc;
+            const materialCodigo = primeraFila.querySelector('.retazo-medida-config').dataset.materialCodigo;
+            const unidad = primeraFila.querySelector('.retazo-medida-config').dataset.unidad;
+
+            const div = document.createElement('div');
+            div.className = 'flex gap-2 items-center';
+            div.innerHTML = `
+                <input type="number" step="0.01" min="0.01" placeholder="Metros" 
+                       class="retazo-medida-config w-24 px-3 py-2 border rounded-lg text-sm" 
+                       data-material-id="${materialId}"
+                       data-material-desc="${materialDesc}"
+                       data-material-codigo="${materialCodigo}"
+                       data-unidad="${unidad}">
+                <span class="text-sm text-gray-500">${unidad}</span>
+                <input type="text" placeholder="Observaciones (opcional)" 
+                       class="retazo-obs-config flex-1 px-3 py-2 border rounded-lg text-sm">
+                <button onclick="this.parentElement.remove()" class="text-red-500 hover:bg-red-50 p-2 rounded">✕</button>
+            `;
+            container.appendChild(div);
+        }
+
+        async function confirmarCierreConRetazos() {
+            const ordenId = parseInt(document.getElementById('config-retazos-orden-id').value);
+            const orden = state.ordenes.find(o => o.id === ordenId);
+            
+            // Procesar materiales normales primero
+            const materialesNormales = state.pendingRetazosConfig.materiales.filter(m => {
+                const material = state.catalogo.find(c => 
+                    (m.codigo && c.codigo === m.codigo) || 
+                    c.descripcion.toLowerCase().trim() === m.descripcion.toLowerCase().trim()
+                );
+                return !material || material.tipoControl !== 'retazos';
+            });
+
+            materialesNormales.forEach(m => {
+                const material = state.catalogo.find(c => 
+                    (m.codigo && c.codigo === m.codigo) || 
+                    c.descripcion.toLowerCase().trim() === m.descripcion.toLowerCase().trim()
+                );
+                
+                const existente = state.stock.find(s => 
+                    s.descripcion.toLowerCase().trim() === m.descripcion.toLowerCase().trim() && 
+                    s.unidad === m.unidad
+                );
+                
+                if (existente) {
+                    existente.cantidad += m.cantidad;
+                } else {
+                    state.stock.push({
+                        id: Date.now() + Math.random(),
+                        materialId: material ? material.id : null,
+                        codigo: material ? material.codigo : (m.codigo || 'SIN-COD'),
+                        descripcion: m.descripcion,
+                        cantidad: m.cantidad,
+                        unidad: m.unidad,
+                        stockMinimo: material ? material.stockMinimo : 3,
+                        usuarioIngreso: CONFIG.currentUser,
+                        fechaIngreso: new Date().toISOString(),
+                        origen: `Orden #${orden.id} - ${orden.destino}`
+                    });
+                }
+            });
+
+            // Procesar retazos
+            let totalRetazos = 0;
+            document.querySelectorAll('.retazo-medida-config').forEach(input => {
+                const medida = parseFloat(input.value);
+                if (medida > 0) {
+                    const materialId = input.dataset.materialId;
+                    const materialDesc = input.dataset.materialDesc;
+                    const materialCodigo = input.dataset.materialCodigo;
+                    const unidad = input.dataset.unidad;
+                    const obs = input.closest('.flex').querySelector('.retazo-obs-config').value;
+
+                    const retazo = {
+                        id: 'RET-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 5).toUpperCase(),
+                        materialId: materialId,
+                        codigoMaterial: materialCodigo,
+                        descripcionMaterial: materialDesc,
+                        medida: medida,
+                        unidad: unidad,
+                        estado: 'disponible',
+                        ubicacion: 'Ingreso por orden',
+                        usuarioIngreso: CONFIG.currentUser,
+                        fechaIngreso: new Date().toISOString(),
+                        origen: `Orden #${orden.id} - ${orden.destino}`,
+                        observaciones: obs || 'Ingresado desde orden cerrada'
+                    };
+                    state.retazos.push(retazo);
+                    totalRetazos++;
+                }
+            });
+
+            orden.estado = 'cerrado';
+            orden.fechaCierre = new Date().toISOString();
+            orden.cerradoPor = CONFIG.currentUser;
+            
+            addAuditLog('CIERRE', 'ORDEN', ordenId, `Orden #${ordenId} cerrada por ${CONFIG.currentUser}. ${materialesNormales.length} materiales normales, ${totalRetazos} retazos.`);
+            
+            await saveToCloud();
+            closeModal('config-retazos');
+            closeModal('editar-orden');
+            renderOrdenes();
+            updateDashboard();
+            alert(`✅ Orden cerrada correctamente.\n${materialesNormales.length} materiales normales\n${totalRetazos} retazos creados`);
+        }
+
+        async function procesarCierreOrdenNormal(ordenId, materiales) {
+            const orden = state.ordenes.find(o => o.id === ordenId);
+            
+            materiales.forEach(m => {
+                const material = state.catalogo.find(c => 
+                    (m.codigo && c.codigo === m.codigo) || 
+                    c.descripcion.toLowerCase().trim() === m.descripcion.toLowerCase().trim()
+                );
+
+                const existente = state.stock.find(s => 
+                    s.descripcion.toLowerCase().trim() === m.descripcion.toLowerCase().trim() && 
+                    s.unidad === m.unidad
+                );
+                
+                if (existente) {
+                    existente.cantidad += m.cantidad;
+                } else {
+                    state.stock.push({
+                        id: Date.now() + Math.random(),
+                        materialId: material ? material.id : null,
+                        codigo: material ? material.codigo : (m.codigo || 'SIN-COD'),
+                        descripcion: m.descripcion,
+                        cantidad: m.cantidad,
+                        unidad: m.unidad,
+                        stockMinimo: material ? material.stockMinimo : 3,
+                        usuarioIngreso: CONFIG.currentUser,
+                        fechaIngreso: new Date().toISOString(),
+                        origen: `Orden #${orden.id} - ${orden.destino}`
+                    });
+                }
+            });
+
+            orden.estado = 'cerrado';
+            orden.fechaCierre = new Date().toISOString();
+            orden.cerradoPor = CONFIG.currentUser;
+            
+            addAuditLog('CIERRE', 'ORDEN', ordenId, `Orden #${ordenId} cerrada por ${CONFIG.currentUser}`);
+            
+            await saveToCloud();
+            closeModal('editar-orden');
+            renderOrdenes();
+            updateDashboard();
+            alert('Orden cerrada correctamente');
         }
 
         async function eliminarOrden(id) {
@@ -2074,49 +2317,32 @@
 
             if (!confirm('¿Autorizar esta orden? Los materiales pasarán al stock.')) return;
 
+            // Verificar si hay materiales tipo retazos
+            const materialesRetazos = [];
+            
             orden.materiales.forEach(m => {
-                const material = state.catalogo.find(c => c.codigo === m.codigo || c.descripcion === m.descripcion);
-
+                const material = state.catalogo.find(c => 
+                    (m.codigo && c.codigo === m.codigo) || 
+                    c.descripcion.toLowerCase().trim() === m.descripcion.toLowerCase().trim()
+                );
+                
                 if (material && material.tipoControl === 'retazos') {
-                    for (let i = 0; i < m.cantidad; i++) {
-                        state.retazos.push({
-                            id: 'RET-' + Date.now().toString(36).toUpperCase() + i,
-                            materialId: material.id,
-                            codigoMaterial: material.codigo,
-                            descripcionMaterial: material.descripcion,
-                            medida: 1,
-                            unidad: m.unidad,
-                            estado: 'disponible',
-                            ubicacion: 'Ingreso por orden',
-                            usuarioIngreso: CONFIG.currentUser,
-                            fechaIngreso: new Date().toISOString(),
-                            origen: `Orden #${orden.id} - ${orden.destino}`,
-                            observaciones: 'Ingresado desde orden cerrada'
-                        });
-                    }
-                } else {
-                    const existente = state.stock.find(s => s.descripcion.toLowerCase() === m.descripcion.toLowerCase() && s.unidad === m.unidad);
-                    if (existente) {
-                        existente.cantidad += m.cantidad;
-                    } else {
-                        state.stock.push({
-                            id: Date.now() + Math.random(),
-                            descripcion: m.descripcion,
-                            cantidad: m.cantidad,
-                            unidad: m.unidad,
-                            stockMinimo: 3
-                        });
-                    }
+                    materialesRetazos.push({
+                        material,
+                        cantidadSolicitada: m.cantidad,
+                        descripcion: m.descripcion,
+                        unidad: m.unidad
+                    });
                 }
             });
 
-            orden.estado = 'cerrado';
-            orden.fechaCierre = new Date().toISOString();
-            addAuditLog('CIERRE', 'ORDEN', id, `Orden #${id} cerrada por ${CONFIG.currentUser}`);
-
-            await saveToCloud();
-            renderOrdenes();
-            updateDashboard();
+            if (materialesRetazos.length > 0) {
+                // Mostrar modal para configurar retazos
+                mostrarModalConfigRetazos(id, materialesRetazos, orden.materiales);
+            } else {
+                // Procesar normalmente
+                procesarCierreOrdenNormal(id, orden.materiales);
+            }
         }
 
         // PLANIFICADOR - CORREGIDO
