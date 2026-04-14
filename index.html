@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#2563eb">
-    <title>StockPro Cloud - Multiusuario + Retazos</title>
+    <title>StockPro Cloud - Multiusuario + Retazos + Reservas</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -34,6 +34,11 @@
         .retazo-usado { border-left-color: #9ca3af; opacity: 0.7; }
         .audit-item { border-left: 3px solid #6366f1; }
         .user-badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+        .reserva-card { border-left: 4px solid #f59e0b; background: #fffbeb; }
+        .item-entregado { background: #d1fae5; }
+        .item-pendiente { background: #fef3c7; }
+        .item-cancelado { background: #f3f4f6; opacity: 0.6; text-decoration: line-through; }
+        .estado-parcial { background: #c084fc; color: white; }
     </style>
 <base target="_blank">
 <base target="_blank">
@@ -137,6 +142,11 @@
                         Órdenes
                         <span id="badge-ordenes" class="ml-auto bg-blue-100 text-blue-600 text-xs font-bold px-2 py-1 rounded-full hidden">0</span>
                     </button>
+                    <button onclick="showSection('reservas')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-gray-700 hover:text-blue-600" id="nav-reservas">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                        Reservas
+                        <span id="badge-reservas" class="ml-auto bg-yellow-100 text-yellow-600 text-xs font-bold px-2 py-1 rounded-full hidden">0</span>
+                    </button>
                     <button onclick="showSection('stock')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-gray-700 hover:text-blue-600" id="nav-stock">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
                         Stock
@@ -171,6 +181,7 @@
                             <div class="flex justify-between"><span>Stock:</span><span id="summary-stock" class="font-bold">0</span></div>
                             <div class="flex justify-between"><span>Catálogo:</span><span id="summary-catalogo" class="font-bold">0</span></div>
                             <div class="flex justify-between"><span>Órdenes:</span><span id="summary-ordenes" class="font-bold">0</span></div>
+                            <div class="flex justify-between"><span>Reservas:</span><span id="summary-reservas" class="font-bold">0</span></div>
                             <div class="flex justify-between"><span>Tareas:</span><span id="summary-tareas" class="font-bold">0</span></div>
                         </div>
                         <p class="text-xs text-gray-400 mt-2" id="last-sync">--</p>
@@ -200,10 +211,10 @@
                             <p class="text-2xl md:text-3xl font-bold text-red-600 mt-1" id="dash-critico">0</p>
                             <p class="text-xs text-red-500 mt-1">Click para ver →</p>
                         </div>
-                        <div onclick="showSection('catalogo')" class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-shadow">
-                            <p class="text-xs text-gray-500">Materiales</p>
-                            <p class="text-2xl md:text-3xl font-bold text-green-600 mt-1" id="dash-total">0</p>
-                            <p class="text-xs text-green-500 mt-1">Click para ver →</p>
+                        <div onclick="showSection('reservas')" class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-shadow">
+                            <p class="text-xs text-gray-500">Reservas Activas</p>
+                            <p class="text-2xl md:text-3xl font-bold text-yellow-600 mt-1" id="dash-reservas">0</p>
+                            <p class="text-xs text-yellow-500 mt-1">Click para ver →</p>
                         </div>
                         <div onclick="showSection('planificador')" class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-shadow">
                             <p class="text-xs text-gray-500">Tareas Hoy</p>
@@ -270,6 +281,8 @@
                         <div class="p-4 border-b border-gray-100 flex gap-2 overflow-x-auto">
                             <button onclick="filterOrders('all')" class="filter-btn active px-4 py-2 rounded-lg text-sm bg-blue-100 text-blue-700 whitespace-nowrap" data-filter="all">Todas</button>
                             <button onclick="filterOrders('abierto')" class="filter-btn px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 whitespace-nowrap" data-filter="abierto">Abiertas</button>
+                            <button onclick="filterOrders('parcial')" class="filter-btn px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 whitespace-nowrap" data-filter="parcial">Parciales</button>
+                            <button onclick="filterOrders('pendiente')" class="filter-btn px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 whitespace-nowrap" data-filter="pendiente">Pendientes</button>
                             <button onclick="filterOrders('cerrado')" class="filter-btn px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 whitespace-nowrap" data-filter="cerrado">Cerradas</button>
                         </div>
                         <div class="overflow-x-auto">
@@ -278,14 +291,69 @@
                                     <tr>
                                         <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">N°</th>
                                         <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Fecha</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Proveedor</th>
                                         <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Destino</th>
-                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Items</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Progreso</th>
                                         <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Creado por</th>
                                         <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Estado</th>
                                         <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody id="ordenes-table" class="divide-y divide-gray-100"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- RESERVAS -->
+                <section id="reservas" class="hidden fade-in space-y-6">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                        <h2 class="text-2xl md:text-3xl font-bold text-gray-800">Reservas de Material</h2>
+                        <button onclick="openReservaModal()" class="bg-yellow-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-yellow-700">+ Nueva Reserva</button>
+                    </div>
+
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6">
+                        <p class="text-sm text-yellow-800">
+                            <strong>💡 Info:</strong> Las reservas apartan material del stock disponible sin retirarlo físicamente. 
+                            Útil para proyectos planificados. El stock reservado no aparece como disponible para otros retiros.
+                        </p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                            <p class="text-xs text-gray-500">Reservas Activas</p>
+                            <p class="text-2xl font-bold text-yellow-600 mt-1" id="reservas-activas-count">0</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                            <p class="text-xs text-gray-500">Material Reservado</p>
+                            <p class="text-2xl font-bold text-blue-600 mt-1" id="reservas-total-items">0</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                            <p class="text-xs text-gray-500">Convertidas a Retiro</p>
+                            <p class="text-2xl font-bold text-green-600 mt-1" id="reservas-convertidas-count">0</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div class="p-4 border-b border-gray-100 flex gap-2 overflow-x-auto">
+                            <button onclick="filterReservas('activas')" class="filter-res-btn active px-4 py-2 rounded-lg text-sm bg-yellow-100 text-yellow-700 whitespace-nowrap" data-filter="activas">Activas</button>
+                            <button onclick="filterReservas('convertidas')" class="filter-res-btn px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 whitespace-nowrap" data-filter="convertidas">Convertidas</button>
+                            <button onclick="filterReservas('canceladas')" class="filter-res-btn px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 whitespace-nowrap" data-filter="canceladas">Canceladas</button>
+                            <button onclick="filterReservas('todas')" class="filter-res-btn px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 whitespace-nowrap" data-filter="todas">Todas</button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Fecha</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Proyecto/Destino</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Solicitante</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Materiales</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Estado</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="reservas-table" class="divide-y divide-gray-100"></tbody>
                             </table>
                         </div>
                     </div>
@@ -442,6 +510,7 @@
                                 <option value="">Todas las acciones</option>
                                 <option value="INGRESO">Ingresos</option>
                                 <option value="RETIRO">Retiros</option>
+                                <option value="RESERVA">Reservas</option>
                                 <option value="ORDEN">Órdenes</option>
                                 <option value="EDICION">Ediciones</option>
                                 <option value="ELIMINACION">Eliminaciones</option>
@@ -588,9 +657,13 @@
                         <input type="date" id="orden-fecha" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Destino</label>
-                        <input type="text" id="orden-destino" placeholder="Ej: Obra Central" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Proveedor</label>
+                        <input type="text" id="orden-proveedor" placeholder="Ej: Proveedor S.A." class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
                     </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Destino</label>
+                    <input type="text" id="orden-destino" placeholder="Ej: Obra Central" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
                 </div>
                 <div>
                     <div class="flex justify-between items-center mb-2">
@@ -625,20 +698,28 @@
                         <input type="date" id="edit-orden-fecha" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
                     </div>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Destino</label>
-                    <input type="text" id="edit-orden-destino" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Proveedor</label>
+                        <input type="text" id="edit-orden-proveedor" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Destino</label>
+                        <input type="text" id="edit-orden-destino" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
+                    </div>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Estado</label>
-                    <select id="edit-orden-estado" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Estado General</label>
+                    <select id="edit-orden-estado" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500" onchange="onEstadoOrdenChange()">
                         <option value="abierto">Abierto</option>
+                        <option value="parcial">Parcial (Algunos ítems entregados)</option>
+                        <option value="pendiente">Pendiente (Esperando stock)</option>
                         <option value="cerrado">Cerrado</option>
                     </select>
                 </div>
                 <div>
                     <div class="flex justify-between items-center mb-2">
-                        <label class="block text-sm font-medium text-gray-700">Materiales</label>
+                        <label class="block text-sm font-medium text-gray-700">Materiales y Estado</label>
                         <button onclick="addEditMaterialRow()" class="text-sm text-blue-600 hover:underline">+ Agregar</button>
                     </div>
                     <div id="edit-materiales-container" class="space-y-2"></div>
@@ -652,13 +733,65 @@
     </div>
 
     <div id="modal-ver-orden" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div class="p-6 border-b border-gray-100 flex justify-between items-center">
                 <h3 class="text-xl font-bold" id="ver-orden-titulo">Detalle Orden</h3>
                 <button onclick="closeModal('ver-orden')" class="text-gray-400 hover:text-gray-600">✕</button>
             </div>
             <div class="p-6" id="ver-orden-contenido"></div>
             <div class="p-6 border-t flex justify-end gap-3" id="ver-orden-acciones"></div>
+        </div>
+    </div>
+
+    <!-- MODAL RESERVA -->
+    <div id="modal-reserva" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-yellow-50">
+                <h3 class="text-xl font-bold text-yellow-900">Nueva Reserva</h3>
+                <button onclick="closeModal('reserva')" class="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Fecha</label>
+                        <input type="date" id="reserva-fecha" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-yellow-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Proyecto/Destino *</label>
+                        <input type="text" id="reserva-proyecto" placeholder="Ej: Obra Norte - Instalación eléctrica" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-yellow-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Solicitante</label>
+                    <input type="text" id="reserva-solicitante" placeholder="Nombre del solicitante" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-yellow-500">
+                </div>
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-sm font-medium text-gray-700">Materiales a Reservar</label>
+                        <button onclick="addReservaMaterialRow()" class="text-sm text-yellow-600 hover:underline">+ Agregar material</button>
+                    </div>
+                    <div id="reserva-materiales-container" class="space-y-2"></div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Observaciones</label>
+                    <textarea id="reserva-observaciones" rows="2" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-yellow-500" placeholder="Motivo de la reserva, fecha estimada de retiro, etc."></textarea>
+                </div>
+                <div class="flex justify-end gap-3 pt-4 border-t">
+                    <button onclick="closeModal('reserva')" class="px-6 py-2 text-gray-600 hover:bg-gray-100 rounded-xl">Cancelar</button>
+                    <button onclick="saveReserva()" class="px-6 py-2 bg-yellow-600 text-white rounded-xl hover:bg-yellow-700">Crear Reserva</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-ver-reserva" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-yellow-50">
+                <h3 class="text-xl font-bold text-yellow-900">Detalle Reserva</h3>
+                <button onclick="closeModal('ver-reserva')" class="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
+            <div class="p-6" id="ver-reserva-contenido"></div>
+            <div class="p-6 border-t flex justify-end gap-3" id="ver-reserva-acciones"></div>
         </div>
     </div>
 
@@ -704,7 +837,10 @@
                 <div id="retiro-normal-section" class="hidden">
                     <label class="block text-sm font-medium text-gray-700 mb-2">Cantidad a retirar</label>
                     <input type="number" id="retiro-cantidad-normal" min="1" class="w-full px-4 py-2 border border-gray-200 rounded-xl">
-                    <p class="text-sm text-gray-500 mt-1">Disponible: <span id="retiro-disponible-normal" class="font-semibold"></span></p>
+                    <div class="flex justify-between mt-1">
+                        <p class="text-sm text-gray-500">Disponible: <span id="retiro-disponible-normal" class="font-semibold"></span></p>
+                        <p class="text-sm text-orange-600">Reservado: <span id="retiro-reservado-normal" class="font-semibold">0</span></p>
+                    </div>
                 </div>
 
                 <!-- Sección para retazos -->
@@ -772,12 +908,14 @@
             retiros: [],
             tareas: [],
             catalogo: [],
-            retazos: [],  // NUEVO: Array de retazos individuales
-            usuarios: [], // NUEVO: Array de usuarios
-            audit_log: [], // NUEVO: Registro de auditoría
+            retazos: [],
+            reservas: [], // NUEVO: Reservas de material
+            usuarios: [],
+            audit_log: [],
             currentDate: new Date(),
             selectedDate: new Date().toISOString().split('T')[0],
             currentFilter: 'all',
+            currentReservaFilter: 'activas',
             pendingImport: []
         };
 
@@ -801,7 +939,6 @@
 
         // FUNCIONES DE USUARIO
         function loadUsers() {
-            // Cargar usuarios desde localStorage temporalmente hasta que se sincronice
             const savedUsers = localStorage.getItem('stockpro_users');
             if (savedUsers) {
                 state.usuarios = JSON.parse(savedUsers);
@@ -869,7 +1006,6 @@
             document.getElementById('login-screen').classList.add('hidden');
             document.getElementById('app-container').classList.remove('hidden');
 
-            // Actualizar UI con usuario actual
             document.getElementById('user-name-display').textContent = CONFIG.currentUser;
             document.getElementById('user-avatar').textContent = CONFIG.currentUser.charAt(0).toUpperCase();
             document.getElementById('welcome-user').textContent = CONFIG.currentUser;
@@ -893,8 +1029,7 @@
                 entidadId: entidadId,
                 detalle: detalle
             };
-            state.audit_log.unshift(log); // Agregar al principio
-            // Mantener solo los últimos 500 registros para no sobrecargar
+            state.audit_log.unshift(log);
             if (state.audit_log.length > 500) {
                 state.audit_log = state.audit_log.slice(0, 500);
             }
@@ -911,6 +1046,7 @@
                     tareas: [], 
                     catalogo: [],
                     retazos: [],
+                    reservas: [], // NUEVO
                     usuarios: [],
                     audit_log: []
                 };
@@ -929,6 +1065,7 @@
                 state.tareas = data.tareas || [];
                 state.catalogo = data.catalogo || [];
                 state.retazos = data.retazos || [];
+                state.reservas = data.reservas || []; // NUEVO
                 state.usuarios = data.usuarios || state.usuarios;
                 state.audit_log = data.audit_log || [];
 
@@ -951,6 +1088,7 @@
                     tareas: state.tareas,
                     catalogo: state.catalogo,
                     retazos: state.retazos,
+                    reservas: state.reservas, // NUEVO
                     usuarios: state.usuarios,
                     audit_log: state.audit_log,
                     lastUpdate: new Date().toISOString()
@@ -1012,6 +1150,7 @@
             if (id === 'dashboard') updateDashboard();
             if (id === 'catalogo') renderCatalogo();
             if (id === 'ordenes') renderOrdenes();
+            if (id === 'reservas') renderReservas(); // NUEVO
             if (id === 'stock') renderStock();
             if (id === 'retiros') renderRetiros();
             if (id === 'planificador') renderPlanner();
@@ -1298,7 +1437,6 @@
             const observaciones = document.getElementById('ingreso-observaciones').value;
 
             if (material.tipoControl === 'retazos') {
-                // Ingreso por retazos
                 const retazos = [];
                 document.querySelectorAll('#retazos-container > div').forEach(div => {
                     const medida = parseFloat(div.querySelector('.retazo-medida').value);
@@ -1328,7 +1466,6 @@
                 addAuditLog('INGRESO', 'RETAZOS', materialId, `Ingresados ${retazos.length} retazos de ${material.codigo}`);
                 alert(`✅ Ingresados ${retazos.length} retazos de ${material.descripcion}`);
             } else {
-                // Ingreso normal
                 const cantidad = parseInt(document.getElementById('ingreso-cantidad').value);
                 if (!cantidad || cantidad < 1) return alert('Ingresa una cantidad válida');
 
@@ -1361,12 +1498,363 @@
             updateDashboard();
         }
 
-        // STOCK Y RETAZOS
+        // RESERVAS - NUEVO MÓDULO COMPLETO
+        function openReservaModal() {
+            document.getElementById('modal-reserva').classList.remove('hidden');
+            document.getElementById('reserva-fecha').valueAsDate = new Date();
+            document.getElementById('reserva-proyecto').value = '';
+            document.getElementById('reserva-solicitante').value = CONFIG.currentUser;
+            document.getElementById('reserva-observaciones').value = '';
+            document.getElementById('reserva-materiales-container').innerHTML = '';
+            addReservaMaterialRow();
+        }
+
+        function addReservaMaterialRow() {
+            const container = document.getElementById('reserva-materiales-container');
+            const div = document.createElement('div');
+            div.className = 'material-row flex gap-2 items-start bg-gray-50 p-2 rounded-lg relative';
+
+            div.innerHTML = `
+                <div class="flex-1 relative">
+                    <input type="text" placeholder="Escribí para buscar material..." 
+                           class="reserva-autocomplete w-full px-3 py-2 border rounded-lg text-sm" 
+                           autocomplete="off">
+                    <div class="autocomplete-results hidden"></div>
+                    <input type="hidden" class="reserva-material-id">
+                </div>
+                <input type="number" placeholder="Cant" min="1" value="1" class="reserva-cant w-20 px-3 py-2 border rounded-lg text-sm">
+                <button onclick="this.closest('.material-row').remove()" class="text-red-500 px-2 hover:bg-red-50 rounded">✕</button>
+            `;
+
+            const input = div.querySelector('.reserva-autocomplete');
+            const resultsDiv = div.querySelector('.autocomplete-results');
+            const materialIdInput = div.querySelector('.reserva-material-id');
+
+            input.addEventListener('input', (e) => {
+                const value = e.target.value.toLowerCase();
+                if (value.length < 1) {
+                    resultsDiv.classList.add('hidden');
+                    return;
+                }
+
+                const matches = state.catalogo.filter(c => 
+                    c.activo !== false && (
+                        c.codigo.toLowerCase().includes(value) || 
+                        c.descripcion.toLowerCase().includes(value)
+                    )
+                ).slice(0, 5);
+
+                if (matches.length > 0) {
+                    resultsDiv.innerHTML = matches.map(m => {
+                        const stockDisp = getStockDisponible(m.id);
+                        return `
+                        <div class="autocomplete-item" data-id="${m.id}" data-desc="${m.descripcion}">
+                            <div class="font-medium">${m.descripcion}</div>
+                            <div class="text-xs text-gray-500">${m.codigo} • Disp: ${stockDisp} ${m.unidad}</div>
+                        </div>
+                    `}).join('');
+                    resultsDiv.classList.remove('hidden');
+
+                    resultsDiv.querySelectorAll('.autocomplete-item').forEach(item => {
+                        item.addEventListener('click', () => {
+                            input.value = item.dataset.desc;
+                            materialIdInput.value = item.dataset.id;
+                            resultsDiv.classList.add('hidden');
+                        });
+                    });
+                } else {
+                    resultsDiv.classList.add('hidden');
+                }
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!div.contains(e.target)) {
+                    resultsDiv.classList.add('hidden');
+                }
+            });
+
+            container.appendChild(div);
+        }
+
+        // Calcular stock disponible restando reservas
+        function getStockDisponible(materialId) {
+            const material = state.catalogo.find(c => c.id === materialId);
+            if (!material) return 0;
+
+            let stockReal = 0;
+            if (material.tipoControl === 'retazos') {
+                stockReal = state.retazos.filter(r => r.materialId === materialId && r.estado === 'disponible').length;
+            } else {
+                const stockItem = state.stock.find(s => s.materialId === materialId);
+                stockReal = stockItem ? stockItem.cantidad : 0;
+            }
+
+            // Restar reservas activas
+            const reservado = state.reservas
+                .filter(r => r.estado === 'activa')
+                .reduce((sum, r) => {
+                    const item = r.materiales.find(m => m.materialId === materialId);
+                    return sum + (item ? item.cantidad : 0);
+                }, 0);
+
+            return Math.max(0, stockReal - reservado);
+        }
+
+        async function saveReserva() {
+            const proyecto = document.getElementById('reserva-proyecto').value.trim();
+            if (!proyecto) return alert('Ingresa el proyecto o destino');
+
+            const materiales = [];
+            let error = false;
+
+            document.querySelectorAll('#reserva-materiales-container .material-row').forEach(row => {
+                const materialId = row.querySelector('.reserva-material-id').value;
+                const desc = row.querySelector('.reserva-autocomplete').value;
+                const cant = parseInt(row.querySelector('.reserva-cant').value);
+
+                if (!materialId || !cant) {
+                    error = true;
+                    return;
+                }
+
+                const disponible = getStockDisponible(materialId);
+                if (cant > disponible) {
+                    alert(`No hay suficiente stock para "${desc}". Disponible: ${disponible}`);
+                    error = true;
+                    return;
+                }
+
+                const material = state.catalogo.find(c => c.id === materialId);
+                materiales.push({
+                    materialId: materialId,
+                    descripcion: desc,
+                    cantidad: cant,
+                    unidad: material.unidad,
+                    tipoControl: material.tipoControl || 'normal'
+                });
+            });
+
+            if (error) return;
+            if (materiales.length === 0) return alert('Agregá al menos un material');
+
+            const reserva = {
+                id: Date.now().toString(),
+                fecha: document.getElementById('reserva-fecha').value,
+                proyecto: proyecto,
+                solicitante: document.getElementById('reserva-solicitante').value || CONFIG.currentUser,
+                materiales: materiales,
+                observaciones: document.getElementById('reserva-observaciones').value,
+                estado: 'activa',
+                creadoPor: CONFIG.currentUser,
+                fechaCreacion: new Date().toISOString()
+            };
+
+            state.reservas.push(reserva);
+            addAuditLog('RESERVA', 'CREACION', reserva.id, `Reserva creada para ${proyecto} - ${materiales.length} items`);
+            
+            await saveToCloud();
+            closeModal('reserva');
+            renderReservas();
+            updateDashboard();
+            alert('✅ Reserva creada correctamente');
+        }
+
+        function renderReservas() {
+            const filter = state.currentReservaFilter;
+            let filtered = state.reservas;
+
+            if (filter === 'activas') filtered = state.reservas.filter(r => r.estado === 'activa');
+            else if (filter === 'convertidas') filtered = state.reservas.filter(r => r.estado === 'convertida');
+            else if (filter === 'canceladas') filtered = state.reservas.filter(r => r.estado === 'cancelada');
+
+            const sorted = filtered.sort((a, b) => new Date(b.fechaCreacion) - new Date(a.fechaCreacion));
+
+            const tbody = document.getElementById('reservas-table');
+            
+            if (sorted.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-400">Sin reservas</td></tr>';
+            } else {
+                tbody.innerHTML = sorted.map(r => {
+                    const totalItems = r.materiales.reduce((sum, m) => sum + m.cantidad, 0);
+                    const estadoClass = {
+                        'activa': 'bg-yellow-100 text-yellow-800',
+                        'convertida': 'bg-green-100 text-green-800',
+                        'cancelada': 'bg-gray-100 text-gray-600'
+                    }[r.estado];
+
+                    return `
+                    <tr class="border-b hover:bg-gray-50 ${r.estado !== 'activa' ? 'opacity-60' : ''}">
+                        <td class="px-4 py-3 text-sm">${new Date(r.fecha).toLocaleDateString('es-ES')}</td>
+                        <td class="px-4 py-3 text-sm font-medium">${r.proyecto}</td>
+                        <td class="px-4 py-3 text-sm">
+                            <span class="user-badge bg-blue-100 text-blue-700">${r.solicitante}</span>
+                        </td>
+                        <td class="px-4 py-3 text-sm">${totalItems} items</td>
+                        <td class="px-4 py-3">
+                            <span class="px-2 py-1 rounded-full text-xs ${estadoClass}">${r.estado}</span>
+                        </td>
+                        <td class="px-4 py-3 text-sm">
+                            <button onclick="verReserva('${r.id}')" class="text-blue-600 hover:text-blue-800 mr-2" title="Ver">👁️</button>
+                            ${r.estado === 'activa' ? `
+                                <button onclick="convertirReserva('${r.id}')" class="text-green-600 hover:text-green-800 mr-2" title="Convertir a Retiro">📦</button>
+                                <button onclick="cancelarReserva('${r.id}')" class="text-red-600 hover:text-red-800" title="Cancelar">✕</button>
+                            ` : ''}
+                        </td>
+                    </tr>
+                    `;
+                }).join('');
+            }
+
+            // Actualizar contadores
+            const activas = state.reservas.filter(r => r.estado === 'activa').length;
+            const convertidas = state.reservas.filter(r => r.estado === 'convertida').length;
+            const totalItemsReservados = state.reservas
+                .filter(r => r.estado === 'activa')
+                .reduce((sum, r) => sum + r.materiales.reduce((s, m) => s + m.cantidad, 0), 0);
+
+            document.getElementById('reservas-activas-count').textContent = activas;
+            document.getElementById('reservas-convertidas-count').textContent = convertidas;
+            document.getElementById('reservas-total-items').textContent = totalItemsReservados;
+            document.getElementById('dash-reservas').textContent = activas;
+            document.getElementById('summary-reservas').textContent = activas;
+
+            // Actualizar badge
+            const badge = document.getElementById('badge-reservas');
+            if (badge) {
+                badge.textContent = activas;
+                badge.classList.toggle('hidden', activas === 0);
+            }
+        }
+
+        function filterReservas(filter) {
+            state.currentReservaFilter = filter;
+            document.querySelectorAll('.filter-res-btn').forEach(btn => {
+                const isActive = btn.dataset.filter === filter;
+                btn.className = `filter-res-btn px-4 py-2 rounded-lg text-sm ${isActive ? 'bg-yellow-100 text-yellow-700' : 'text-gray-600 hover:bg-gray-100'} whitespace-nowrap`;
+            });
+            renderReservas();
+        }
+
+        function verReserva(id) {
+            const reserva = state.reservas.find(r => r.id === id);
+            if (!reserva) return;
+
+            const materialesHtml = reserva.materiales.map(m => `
+                <div class="flex justify-between items-center bg-gray-50 p-2 rounded-lg mb-2">
+                    <span>${m.descripcion}</span>
+                    <span class="font-semibold">${m.cantidad} ${m.unidad}</span>
+                </div>
+            `).join('');
+
+            document.getElementById('ver-reserva-contenido').innerHTML = `
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div><strong>Fecha:</strong> ${new Date(reserva.fecha).toLocaleDateString('es-ES')}</div>
+                        <div><strong>Estado:</strong> <span class="px-2 py-1 rounded-full text-xs ${reserva.estado === 'activa' ? 'bg-yellow-100 text-yellow-800' : reserva.estado === 'convertida' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}">${reserva.estado}</span></div>
+                    </div>
+                    <div><strong>Proyecto:</strong> ${reserva.proyecto}</div>
+                    <div><strong>Solicitante:</strong> ${reserva.solicitante}</div>
+                    ${reserva.observaciones ? `<div><strong>Observaciones:</strong> ${reserva.observaciones}</div>` : ''}
+                    <div class="mt-4">
+                        <strong>Materiales Reservados:</strong>
+                        <div class="mt-2">${materialesHtml}</div>
+                    </div>
+                </div>
+            `;
+
+            const accionesDiv = document.getElementById('ver-reserva-acciones');
+            if (reserva.estado === 'activa') {
+                accionesDiv.innerHTML = `
+                    <button onclick="convertirReserva('${id}'); closeModal('ver-reserva');" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Convertir a Retiro</button>
+                    <button onclick="cancelarReserva('${id}'); closeModal('ver-reserva');" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Cancelar Reserva</button>
+                `;
+            } else {
+                accionesDiv.innerHTML = '<span class="text-gray-500">Reserva procesada</span>';
+            }
+
+            document.getElementById('modal-ver-reserva').classList.remove('hidden');
+        }
+
+        async function convertirReserva(id) {
+            const reserva = state.reservas.find(r => r.id === id);
+            if (!reserva || reserva.estado !== 'activa') return;
+
+            if (!confirm('¿Convertir esta reserva en un retiro? El material será descontado del stock.')) return;
+
+            // Procesar retiro de cada material
+            for (const m of reserva.materiales) {
+                const material = state.catalogo.find(c => c.id === m.materialId);
+                
+                if (material && material.tipoControl === 'retazos') {
+                    // Retirar retazos (FIFO)
+                    const retazosDisp = state.retazos.filter(r => r.materialId === m.materialId && r.estado === 'disponible')
+                        .sort((a, b) => new Date(a.fechaIngreso) - new Date(b.fechaIngreso));
+
+                    for (let i = 0; i < m.cantidad; i++) {
+                        if (retazosDisp[i]) {
+                            retazosDisp[i].estado = 'usado';
+                            retazosDisp[i].fechaRetiro = new Date().toISOString();
+                            retazosDisp[i].usuarioRetiro = CONFIG.currentUser;
+                            retazosDisp[i].destinoObra = reserva.proyecto;
+                        }
+                    }
+                } else {
+                    // Retiro normal
+                    const stockItem = state.stock.find(s => s.materialId === m.materialId);
+                    if (stockItem) {
+                        stockItem.cantidad -= m.cantidad;
+                    }
+                }
+            }
+
+            // Crear registro de retiro
+            state.retiros.push({
+                id: Date.now(),
+                fecha: new Date().toISOString(),
+                tipo: 'reserva',
+                destino: reserva.proyecto,
+                reservaId: reserva.id,
+                usuario: CONFIG.currentUser,
+                materiales: reserva.materiales.map(m => ({
+                    descripcion: m.descripcion,
+                    cantidad: m.cantidad,
+                    unidad: m.unidad,
+                    tipo: m.tipoControl === 'retazos' ? 'retazo' : 'normal'
+                }))
+            });
+
+            reserva.estado = 'convertida';
+            reserva.fechaConversion = new Date().toISOString();
+
+            addAuditLog('RESERVA', 'CONVERSION', id, `Reserva convertida a retiro para ${reserva.proyecto}`);
+            await saveToCloud();
+            renderReservas();
+            renderRetiros();
+            renderStock();
+            updateDashboard();
+            alert('✅ Reserva convertida a retiro exitosamente');
+        }
+
+        async function cancelarReserva(id) {
+            const reserva = state.reservas.find(r => r.id === id);
+            if (!reserva || reserva.estado !== 'activa') return;
+
+            if (!confirm('¿Cancelar esta reserva? El material volverá a estar disponible.')) return;
+
+            reserva.estado = 'cancelada';
+            reserva.fechaCancelacion = new Date().toISOString();
+
+            addAuditLog('RESERVA', 'CANCELACION', id, `Reserva cancelada para ${reserva.proyecto}`);
+            await saveToCloud();
+            renderReservas();
+            updateDashboard();
+        }
+
+        // STOCK Y RETAZOS (modificado para mostrar disponible vs real)
         function renderStock() {
             const search = document.getElementById('search-stock')?.value.toLowerCase() || '';
             const container = document.getElementById('stock-grid');
 
-            // Filtrar materiales del catálogo que coincidan con la búsqueda
             const materialesFiltrados = state.catalogo.filter(c => {
                 if (c.activo === false) return false;
                 return c.codigo.toLowerCase().includes(search) || 
@@ -1380,10 +1868,16 @@
 
             container.innerHTML = materialesFiltrados.map(m => {
                 if (m.tipoControl === 'retazos') {
-                    // Render para retazos
                     const retazosMaterial = state.retazos.filter(r => r.materialId === m.id && r.estado === 'disponible');
-                    const totalMedida = retazosMaterial.reduce((sum, r) => sum + r.medida, 0);
-                    const isCritical = retazosMaterial.length <= (m.stockMinimo || 3);
+                    const totalReal = retazosMaterial.length;
+                    const reservado = state.reservas
+                        .filter(r => r.estado === 'activa')
+                        .reduce((sum, r) => {
+                            const item = r.materiales.find(mat => mat.materialId === m.id);
+                            return sum + (item ? item.cantidad : 0);
+                        }, 0);
+                    const disponible = Math.max(0, totalReal - reservado);
+                    const isCritical = disponible <= (m.stockMinimo || 3);
 
                     return `
                     <div class="bg-white p-4 rounded-2xl shadow-sm border ${isCritical ? 'border-red-300 bg-red-50' : 'border-gray-100'}">
@@ -1394,11 +1888,12 @@
                                 <span class="text-xs text-purple-600 bg-purple-50 px-2 py-1 rounded-full">📏 Control por Retazos</span>
                             </div>
                             <div class="text-right">
-                                <span class="text-2xl font-bold ${isCritical ? 'text-red-600' : 'text-blue-600'}">${retazosMaterial.length}</span>
-                                <p class="text-xs text-gray-500">piezas</p>
-                                <span class="text-sm ${isCritical ? 'text-red-600' : 'text-gray-600'}">${totalMedida.toFixed(2)} ${m.unidad} total</span>
+                                <span class="text-2xl font-bold ${isCritical ? 'text-red-600' : 'text-blue-600'}">${disponible}</span>
+                                <p class="text-xs text-gray-500">disp. / ${totalReal} total</p>
                             </div>
                         </div>
+
+                        ${reservado > 0 ? `<p class="text-xs text-yellow-600 mb-2">🔒 ${reservado} reservados</p>` : ''}
 
                         <div class="mt-3 space-y-1 max-h-32 overflow-y-auto">
                             ${retazosMaterial.slice(0, 5).map(r => `
@@ -1414,10 +1909,16 @@
                     </div>
                     `;
                 } else {
-                    // Render normal
                     const stockItem = state.stock.find(s => s.materialId === m.id);
-                    const cantidad = stockItem ? stockItem.cantidad : 0;
-                    const isCritical = cantidad <= (m.stockMinimo || 3);
+                    const totalReal = stockItem ? stockItem.cantidad : 0;
+                    const reservado = state.reservas
+                        .filter(r => r.estado === 'activa')
+                        .reduce((sum, r) => {
+                            const item = r.materiales.find(mat => mat.materialId === m.id);
+                            return sum + (item ? item.cantidad : 0);
+                        }, 0);
+                    const disponible = Math.max(0, totalReal - reservado);
+                    const isCritical = disponible <= (m.stockMinimo || 3);
 
                     return `
                     <div class="bg-white p-4 rounded-2xl shadow-sm border ${isCritical ? 'border-red-300 bg-red-50' : 'border-gray-100'}">
@@ -1428,10 +1929,17 @@
                                 <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">∑ Suma Normal</span>
                             </div>
                             <div class="text-right">
-                                <span class="text-2xl font-bold ${isCritical ? 'text-red-600' : 'text-blue-600'}">${cantidad}</span>
+                                <span class="text-2xl font-bold ${isCritical ? 'text-red-600' : 'text-blue-600'}">${disponible}</span>
                                 <p class="text-xs ${isCritical ? 'text-red-500' : 'text-gray-400'}">${m.unidad}</p>
                             </div>
                         </div>
+                        
+                        ${reservado > 0 ? `
+                            <div class="mt-2 flex justify-between text-xs">
+                                <span class="text-gray-500">Real: ${totalReal} • Reservado: ${reservado}</span>
+                            </div>
+                        ` : ''}
+                        
                         <div class="mt-3 pt-3 border-t flex justify-between items-center">
                             <span class="text-xs text-gray-500">Mín: ${m.stockMinimo || 3}</span>
                             ${stockItem ? `<button onclick="ajustarStock('${stockItem.id}')" class="text-sm text-blue-600 hover:underline">Ajustar</button>` : ''}
@@ -1442,16 +1950,11 @@
                 }
             }).join('');
 
-            // Actualizar contador de stock crítico
+            // Actualizar contador de stock crítico (basado en disponible, no real)
             const critico = state.catalogo.filter(c => {
                 if (c.activo === false) return false;
-                if (c.tipoControl === 'retazos') {
-                    const count = state.retazos.filter(r => r.materialId === c.id && r.estado === 'disponible').length;
-                    return count <= (c.stockMinimo || 3);
-                } else {
-                    const stockItem = state.stock.find(s => s.materialId === c.id);
-                    return (stockItem ? stockItem.cantidad : 0) <= (c.stockMinimo || 3);
-                }
+                const disponible = getStockDisponible(c.id);
+                return disponible <= (c.stockMinimo || 3);
             }).length;
 
             document.getElementById('dash-critico').textContent = critico;
@@ -1473,7 +1976,7 @@
             }
         }
 
-        // RETIROS
+        // RETIROS (modificado para considerar reservas)
         function openRetiroObraModal() {
             const ordenesCerradas = state.ordenes.filter(o => o.estado === 'cerrado');
             if (ordenesCerradas.length === 0) {
@@ -1508,11 +2011,11 @@
                 let disponibleHtml = '';
 
                 if (material && material.tipoControl === 'retazos') {
-                    const retazosDisp = state.retazos.filter(r => r.materialId === material.id && r.estado === 'disponible');
-                    disponibleHtml = `<p class="text-xs text-gray-500">${retazosDisp.length} retazos disponibles</p>`;
+                    const disp = getStockDisponible(material.id);
+                    disponibleHtml = `<p class="text-xs ${disp < m.cantidad ? 'text-red-500' : 'text-gray-500'}">Disp: ${disp} retazos</p>`;
                 } else {
-                    const stockItem = state.stock.find(s => s.descripcion.toLowerCase() === m.descripcion.toLowerCase());
-                    disponibleHtml = `<p class="text-xs text-gray-500">Disp: ${stockItem ? stockItem.cantidad : 0} ${m.unidad}</p>`;
+                    const disp = material ? getStockDisponible(material.id) : 0;
+                    disponibleHtml = `<p class="text-xs ${disp < m.cantidad ? 'text-red-500' : 'text-gray-500'}">Disp: ${disp} ${m.unidad}</p>`;
                 }
 
                 container.innerHTML += `
@@ -1523,7 +2026,7 @@
                         </div>
                         <input type="number" min="0" max="${m.cantidad}" value="0" 
                                class="retiro-cant-obra w-20 px-2 py-1 border rounded text-center" 
-                               data-desc="${m.descripcion}" data-unit="${m.unidad}" data-codigo="${m.codigo || ''}">
+                               data-desc="${m.descripcion}" data-unit="${m.unidad}" data-codigo="${m.codigo || ''}" data-material-id="${material ? material.id : ''}">
                     </div>
                 `;
             });
@@ -1544,16 +2047,16 @@
                     const desc = input.dataset.desc;
                     const unidad = input.dataset.unit;
                     const codigo = input.dataset.codigo;
+                    const materialId = input.dataset.materialId;
 
-                    const material = state.catalogo.find(c => c.codigo === codigo || c.descripcion === desc);
+                    const material = state.catalogo.find(c => c.id === materialId);
 
                     if (material && material.tipoControl === 'retazos') {
-                        // Retirar retazos (FIFO - primero ingresado, primero retirado)
                         const retazosDisp = state.retazos.filter(r => r.materialId === material.id && r.estado === 'disponible')
                             .sort((a, b) => new Date(a.fechaIngreso) - new Date(b.fechaIngreso));
 
                         if (retazosDisp.length < cantidad) {
-                            alert(`No hay suficientes retazos de ${desc}. Disponibles: ${retazosDisp.length}`);
+                            alert(`No hay suficientes retazos disponibles de ${desc}. Disponibles: ${retazosDisp.length}`);
                             return;
                         }
 
@@ -1572,14 +2075,27 @@
                             });
                         }
                     } else {
-                        // Retiro normal
-                        const stockItem = state.stock.find(s => s.descripcion.toLowerCase() === desc.toLowerCase());
-                        if (stockItem && stockItem.cantidad >= cantidad) {
+                        const stockItem = state.stock.find(s => s.materialId === materialId);
+                        const disponible = stockItem ? stockItem.cantidad : 0;
+                        
+                        // Verificar si hay reservas que compitan
+                        const reservado = state.reservas
+                            .filter(r => r.estado === 'activa')
+                            .reduce((sum, r) => {
+                                const item = r.materiales.find(m => m.materialId === materialId);
+                                return sum + (item ? item.cantidad : 0);
+                            }, 0);
+                        
+                        const realDisponible = Math.max(0, disponible - reservado);
+                        
+                        if (realDisponible < cantidad) {
+                            alert(`Stock insuficiente para ${desc}. Disponible: ${realDisponible} (Reservado: ${reservado})`);
+                            return;
+                        }
+
+                        if (stockItem) {
                             stockItem.cantidad -= cantidad;
                             materialesRetiro.push({ descripcion: desc, cantidad, unidad, tipo: 'normal' });
-                        } else {
-                            alert(`Stock insuficiente para ${desc}`);
-                            return;
                         }
                     }
                 }
@@ -1611,14 +2127,13 @@
             document.getElementById('retiro-normal-section').classList.add('hidden');
             document.getElementById('retiro-retazos-section').classList.add('hidden');
 
-            // Cargar materiales activos
             const select = document.getElementById('retiro-material-tipo');
             select.innerHTML = '<option value="">Seleccionar material...</option>';
 
             state.catalogo.filter(c => c.activo !== false).forEach(c => {
                 const option = document.createElement('option');
                 option.value = c.id;
-                option.textContent = `${c.codigo} - ${c.descripcion}`;
+                option.textContent = `${c.codigo} - ${c.descripcion} (Disp: ${getStockDisponible(c.id)})`;
                 option.dataset.tipo = c.tipoControl || 'normal';
                 select.appendChild(option);
             });
@@ -1661,8 +2176,17 @@
 
                 const stockItem = state.stock.find(s => s.materialId === materialId);
                 const disponible = stockItem ? stockItem.cantidad : 0;
-                document.getElementById('retiro-disponible-normal').textContent = `${disponible} ${material.unidad}`;
-                document.getElementById('retiro-cantidad-normal').max = disponible;
+                const reservado = state.reservas
+                    .filter(r => r.estado === 'activa')
+                    .reduce((sum, r) => {
+                        const item = r.materiales.find(m => m.materialId === materialId);
+                        return sum + (item ? item.cantidad : 0);
+                    }, 0);
+                const realDisponible = Math.max(0, disponible - reservado);
+
+                document.getElementById('retiro-disponible-normal').textContent = `${realDisponible} ${material.unidad}`;
+                document.getElementById('retiro-reservado-normal').textContent = reservado;
+                document.getElementById('retiro-cantidad-normal').max = realDisponible;
             }
         }
 
@@ -1699,9 +2223,18 @@
             } else {
                 const cantidad = parseInt(document.getElementById('retiro-cantidad-normal').value);
                 const stockItem = state.stock.find(s => s.materialId === materialId);
+                const reservado = state.reservas
+                    .filter(r => r.estado === 'activa')
+                    .reduce((sum, r) => {
+                        const item = r.materiales.find(m => m.materialId === materialId);
+                        return sum + (item ? item.cantidad : 0);
+                    }, 0);
 
                 if (!cantidad || cantidad < 1) return alert('Ingrese cantidad válida');
-                if (!stockItem || stockItem.cantidad < cantidad) return alert('Stock insuficiente');
+                if (!stockItem || (stockItem.cantidad - reservado) < cantidad) {
+                    alert(`Stock insuficiente. Disponible: ${Math.max(0, stockItem.cantidad - reservado)} (Reservado: ${reservado})`);
+                    return;
+                }
 
                 stockItem.cantidad -= cantidad;
                 materiales.push({
@@ -1725,6 +2258,7 @@
             await saveToCloud();
             closeModal('retiro-individual');
             renderRetiros();
+            renderStock();
             updateDashboard();
             alert('Retiro procesado correctamente');
         }
@@ -1736,7 +2270,7 @@
                 <tr class="border-b">
                     <td class="px-4 py-3 text-sm">${new Date(r.fecha).toLocaleDateString('es-ES')} ${new Date(r.fecha).toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit'})}</td>
                     <td class="px-4 py-3">
-                        <span class="px-2 py-1 rounded-full text-xs ${r.tipo === 'obra' ? 'bg-purple-100 text-purple-800' : 'bg-orange-100 text-orange-800'}">
+                        <span class="px-2 py-1 rounded-full text-xs ${r.tipo === 'obra' ? 'bg-purple-100 text-purple-800' : r.tipo === 'reserva' ? 'bg-yellow-100 text-yellow-800' : 'bg-orange-100 text-orange-800'}">
                             ${r.tipo}
                         </span>
                     </td>
@@ -1754,11 +2288,12 @@
             `).join('') || '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-400">Sin retiros registrados</td></tr>';
         }
 
-        // ÓRDENES (actualizadas con usuario)
+        // ÓRDENES (actualizadas con proveedor y cierre parcial)
         function openOrdenModal() {
             document.getElementById('modal-orden').classList.remove('hidden');
             document.getElementById('orden-fecha').valueAsDate = new Date();
             document.getElementById('orden-destino').value = '';
+            document.getElementById('orden-proveedor').value = '';
             document.getElementById('materiales-container').innerHTML = '';
             addMaterialRow();
         }
@@ -1842,12 +2377,102 @@
         }
 
         function addEditMaterialRow(data = null) {
-            createAutocompleteInput(document.getElementById('edit-materiales-container'), data);
+            const container = document.getElementById('edit-materiales-container');
+            const div = document.createElement('div');
+            div.className = 'material-row flex gap-2 items-start bg-gray-50 p-2 rounded-lg relative';
+
+            const estados = ['pendiente', 'entregado', 'cancelado'];
+            const estadoActual = data?.estadoItem || 'pendiente';
+
+            div.innerHTML = `
+                <div class="flex-1 relative">
+                    <input type="text" placeholder="Escribí para buscar..." 
+                           class="material-autocomplete w-full px-3 py-2 border rounded-lg text-sm" 
+                           value="${data ? data.descripcion : ''}"
+                           autocomplete="off">
+                    <div class="autocomplete-results hidden"></div>
+                    <input type="hidden" class="material-codigo" value="${data ? data.codigo || '' : ''}">
+                </div>
+                <input type="number" placeholder="Cant" min="1" value="${data ? data.cantidad : '1'}" class="material-cant w-16 px-2 py-2 border rounded-lg text-sm">
+                <select class="material-unit w-20 px-2 py-2 border rounded-lg text-sm text-xs">
+                    <option value="unidades" ${data?.unidad === 'unidades' ? 'selected' : ''}>Unid</option>
+                    <option value="kg" ${data?.unidad === 'kg' ? 'selected' : ''}>Kg</option>
+                    <option value="metros" ${data?.unidad === 'metros' ? 'selected' : ''}>m</option>
+                    <option value="litros" ${data?.unidad === 'litros' ? 'selected' : ''}>L</option>
+                    <option value="cajas" ${data?.unidad === 'cajas' ? 'selected' : ''}>Caja</option>
+                </select>
+                <select class="item-estado w-24 px-2 py-2 border rounded-lg text-xs ${estadoActual === 'entregado' ? 'bg-green-100' : estadoActual === 'cancelado' ? 'bg-gray-100' : 'bg-yellow-100'}">
+                    <option value="pendiente" ${estadoActual === 'pendiente' ? 'selected' : ''}>Pendiente</option>
+                    <option value="entregado" ${estadoActual === 'entregado' ? 'selected' : ''}>Entregado</option>
+                    <option value="cancelado" ${estadoActual === 'cancelado' ? 'selected' : ''}>Cancelado</option>
+                </select>
+                <button onclick="this.closest('.material-row').remove()" class="text-red-500 px-1 hover:bg-red-50 rounded">✕</button>
+            `;
+
+            // Agregar listener para cambio de estado y actualizar color
+            const estadoSelect = div.querySelector('.item-estado');
+            estadoSelect.addEventListener('change', function() {
+                this.className = `item-estado w-24 px-2 py-2 border rounded-lg text-xs ${
+                    this.value === 'entregado' ? 'bg-green-100' : 
+                    this.value === 'cancelado' ? 'bg-gray-100' : 'bg-yellow-100'
+                }`;
+            });
+
+            // Autocomplete
+            const input = div.querySelector('.material-autocomplete');
+            const resultsDiv = div.querySelector('.autocomplete-results');
+            const unitSelect = div.querySelector('.material-unit');
+            const codigoInput = div.querySelector('.material-codigo');
+
+            input.addEventListener('input', (e) => {
+                const value = e.target.value.toLowerCase();
+                if (value.length < 1) {
+                    resultsDiv.classList.add('hidden');
+                    return;
+                }
+
+                const matches = state.catalogo.filter(c => 
+                    c.activo !== false && (
+                        c.codigo.toLowerCase().includes(value) || 
+                        c.descripcion.toLowerCase().includes(value)
+                    )
+                ).slice(0, 5);
+
+                if (matches.length > 0) {
+                    resultsDiv.innerHTML = matches.map(m => `
+                        <div class="autocomplete-item" data-codigo="${m.codigo}" data-desc="${m.descripcion}" data-unit="${m.unidad}">
+                            <div class="font-medium">${m.descripcion}</div>
+                            <div class="text-xs text-gray-500">${m.codigo} • ${m.unidad}</div>
+                        </div>
+                    `).join('');
+                    resultsDiv.classList.remove('hidden');
+
+                    resultsDiv.querySelectorAll('.autocomplete-item').forEach(item => {
+                        item.addEventListener('click', () => {
+                            input.value = item.dataset.desc;
+                            codigoInput.value = item.dataset.codigo;
+                            unitSelect.value = item.dataset.unit;
+                            resultsDiv.classList.add('hidden');
+                        });
+                    });
+                } else {
+                    resultsDiv.classList.add('hidden');
+                }
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!div.contains(e.target)) {
+                    resultsDiv.classList.add('hidden');
+                }
+            });
+
+            container.appendChild(div);
         }
 
         async function saveOrden() {
             const fecha = document.getElementById('orden-fecha').value;
             const destino = document.getElementById('orden-destino').value;
+            const proveedor = document.getElementById('orden-proveedor').value;
 
             if (!fecha || !destino) return alert('Complete fecha y destino');
 
@@ -1860,7 +2485,13 @@
                 const unit = row.querySelector('.material-unit').value;
 
                 if (desc && cant) {
-                    materiales.push({ codigo, descripcion: desc, cantidad: parseInt(cant), unidad: unit });
+                    materiales.push({ 
+                        codigo, 
+                        descripcion: desc, 
+                        cantidad: parseInt(cant), 
+                        unidad: unit,
+                        estadoItem: 'pendiente' // NUEVO: Estado inicial del ítem
+                    });
                 }
             });
 
@@ -1870,6 +2501,7 @@
                 id: Date.now(),
                 fecha,
                 destino,
+                proveedor: proveedor || 'Sin especificar',
                 estado: 'abierto',
                 materiales,
                 creadoPor: CONFIG.currentUser,
@@ -1892,6 +2524,7 @@
             document.getElementById('edit-orden-numero').value = '#' + orden.id;
             document.getElementById('edit-orden-fecha').value = orden.fecha;
             document.getElementById('edit-orden-destino').value = orden.destino;
+            document.getElementById('edit-orden-proveedor').value = orden.proveedor || '';
             document.getElementById('edit-orden-estado').value = orden.estado;
 
             const container = document.getElementById('edit-materiales-container');
@@ -1901,6 +2534,21 @@
             document.getElementById('modal-editar-orden').classList.remove('hidden');
         }
 
+        function onEstadoOrdenChange() {
+            const estado = document.getElementById('edit-orden-estado').value;
+            const container = document.getElementById('edit-materiales-container');
+            
+            // Si se marca como cerrado, preguntar si marcar todos como entregados
+            if (estado === 'cerrado') {
+                if (confirm('¿Marcar todos los ítems como entregados?')) {
+                    container.querySelectorAll('.item-estado').forEach(select => {
+                        select.value = 'entregado';
+                        select.className = 'item-estado w-24 px-2 py-2 border rounded-lg text-xs bg-green-100';
+                    });
+                }
+            }
+        }
+
         async function saveEditOrden() {
             const id = parseInt(document.getElementById('edit-orden-id').value);
             const orden = state.ordenes.find(o => o.id === id);
@@ -1908,54 +2556,12 @@
 
             const fecha = document.getElementById('edit-orden-fecha').value;
             const destino = document.getElementById('edit-orden-destino').value;
+            const proveedor = document.getElementById('edit-orden-proveedor').value;
             const estado = document.getElementById('edit-orden-estado').value;
 
             if (!fecha || !destino) return alert('Complete fecha y destino');
 
-            if (estado === 'cerrado' && orden.estado === 'abierto') {
-                if (!confirm('¿Cerrar esta orden? Los materiales se agregarán al stock.')) return;
-
-                orden.materiales.forEach(m => {
-                    const material = state.catalogo.find(c => c.codigo === m.codigo || c.descripcion === m.descripcion);
-
-                    if (material && material.tipoControl === 'retazos') {
-                        // Para retazos, creamos N retazos individuales
-                        for (let i = 0; i < m.cantidad; i++) {
-                            state.retazos.push({
-                                id: 'RET-' + Date.now().toString(36).toUpperCase() + i,
-                                materialId: material.id,
-                                codigoMaterial: material.codigo,
-                                descripcionMaterial: material.descripcion,
-                                medida: 1, // Por defecto 1 unidad, se puede ajustar después
-                                unidad: m.unidad,
-                                estado: 'disponible',
-                                ubicacion: 'Ingreso por orden',
-                                usuarioIngreso: CONFIG.currentUser,
-                                fechaIngreso: new Date().toISOString(),
-                                origen: `Orden #${orden.id} - ${orden.destino}`,
-                                observaciones: `Ingresado desde orden cerrada`
-                            });
-                        }
-                    } else {
-                        // Stock normal
-                        const existente = state.stock.find(s => s.descripcion.toLowerCase() === m.descripcion.toLowerCase() && s.unidad === m.unidad);
-                        if (existente) {
-                            existente.cantidad += m.cantidad;
-                        } else {
-                            state.stock.push({
-                                id: Date.now() + Math.random(),
-                                descripcion: m.descripcion,
-                                cantidad: m.cantidad,
-                                unidad: m.unidad,
-                                stockMinimo: 3
-                            });
-                        }
-                    }
-                });
-                orden.fechaCierre = new Date().toISOString();
-                addAuditLog('CIERRE', 'ORDEN', id, `Orden cerrada por ${CONFIG.currentUser}`);
-            }
-
+            // Recolectar materiales con sus estados
             const materiales = [];
             document.querySelectorAll('#edit-materiales-container .material-row').forEach(row => {
                 const input = row.querySelector('.material-autocomplete');
@@ -1963,20 +2569,105 @@
                 const desc = input.value;
                 const cant = row.querySelector('.material-cant').value;
                 const unit = row.querySelector('.material-unit').value;
+                const estadoItem = row.querySelector('.item-estado').value;
 
                 if (desc && cant) {
-                    materiales.push({ codigo, descripcion: desc, cantidad: parseInt(cant), unidad: unit });
+                    materiales.push({ 
+                        codigo, 
+                        descripcion: desc, 
+                        cantidad: parseInt(cant), 
+                        unidad: unit,
+                        estadoItem: estadoItem || 'pendiente'
+                    });
                 }
             });
 
+            // Calcular estado automático basado en ítems si no es manual
+            const itemsEntregados = materiales.filter(m => m.estadoItem === 'entregado').length;
+            const itemsCancelados = materiales.filter(m => m.estadoItem === 'cancelado').length;
+            const totalItems = materiales.length;
+
+            let estadoFinal = estado;
+            if (estado === 'abierto' || estado === 'parcial') {
+                if (itemsEntregados === totalItems) {
+                    estadoFinal = 'cerrado';
+                } else if (itemsEntregados > 0) {
+                    estadoFinal = 'parcial';
+                }
+            }
+
+            // Si se cierra la orden, verificar stock y procesar
+            if (estadoFinal === 'cerrado' && orden.estado !== 'cerrado') {
+                const faltantes = [];
+                
+                for (const m of materiales.filter(mat => mat.estadoItem === 'entregado')) {
+                    const material = state.catalogo.find(c => c.codigo === m.codigo || c.descripcion === m.descripcion);
+                    
+                    if (material) {
+                        const disponible = getStockDisponible(material.id);
+                        if (disponible < m.cantidad) {
+                            faltantes.push(`${m.descripcion} (faltan ${m.cantidad - disponible})`);
+                        }
+                    }
+                }
+
+                if (faltantes.length > 0) {
+                    if (!confirm(`Falta stock para:\n${faltantes.join('\n')}\n\n¿Marcar orden como PENDIENTE y continuar?`)) {
+                        return;
+                    }
+                    estadoFinal = 'pendiente';
+                } else {
+                    if (!confirm('¿Cerrar esta orden? Los materiales marcados como ENTREGADOS se descontarán del stock.')) return;
+                    
+                    // Procesar entrega de materiales
+                    for (const m of materiales.filter(mat => mat.estadoItem === 'entregado')) {
+                        const material = state.catalogo.find(c => c.codigo === m.codigo || c.descripcion === m.descripcion);
+
+                        if (material && material.tipoControl === 'retazos') {
+                            for (let i = 0; i < m.cantidad; i++) {
+                                state.retazos.push({
+                                    id: 'RET-' + Date.now().toString(36).toUpperCase() + i,
+                                    materialId: material.id,
+                                    codigoMaterial: material.codigo,
+                                    descripcionMaterial: material.descripcion,
+                                    medida: 1,
+                                    unidad: m.unidad,
+                                    estado: 'disponible',
+                                    ubicacion: 'Ingreso por orden',
+                                    usuarioIngreso: CONFIG.currentUser,
+                                    fechaIngreso: new Date().toISOString(),
+                                    origen: `Orden #${orden.id} - ${orden.destino}`,
+                                    observaciones: `Ingresado desde orden cerrada`
+                                });
+                            }
+                        } else {
+                            const existente = state.stock.find(s => s.descripcion.toLowerCase() === m.descripcion.toLowerCase() && s.unidad === m.unidad);
+                            if (existente) {
+                                existente.cantidad += m.cantidad;
+                            } else {
+                                state.stock.push({
+                                    id: Date.now() + Math.random(),
+                                    descripcion: m.descripcion,
+                                    cantidad: m.cantidad,
+                                    unidad: m.unidad,
+                                    stockMinimo: 3
+                                });
+                            }
+                        }
+                    }
+                    orden.fechaCierre = new Date().toISOString();
+                }
+            }
+
             orden.fecha = fecha;
             orden.destino = destino;
-            orden.estado = estado;
+            orden.proveedor = proveedor;
+            orden.estado = estadoFinal;
             orden.materiales = materiales;
             orden.modificadoPor = CONFIG.currentUser;
             orden.fechaModificacion = new Date().toISOString();
 
-            addAuditLog('EDICION', 'ORDEN', id, `Orden editada por ${CONFIG.currentUser}`);
+            addAuditLog('EDICION', 'ORDEN', id, `Orden editada por ${CONFIG.currentUser}. Estado: ${estadoFinal}`);
             await saveToCloud();
             closeModal('editar-orden');
             renderOrdenes();
@@ -2003,33 +2694,56 @@
 
             const sorted = filtered.sort((a, b) => new Date(b.fechaCreacion || b.id) - new Date(a.fechaCreacion || a.id));
 
-            document.getElementById('ordenes-table').innerHTML = sorted.map(o => `
+            document.getElementById('ordenes-table').innerHTML = sorted.map(o => {
+                const itemsEntregados = o.materiales.filter(m => m.estadoItem === 'entregado').length;
+                const itemsTotal = o.materiales.length;
+                const progreso = itemsTotal > 0 ? Math.round((itemsEntregados / itemsTotal) * 100) : 0;
+                
+                let estadoClass = '';
+                let estadoText = o.estado;
+                
+                switch(o.estado) {
+                    case 'abierto': estadoClass = 'bg-yellow-100 text-yellow-800'; break;
+                    case 'parcial': estadoClass = 'bg-purple-100 text-purple-800'; estadoText = 'Parcial'; break;
+                    case 'pendiente': estadoClass = 'bg-orange-100 text-orange-800'; estadoText = 'Pendiente'; break;
+                    case 'cerrado': estadoClass = 'bg-green-100 text-green-800'; break;
+                    default: estadoClass = 'bg-gray-100 text-gray-800';
+                }
+
+                return `
                 <tr class="border-b hover:bg-gray-50">
                     <td class="px-4 py-3 text-sm font-medium">#${o.id}</td>
                     <td class="px-4 py-3 text-sm">${new Date(o.fecha).toLocaleDateString('es-ES')}</td>
+                    <td class="px-4 py-3 text-sm">${o.proveedor || '-'}</td>
                     <td class="px-4 py-3 text-sm">${o.destino}</td>
-                    <td class="px-4 py-3 text-sm">${o.materiales.length} items</td>
+                    <td class="px-4 py-3 text-sm">
+                        <div class="flex items-center gap-2">
+                            <div class="w-16 bg-gray-200 rounded-full h-2">
+                                <div class="bg-green-500 h-2 rounded-full" style="width: ${progreso}%"></div>
+                            </div>
+                            <span class="text-xs">${progreso}%</span>
+                        </div>
+                        <span class="text-xs text-gray-500">${itemsEntregados}/${itemsTotal} entregados</span>
+                    </td>
                     <td class="px-4 py-3 text-sm">
                         <span class="user-badge bg-gray-100 text-gray-700">${o.creadoPor || 'N/A'}</span>
                     </td>
                     <td class="px-4 py-3">
-                        <span class="px-2 py-1 rounded-full text-xs ${o.estado === 'abierto' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}">
-                            ${o.estado}
-                        </span>
+                        <span class="px-2 py-1 rounded-full text-xs ${estadoClass}">${estadoText}</span>
                     </td>
                     <td class="px-4 py-3 text-sm">
                         <div class="flex gap-2">
                             <button onclick="verOrden(${o.id})" class="text-blue-600 hover:text-blue-800" title="Ver">👁️</button>
                             <button onclick="editarOrden(${o.id})" class="text-yellow-600 hover:text-yellow-800" title="Editar">✏️</button>
-                            ${o.estado === 'abierto' ? `<button onclick="cerrarOrden(${o.id})" class="text-green-600 hover:text-green-800" title="Cerrar">✓</button>` : ''}
+                            ${o.estado !== 'cerrado' ? `<button onclick="cerrarOrden(${o.id})" class="text-green-600 hover:text-green-800" title="Cerrar">✓</button>` : ''}
                             <button onclick="eliminarOrden(${o.id})" class="text-red-600 hover:text-red-800" title="Eliminar">🗑️</button>
                         </div>
                     </td>
                 </tr>
-            `).join('');
+            `}).join('');
 
             document.getElementById('dash-ordenes').textContent = state.ordenes.filter(o => o.estado === 'abierto').length;
-            document.getElementById('summary-ordenes').textContent = state.ordenes.filter(o => o.estado === 'abierto').length;
+            document.getElementById('summary-ordenes').textContent = state.ordenes.filter(o => o.estado === 'abierto' || o.estado === 'parcial').length;
         }
 
         function filterOrders(filter) {
@@ -2045,33 +2759,52 @@
             const orden = state.ordenes.find(o => o.id === id);
             if (!orden) return;
 
+            const materialesHtml = orden.materiales.map(m => {
+                const estadoClass = {
+                    'entregado': 'item-entregado',
+                    'cancelado': 'item-cancelado',
+                    'pendiente': 'item-pendiente'
+                }[m.estadoItem || 'pendiente'];
+
+                const estadoText = {
+                    'entregado': '✓ Entregado',
+                    'cancelado': '✕ Cancelado',
+                    'pendiente': '⏳ Pendiente'
+                }[m.estadoItem || 'pendiente'];
+
+                return `
+                    <div class="flex justify-between items-center p-3 rounded-lg mb-2 ${estadoClass}">
+                        <div>
+                            <span class="font-medium">${m.descripcion}</span>
+                            ${m.codigo ? `<span class="text-xs text-blue-600 ml-2">(${m.codigo})</span>` : ''}
+                            <span class="text-xs ml-2 px-2 py-0.5 rounded-full bg-white bg-opacity-50">${estadoText}</span>
+                        </div>
+                        <span class="text-gray-600">${m.cantidad} ${m.unidad}</span>
+                    </div>
+                `;
+            }).join('');
+
             document.getElementById('ver-orden-titulo').textContent = `Orden #${id}`;
             document.getElementById('ver-orden-contenido').innerHTML = `
                 <div class="space-y-3">
-                    <p><strong>Fecha:</strong> ${new Date(orden.fecha).toLocaleDateString('es-ES')}</p>
-                    <p><strong>Destino:</strong> ${orden.destino}</p>
-                    <p><strong>Creado por:</strong> <span class="user-badge bg-blue-100 text-blue-700">${orden.creadoPor || 'N/A'}</span></p>
-                    <p><strong>Estado:</strong> <span class="px-2 py-1 rounded-full text-xs ${orden.estado === 'abierto' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}">${orden.estado}</span></p>
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div><strong>Fecha:</strong> ${new Date(orden.fecha).toLocaleDateString('es-ES')}</div>
+                        <div><strong>Estado:</strong> <span class="px-2 py-1 rounded-full text-xs ${orden.estado === 'abierto' ? 'bg-yellow-100 text-yellow-800' : orden.estado === 'parcial' ? 'bg-purple-100 text-purple-800' : orden.estado === 'pendiente' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'}">${orden.estado}</span></div>
+                    </div>
+                    <div><strong>Proveedor:</strong> ${orden.proveedor || 'No especificado'}</div>
+                    <div><strong>Destino:</strong> ${orden.destino}</div>
+                    <div><strong>Creado por:</strong> <span class="user-badge bg-blue-100 text-blue-700">${orden.creadoPor || 'N/A'}</span></div>
                     <div class="mt-4">
                         <strong>Materiales:</strong>
-                        <div class="mt-2 space-y-2">
-                            ${orden.materiales.map(m => `
-                                <div class="bg-gray-50 p-2 rounded-lg flex justify-between items-center">
-                                    <div>
-                                        <span class="font-medium">${m.descripcion}</span>
-                                        ${m.codigo ? `<span class="text-xs text-blue-600 ml-2">(${m.codigo})</span>` : ''}
-                                    </div>
-                                    <span class="text-gray-600">${m.cantidad} ${m.unidad}</span>
-                                </div>
-                            `).join('')}
-                        </div>
+                        <div class="mt-2">${materialesHtml}</div>
                     </div>
+                    ${orden.observaciones ? `<div class="mt-4 p-3 bg-gray-50 rounded-lg"><strong>Observaciones:</strong> ${orden.observaciones}</div>` : ''}
                 </div>
             `;
 
-            document.getElementById('ver-orden-acciones').innerHTML = orden.estado === 'abierto' 
-                ? `<button onclick="cerrarOrden(${orden.id}); closeModal('ver-orden');" class="px-6 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700">Autorizar y Cerrar</button>`
-                : '<span class="text-gray-500">Orden procesada</span>';
+            document.getElementById('ver-orden-acciones').innerHTML = orden.estado !== 'cerrado' 
+                ? `<button onclick="editarOrden(${orden.id}); closeModal('ver-orden');" class="px-6 py-2 bg-yellow-600 text-white rounded-xl hover:bg-yellow-700">Editar Orden</button>`
+                : '<span class="text-gray-500">Orden cerrada</span>';
 
             document.getElementById('modal-ver-orden').classList.remove('hidden');
         }
@@ -2080,9 +2813,46 @@
             const orden = state.ordenes.find(o => o.id === id);
             if (!orden || orden.estado === 'cerrado') return;
 
-            if (!confirm('¿Autorizar esta orden? Los materiales pasarán al stock.')) return;
+            // Verificar si hay ítems entregables
+            const itemsPendientes = orden.materiales.filter(m => m.estadoItem === 'pendiente');
+            
+            if (itemsPendientes.length > 0) {
+                if (!confirm(`Hay ${itemsPendientes.length} ítems pendientes. ¿Marcar todos como entregados y cerrar?`)) {
+                    return;
+                }
+                // Marcar todos como entregados
+                orden.materiales.forEach(m => {
+                    if (m.estadoItem === 'pendiente') m.estadoItem = 'entregado';
+                });
+            }
 
+            if (!confirm('¿Cerrar esta orden? Los materiales se agregarán al stock.')) return;
+
+            // Verificar stock suficiente
+            const faltantes = [];
+            for (const m of orden.materiales.filter(mat => mat.estadoItem === 'entregado')) {
+                const material = state.catalogo.find(c => c.codigo === m.codigo || c.descripcion === m.descripcion);
+                if (material) {
+                    const disponible = getStockDisponible(material.id);
+                    if (disponible < m.cantidad) {
+                        faltantes.push(`${m.descripcion} (faltan ${m.cantidad - disponible})`);
+                    }
+                }
+            }
+
+            if (faltantes.length > 0) {
+                alert(`No se puede cerrar. Falta stock para:\n${faltantes.join('\n')}\n\nLa orden se marcará como PENDIENTE.`);
+                orden.estado = 'pendiente';
+                orden.observaciones = (orden.observaciones || '') + `\n[PENDIENTE por falta de stock: ${new Date().toLocaleDateString()}]`;
+                await saveToCloud();
+                renderOrdenes();
+                return;
+            }
+
+            // Procesar cierre
             orden.materiales.forEach(m => {
+                if (m.estadoItem !== 'entregado') return;
+
                 const material = state.catalogo.find(c => c.codigo === m.codigo || c.descripcion === m.descripcion);
 
                 if (material && material.tipoControl === 'retazos') {
@@ -2127,7 +2897,7 @@
             updateDashboard();
         }
 
-        // PLANIFICADOR (sin cambios mayores, solo auditoría opcional)
+        // PLANIFICADOR
         function renderPlanner() {
             const year = state.currentDate.getFullYear();
             const month = state.currentDate.getMonth();
@@ -2269,7 +3039,6 @@
             const filterUser = document.getElementById('audit-filter-user').value;
             const filterAction = document.getElementById('audit-filter-action').value;
 
-            // Actualizar opciones de usuarios en el filtro
             const userSelect = document.getElementById('audit-filter-user');
             if (userSelect.options.length <= 1) {
                 state.usuarios.forEach(u => {
@@ -2295,6 +3064,7 @@
                 const actionColors = {
                     'INGRESO': 'bg-green-100 text-green-800',
                     'RETIRO': 'bg-orange-100 text-orange-800',
+                    'RESERVA': 'bg-yellow-100 text-yellow-800',
                     'CREACION': 'bg-blue-100 text-blue-800',
                     'EDICION': 'bg-yellow-100 text-yellow-800',
                     'ELIMINACION': 'bg-red-100 text-red-800',
@@ -2323,28 +3093,30 @@
         // DASHBOARD
         function updateDashboard() {
             const abiertas = state.ordenes.filter(o => o.estado === 'abierto').length;
+            const parciales = state.ordenes.filter(o => o.estado === 'parcial').length;
+            const pendientes = state.ordenes.filter(o => o.estado === 'pendiente').length;
+            const reservasActivas = state.reservas.filter(r => r.estado === 'activa').length;
+            
             const critico = state.catalogo.filter(c => {
                 if (c.activo === false) return false;
-                if (c.tipoControl === 'retazos') {
-                    const count = state.retazos.filter(r => r.materialId === c.id && r.estado === 'disponible').length;
-                    return count <= (c.stockMinimo || 3);
-                } else {
-                    const stockItem = state.stock.find(s => s.materialId === c.id);
-                    return (stockItem ? stockItem.cantidad : 0) <= (c.stockMinimo || 3);
-                }
+                const disponible = getStockDisponible(c.id);
+                return disponible <= (c.stockMinimo || 3);
             }).length;
+            
             const totalMateriales = state.catalogo.filter(c => c.activo !== false).length;
             const today = new Date().toISOString().split('T')[0];
             const tareasHoy = state.tareas.filter(t => t.fecha === today && t.estado === 'pendiente').length;
 
             document.getElementById('dash-ordenes').textContent = abiertas;
             document.getElementById('dash-critico').textContent = critico;
+            document.getElementById('dash-reservas').textContent = reservasActivas;
             document.getElementById('dash-total').textContent = totalMateriales;
             document.getElementById('dash-tareas-pendientes').textContent = tareasHoy;
 
             document.getElementById('summary-stock').textContent = state.stock.length + state.retazos.filter(r => r.estado === 'disponible').length;
             document.getElementById('summary-catalogo').textContent = state.catalogo.length;
-            document.getElementById('summary-ordenes').textContent = abiertas;
+            document.getElementById('summary-ordenes').textContent = abiertas + parciales + pendientes;
+            document.getElementById('summary-reservas').textContent = reservasActivas;
             document.getElementById('summary-tareas').textContent = state.tareas.filter(t => t.fecha === today).length;
 
             const setBadge = (id, count) => {
@@ -2356,6 +3128,7 @@
             };
             setBadge('badge-ordenes', abiertas);
             setBadge('badge-critical', critico);
+            setBadge('badge-reservas', reservasActivas);
             setBadge('badge-tareas', state.tareas.filter(t => t.estado === 'pendiente').length);
 
             // Calendario dashboard
@@ -2388,6 +3161,7 @@
             updateDashboard();
             if (!document.getElementById('catalogo').classList.contains('hidden')) renderCatalogo();
             if (!document.getElementById('ordenes').classList.contains('hidden')) renderOrdenes();
+            if (!document.getElementById('reservas').classList.contains('hidden')) renderReservas();
             if (!document.getElementById('stock').classList.contains('hidden')) renderStock();
             if (!document.getElementById('retiros').classList.contains('hidden')) renderRetiros();
             if (!document.getElementById('planificador').classList.contains('hidden')) renderPlanner();
