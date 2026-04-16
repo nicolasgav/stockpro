@@ -834,11 +834,36 @@
             setupDragAndDrop();
         });
 
-        // FUNCIONES DE USUARIO
-        function loadUsers() {
-            const savedUsers = localStorage.getItem('stockpro_users');
-            if (savedUsers) {
-                state.usuarios = JSON.parse(savedUsers);
+        // FUNCIONES DE USUARIO - CORREGIDAS PARA SINCRONIZACIÓN CLOUD
+        async function loadUsers() {
+            // Primero intentar cargar desde JSONBin si hay binId configurado
+            if (CONFIG.binId && CONFIG.apiKey) {
+                try {
+                    const response = await fetch(`${CONFIG.baseUrl}/${CONFIG.binId}/latest`, {
+                        headers: { 'X-Master-Key': CONFIG.apiKey }
+                    });
+                    if (response.ok) {
+                        const result = await response.json();
+                        if (result.record && result.record.usuarios) {
+                            state.usuarios = result.record.usuarios;
+                            // Actualizar localStorage como caché local
+                            localStorage.setItem('stockpro_users', JSON.stringify(state.usuarios));
+                        }
+                    }
+                } catch (err) {
+                    console.log('Error cargando usuarios de cloud:', err);
+                    // Fallback a localStorage
+                    const savedUsers = localStorage.getItem('stockpro_users');
+                    if (savedUsers) {
+                        state.usuarios = JSON.parse(savedUsers);
+                    }
+                }
+            } else {
+                // Sin configuración cloud, usar localStorage
+                const savedUsers = localStorage.getItem('stockpro_users');
+                if (savedUsers) {
+                    state.usuarios = JSON.parse(savedUsers);
+                }
             }
             renderUserList();
         }
@@ -857,13 +882,21 @@
             `).join('');
         }
 
-        function createUser() {
+        async function createUser() {
             const name = document.getElementById('new-user-name').value.trim();
             if (!name) return alert('Ingresa un nombre');
             if (state.usuarios.includes(name)) return alert('Este usuario ya existe');
 
             state.usuarios.push(name);
+            
+            // Guardar en localStorage (caché local)
             localStorage.setItem('stockpro_users', JSON.stringify(state.usuarios));
+            
+            // Si hay configuración cloud, sincronizar inmediatamente
+            if (CONFIG.binId && CONFIG.apiKey) {
+                await saveToCloud();
+            }
+            
             document.getElementById('new-user-name').value = '';
             renderUserList();
         }
@@ -882,7 +915,7 @@
         }
 
         // CONFIGURACIÓN JSONBin
-        function saveConfig() {
+        async function saveConfig() {
             const key = document.getElementById('api-key').value.trim();
             const binId = document.getElementById('bin-id').value.trim();
 
@@ -893,9 +926,20 @@
             CONFIG.apiKey = key;
             CONFIG.binId = binId;
 
+            // Si hay un binId existente, cargar usuarios desde allí
+            if (binId) {
+                await loadUsers();
+            } else {
+                // Si es nuevo bin, subir usuarios locales si existen
+                const savedUsers = localStorage.getItem('stockpro_users');
+                if (savedUsers) {
+                    state.usuarios = JSON.parse(savedUsers);
+                }
+            }
+
             document.getElementById('config-screen').classList.add('hidden');
             document.getElementById('login-screen').classList.remove('hidden');
-            loadUsers();
+            renderUserList();
         }
 
         function showApp() {
