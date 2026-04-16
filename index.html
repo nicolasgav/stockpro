@@ -756,7 +756,48 @@
             </div>
         </div>
     </div>
+    <!-- MODAL RECEPCIÓN PARCIAL -->
+    <div id="modal-recepcion" class="fixed inset-0 bg-black bg-opacity-50 hidden z-[60] flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-100 bg-indigo-50">
+                <h3 class="text-xl font-bold text-indigo-900">Recepción de Materiales</h3>
+                <p class="text-sm text-indigo-700 mt-1">Seleccioná qué materiales recibiste y en qué cantidad. Podés dejar pendiente lo que falte.</p>
+            </div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="recepcion-orden-id">
+                
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                    <p class="text-sm text-yellow-800">
+                        <strong>💡 Tip:</strong> Dejá en 0 o desmarcá los materiales que no llegaron. 
+                        La orden quedará <strong>parcial</strong> y podés completarla después.
+                    </p>
+                </div>
 
+                <div id="recepcion-materiales-list" class="space-y-3">
+                    <!-- Se genera dinámicamente -->
+                </div>
+
+                <div class="mt-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Observaciones de esta recepción</label>
+                    <textarea id="recepcion-observaciones" rows="2" class="w-full px-4 py-2 border border-gray-200 rounded-xl" placeholder="Ej: Faltaron 2 items por falta de stock del proveedor..."></textarea>
+                </div>
+
+                <div class="flex items-center gap-2 mt-4 p-3 bg-gray-50 rounded-lg">
+                    <input type="checkbox" id="recepcion-completa" class="w-4 h-4 text-blue-600 rounded">
+                    <label for="recepcion-completa" class="text-sm font-medium text-gray-700">
+                        Esta es la recepción <strong>completa y final</strong> (cerrar orden definitivamente)
+                    </label>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-4 border-t">
+                    <button onclick="closeModal('recepcion')" class="px-6 py-2 text-gray-600 hover:bg-gray-100 rounded-xl">Cancelar</button>
+                    <button onclick="confirmarRecepcion()" class="px-6 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-medium">
+                        Confirmar Recepción
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
     <div id="modal-tarea" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
             <div class="p-6 border-b border-gray-100 bg-blue-50 flex justify-between items-center">
@@ -2550,15 +2591,17 @@ function crearNuevoMaterialIngreso(descripcion) {
                         <span class="user-badge bg-gray-100 text-gray-700">${o.creadoPor || 'N/A'}</span>
                     </td>
                     <td class="px-4 py-3">
-                        <span class="px-2 py-1 rounded-full text-xs ${o.estado === 'abierto' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}">
-                            ${o.estado}
-                        </span>
-                    </td>
-                    <td class="px-4 py-3 text-sm">
+                        ${o.estado === 'parcial' 
+                            ? `<span class="px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-800" title="Faltan materiales por recibir">Parcial (${o.recepciones?.length || 1}/?)</span>`
+                            : `<span class="px-2 py-1 rounded-full text-xs ${o.estado === 'abierto' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}">
+                                ${o.estado}
+                               </span>`
+                        }
+                    </td>                    <td class="px-4 py-3 text-sm">
                         <div class="flex gap-2">
                             <button onclick="verOrden(${o.id})" class="text-blue-600 hover:text-blue-800" title="Ver">👁️</button>
                             <button onclick="editarOrden(${o.id})" class="text-yellow-600 hover:text-yellow-800" title="Editar">✏️</button>
-                            ${o.estado === 'abierto' ? `<button onclick="cerrarOrden(${o.id})" class="text-green-600 hover:text-green-800" title="Cerrar">✓</button>` : ''}
+                            ${o.estado !== 'cerrado' ? `<button onclick="cerrarOrden(${o.id})" class="text-green-600 hover:text-green-800" title="${o.estado === 'parcial' ? 'Completar recepción' : 'Cerrar'}">${o.estado === 'parcial' ? '➕' : '✓'}</button>` : ''}
                             <button onclick="eliminarOrden(${o.id})" class="text-red-600 hover:text-red-800" title="Eliminar">🗑️</button>
                         </div>
                     </td>
@@ -2601,6 +2644,40 @@ function crearNuevoMaterialIngreso(descripcion) {
                                     <span class="text-gray-600">${m.cantidad} ${m.unidad}</span>
                                 </div>
                             `).join('')}
+			            ${orden.recepciones && orden.recepciones.length > 0 ? `
+            <div class="mt-4">
+                <strong>Historial de Recepciones:</strong>
+                <div class="mt-2 space-y-2">
+                    ${orden.recepciones.map((r, i) => `
+                        <div class="bg-${r.esParcial ? 'orange' : 'green'}-50 p-2 rounded-lg text-sm border-l-4 border-${r.esParcial ? 'orange' : 'green'}-400">
+                            <div class="flex justify-between">
+                                <span class="font-medium">${new Date(r.fecha).toLocaleDateString()} ${new Date(r.fecha).toLocaleTimeString()}</span>
+                                <span class="text-xs bg-${r.esParcial ? 'orange' : 'green'}-100 text-${r.esParcial ? 'orange' : 'green'}-800 px-2 rounded">${r.esParcial ? 'Parcial' : 'Completa'}</span>
+                            </div>
+                            <p class="text-gray-600 mt-1">Por: ${r.usuario}</p>
+                            ${r.observaciones ? `<p class="text-gray-500 italic mt-1">"${r.observaciones}"</p>` : ''}
+                            <div class="mt-1 text-xs text-gray-500">
+                                ${r.materiales.length} materiales recibidos
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            ` : ''}
+            
+            ${orden.materialesPendientes && orden.materialesPendientes.length > 0 ? `
+            <div class="mt-4 bg-orange-50 p-3 rounded-lg border border-orange-200">
+                <strong class="text-orange-800">⏳ Materiales Pendientes:</strong>
+                <div class="mt-2 space-y-1">
+                    ${orden.materialesPendientes.map(m => `
+                        <div class="flex justify-between text-sm text-orange-900">
+                            <span>${m.descripcion}</span>
+                            <span class="font-bold">${m.cantidad} ${m.unidad}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            ` : ''}
                         </div>
                     </div>
                 </div>
@@ -2612,40 +2689,304 @@ function crearNuevoMaterialIngreso(descripcion) {
 
             document.getElementById('modal-ver-orden').classList.remove('hidden');
         }
+async function cerrarOrden(id) {
+    const orden = state.ordenes.find(o => o.id === id);
+    if (!orden || orden.estado === 'cerrado') return;
 
-        async function cerrarOrden(id) {
-            const orden = state.ordenes.find(o => o.id === id);
-            if (!orden || orden.estado === 'cerrado') return;
+    // Abrir modal de recepción en lugar de confirm simple
+    document.getElementById('recepcion-orden-id').value = id;
+    document.getElementById('recepcion-completa').checked = false;
+    document.getElementById('recepcion-observaciones').value = '';
+    
+    const container = document.getElementById('recepcion-materiales-list');
+    container.innerHTML = '';
 
-            if (!confirm('¿Autorizar esta orden? Los materiales pasarán al stock.')) return;
+    // Generar filas para cada material
+    orden.materiales.forEach((m, idx) => {
+        const material = state.catalogo.find(c => 
+            (m.codigo && c.codigo === m.codigo) || 
+            c.descripcion.toLowerCase().trim() === m.descripcion.toLowerCase().trim()
+        );
+        
+        const esRetazo = material && material.tipoControl === 'retazos';
+        
+        const div = document.createElement('div');
+        div.className = 'border rounded-xl p-4 bg-gray-50';
+        div.innerHTML = `
+            <div class="flex items-start gap-3">
+                <input type="checkbox" id="recv-check-${idx}" checked 
+                       class="w-5 h-5 text-blue-600 rounded mt-1" 
+                       onchange="toggleRecepcionItem(${idx})">
+                <div class="flex-1">
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <label for="recv-check-${idx}" class="font-medium text-gray-900 cursor-pointer">${m.descripcion}</label>
+                            ${m.codigo ? `<span class="text-xs text-blue-600 ml-2">(${m.codigo})</span>` : ''}
+                            <span class="text-xs ${esRetazo ? 'text-purple-600' : 'text-gray-500'} ml-2">
+                                ${esRetazo ? '📏 Por retazos' : '∑ Normal'}
+                            </span>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm text-gray-500">Solicitado: <span class="font-bold">${m.cantidad} ${m.unidad}</span></p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-3 mt-2">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Recibido (cantidad)</label>
+                            <input type="number" id="recv-cant-${idx}" 
+                                   value="${m.cantidad}" min="0" max="${m.cantidad * 2}" step="${esRetazo ? '0.01' : '1'}"
+                                   class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                                   onchange="validarCantidadRecepcion(${idx}, ${m.cantidad})">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Pendiente</label>
+                            <input type="text" id="recv-pendiente-${idx}" readonly 
+                                   value="0 ${m.unidad}"
+                                   class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-100 text-gray-600">
+                        </div>
+                    </div>
+                    
+                    ${esRetazo ? `
+                    <div class="mt-2 p-2 bg-purple-50 rounded-lg">
+                        <p class="text-xs text-purple-700 mb-1">Configurar retazos recibidos (opcional):</p>
+                        <button type="button" onclick="configurarRetazosRecepcion(${idx}, '${material.id}', ${m.cantidad})" 
+                                class="text-xs bg-purple-100 text-purple-700 px-3 py-1 rounded hover:bg-purple-200">
+                            Configurar medidas de retazos
+                        </button>
+                        <div id="retazos-recepcion-${idx}" class="mt-2 hidden">
+                            <div class="space-y-1" id="retazos-list-${idx}"></div>
+                            <button type="button" onclick="agregarRetazoRecepcion(${idx})" class="text-xs text-purple-600 mt-1">+ Agregar retazo</button>
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+            <input type="hidden" id="recv-material-id-${idx}" value="${material ? material.id : ''}">
+            <input type="hidden" id="recv-codigo-${idx}" value="${m.codigo || ''}">
+            <input type="hidden" id="recv-desc-${idx}" value="${m.descripcion}">
+            <input type="hidden" id="recv-unidad-${idx}" value="${m.unidad}">
+            <input type="hidden" id="recv-solicitado-${idx}" value="${m.cantidad}">
+        `;
+        container.appendChild(div);
+    });
 
-            // Verificar si hay materiales tipo retazos
-            const materialesRetazos = [];
+    document.getElementById('modal-recepcion').classList.remove('hidden');
+}
+
+// Funciones auxiliares para recepción
+function toggleRecepcionItem(idx) {
+    const check = document.getElementById(`recv-check-${idx}`);
+    const cantInput = document.getElementById(`recv-cant-${idx}`);
+    cantInput.disabled = !check.checked;
+    if (!check.checked) {
+        cantInput.value = 0;
+        document.getElementById(`recv-pendiente-${idx}`).value = document.getElementById(`recv-solicitado-${idx}`).value + ' ' + document.getElementById(`recv-unidad-${idx}`).value;
+    } else {
+        cantInput.value = document.getElementById(`recv-solicitado-${idx}`).value;
+        document.getElementById(`recv-pendiente-${idx}`).value = '0 ' + document.getElementById(`recv-unidad-${idx}`).value;
+    }
+}
+
+function validarCantidadRecepcion(idx, solicitado) {
+    const recibido = parseFloat(document.getElementById(`recv-cant-${idx}`).value) || 0;
+    const pendiente = Math.max(0, solicitado - recibido);
+    const unidad = document.getElementById(`recv-unidad-${idx}`).value;
+    document.getElementById(`recv-pendiente-${idx}`).value = pendiente + ' ' + unidad;
+    
+    // Si recibe más de lo solicitado, advertir pero permitir (sobrante)
+    if (recibido > solicitado) {
+        document.getElementById(`recv-pendiente-${idx}`).value = '0 ' + unidad + ' (sobrante: ' + (recibido - solicitado) + ')';
+    }
+}
+
+let retazosRecepcionTemp = {}; // Almacena configuración temporal de retazos
+
+function configurarRetazosRecepcion(idx, materialId, cantidadTotal) {
+    const container = document.getElementById(`retazos-recepcion-${idx}`);
+    const list = document.getElementById(`retazos-list-${idx}`);
+    
+    if (!retazosRecepcionTemp[idx]) {
+        retazosRecepcionTemp[idx] = [];
+    }
+    
+    container.classList.remove('hidden');
+    
+    // Si no hay retazos configurados, crear uno por defecto con el total
+    if (retazosRecepcionTemp[idx].length === 0) {
+        retazosRecepcionTemp[idx].push({ medida: cantidadTotal, obs: '' });
+    }
+    
+    renderRetazosRecepcion(idx);
+}
+
+function renderRetazosRecepcion(idx) {
+    const list = document.getElementById(`retazos-list-${idx}`);
+    list.innerHTML = retazosRecepcionTemp[idx].map((r, i) => `
+        <div class="flex gap-2 items-center bg-white p-2 rounded border">
+            <input type="number" step="0.01" value="${r.medida}" 
+                   onchange="retazosRecepcionTemp[${idx}][${i}].medida = parseFloat(this.value)"
+                   class="w-20 px-2 py-1 border rounded text-sm">
+            <span class="text-xs text-gray-500">metros</span>
+            <input type="text" placeholder="Obs." value="${r.obs || ''}"
+                   onchange="retazosRecepcionTemp[${idx}][${i}].obs = this.value"
+                   class="flex-1 px-2 py-1 border rounded text-sm">
+            <button onclick="retazosRecepcionTemp[${idx}].splice(${i}, 1); renderRetazosRecepcion(${idx})" 
+                    class="text-red-500 text-xs hover:bg-red-50 p-1 rounded">✕</button>
+        </div>
+    `).join('');
+}
+
+function agregarRetazoRecepcion(idx) {
+    retazosRecepcionTemp[idx].push({ medida: 0, obs: '' });
+    renderRetazosRecepcion(idx);
+}
+async function confirmarRecepcion() {
+    const ordenId = parseInt(document.getElementById('recepcion-orden-id').value);
+    const orden = state.ordenes.find(o => o.id === ordenId);
+    const esCompleta = document.getElementById('recepcion-completa').checked;
+    const observaciones = document.getElementById('recepcion-observaciones').value;
+    
+    const materialesRecibidos = [];
+    const materialesPendientes = [];
+    let tieneRetazos = false;
+    
+    // Procesar cada material
+    const container = document.getElementById('recepcion-materiales-list');
+    const filas = container.children;
+    
+    for (let idx = 0; idx < filas.length; idx++) {
+        const check = document.getElementById(`recv-check-${idx}`);
+        const materialId = document.getElementById(`recv-material-id-${idx}`).value;
+        const codigo = document.getElementById(`recv-codigo-${idx}`).value;
+        const descripcion = document.getElementById(`recv-desc-${idx}`).value;
+        const unidad = document.getElementById(`recv-unidad-${idx}`).value;
+        const solicitado = parseFloat(document.getElementById(`recv-solicitado-${idx}`).value);
+        const recibido = parseFloat(document.getElementById(`recv-cant-${idx}`).value) || 0;
+        
+        if (!check.checked || recibido <= 0) {
+            // No se recibió nada, todo pendiente
+            materialesPendientes.push({
+                codigo, descripcion, cantidad: solicitado, unidad,
+                cantidadPendiente: solicitado
+            });
+            continue;
+        }
+        
+        const material = state.catalogo.find(c => c.id === materialId);
+        
+        if (material && material.tipoControl === 'retazos') {
+            tieneRetazos = true;
+            // Procesar retazos configurados o crear uno genérico
+            const retazosConfig = retazosRecepcionTemp[idx] || [{ medida: recibido, obs: '' }];
+            const totalRetazos = retazosConfig.reduce((sum, r) => sum + (r.medida || 0), 0);
             
-            orden.materiales.forEach(m => {
-                const material = state.catalogo.find(c => 
-                    (m.codigo && c.codigo === m.codigo) || 
-                    c.descripcion.toLowerCase().trim() === m.descripcion.toLowerCase().trim()
-                );
-                
-                if (material && material.tipoControl === 'retazos') {
-                    materialesRetazos.push({
-                        material,
-                        cantidadSolicitada: m.cantidad,
-                        descripcion: m.descripcion,
-                        unidad: m.unidad
-                    });
+            // Validar que la suma de retazos coincida aproximadamente con lo recibido
+            if (Math.abs(totalRetazos - recibido) > 0.1) {
+                if (!confirm(`La suma de retazos (${totalRetazos}m) no coincide con la cantidad recibida (${recibido}m). ¿Continuar de todas formas?`)) {
+                    return;
+                }
+            }
+            
+            // Crear retazos
+            retazosConfig.forEach(r => {
+                if (r.medida > 0) {
+                    const retazo = {
+                        id: 'RET-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 5).toUpperCase(),
+                        materialId: material.id,
+                        codigoMaterial: material.codigo,
+                        descripcionMaterial: material.descripcion,
+                        medida: r.medida,
+                        unidad: unidad,
+                        estado: 'disponible',
+                        ubicacion: 'Recepción orden parcial',
+                        usuarioIngreso: CONFIG.currentUser,
+                        fechaIngreso: new Date().toISOString(),
+                        origen: `Orden #${orden.id} - ${orden.destino} (Recepción)`,
+                        observaciones: r.obs || observaciones || 'Ingresado desde recepción parcial'
+                    };
+                    state.retazos.push(retazo);
                 }
             });
-
-            if (materialesRetazos.length > 0) {
-                // Mostrar modal para configurar retazos
-                mostrarModalConfigRetazos(id, materialesRetazos, orden.materiales);
+            
+            materialesRecibidos.push({
+                codigo, descripcion, cantidad: recibido, unidad, tipo: 'retazos',
+                retazos: retazosConfig.length
+            });
+            
+        } else {
+            // Stock normal
+            const existente = state.stock.find(s => s.materialId === materialId);
+            if (existente) {
+                existente.cantidad += recibido;
+                existente.ultimoIngreso = new Date().toISOString();
             } else {
-                // Procesar normalmente
-                procesarCierreOrdenNormal(id, orden.materiales);
+                state.stock.push({
+                    id: Date.now().toString() + Math.random(),
+                    materialId: materialId || null,
+                    codigo: codigo || 'SIN-COD',
+                    descripcion: descripcion,
+                    cantidad: recibido,
+                    unidad: unidad,
+                    stockMinimo: material ? material.stockMinimo : 3,
+                    usuarioIngreso: CONFIG.currentUser,
+                    fechaIngreso: new Date().toISOString(),
+                    origen: `Orden #${orden.id} - ${orden.destino}`
+                });
             }
+            
+            materialesRecibidos.push({
+                codigo, descripcion, cantidad: recibido, unidad, tipo: 'normal'
+            });
         }
+        
+        // Calcular si queda pendiente
+        if (recibido < solicitado && !esCompleta) {
+            materialesPendientes.push({
+                codigo, descripcion, cantidad: solicitado - recibido, unidad,
+                cantidadPendiente: solicitado - recibido,
+                cantidadRecibida: recibido
+            });
+        }
+    }
+    
+    if (materialesRecibidos.length === 0) {
+        return alert('Debes recibir al menos un material');
+    }
+    
+    // Registrar la recepción en el historial de la orden
+    if (!orden.recepciones) orden.recepciones = [];
+    orden.recepciones.push({
+        fecha: new Date().toISOString(),
+        usuario: CONFIG.currentUser,
+        materiales: materialesRecibidos,
+        observaciones: observaciones,
+        esParcial: !esCompleta
+    });
+    
+    // Determinar estado final
+    if (esCompleta || materialesPendientes.length === 0) {
+        orden.estado = 'cerrado';
+        orden.fechaCierre = new Date().toISOString();
+        addAuditLog('CIERRE', 'ORDEN', ordenId, `Orden #${ordenId} cerrada${esCompleta ? ' (forzada)' : ''}. Recibidos ${materialesRecibidos.length} items`);
+    } else {
+        orden.estado = 'parcial';
+        orden.materialesPendientes = materialesPendientes;
+        addAuditLog('RECEPCION_PARCIAL', 'ORDEN', ordenId, `Recepción parcial orden #${ordenId}. Recibidos ${materialesRecibidos.length}, pendientes ${materialesPendientes.length}`);
+    }
+    
+    await saveToCloud();
+    closeModal('recepcion');
+    closeModal('ver-orden');
+    renderOrdenes();
+    updateDashboard();
+    
+    const mensaje = esCompleta || materialesPendientes.length === 0 
+        ? `✅ Orden cerrada completamente\n📦 ${materialesRecibidos.length} materiales ingresados`
+        : `✅ Recepción parcial registrada\n📦 ${materialesRecibidos.length} recibidos\n⏳ ${materialesPendientes.length} pendientes\n\nLa orden quedó abierta para completar después.`;
+    
+    alert(mensaje);
+}
 
         // PLANIFICADOR - CORREGIDO
         function renderPlanner() {
