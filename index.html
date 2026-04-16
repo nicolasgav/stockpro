@@ -1836,79 +1836,138 @@
             addMaterialRow();
         }
 
-        function createAutocompleteInput(container, initialData = null) {
-            const div = document.createElement('div');
-            div.className = 'material-row flex gap-2 items-start bg-gray-50 p-2 rounded-lg relative';
+        function createAutocompleteInput(container, initialData = null, isNewMaterial = false) {
+    				const div = document.createElement('div');
+    				div.className = 'material-row flex gap-2 items-start bg-gray-50 p-2 rounded-lg relative';
 
-            div.innerHTML = `
-                <div class="flex-1 relative">
-                    <input type="text" placeholder="Escribí para buscar..." 
-                           class="material-autocomplete w-full px-3 py-2 border rounded-lg text-sm" 
-                           value="${initialData ? initialData.descripcion : ''}"
-                           autocomplete="off">
-                    <div class="autocomplete-results hidden"></div>
-                    <input type="hidden" class="material-codigo" value="${initialData ? initialData.codigo || '' : ''}">
-                </div>
-                <input type="number" placeholder="Cant" min="1" value="${initialData ? initialData.cantidad : '1'}" class="material-cant w-20 px-3 py-2 border rounded-lg text-sm">
-                <select class="material-unit w-24 px-3 py-2 border rounded-lg text-sm">
-                    <option value="unidades" ${initialData?.unidad === 'unidades' ? 'selected' : ''}>Unid</option>
-                    <option value="kg" ${initialData?.unidad === 'kg' ? 'selected' : ''}>Kg</option>
-                    <option value="metros" ${initialData?.unidad === 'metros' ? 'selected' : ''}>m</option>
-                    <option value="litros" ${initialData?.unidad === 'litros' ? 'selected' : ''}>L</option>
-                    <option value="cajas" ${initialData?.unidad === 'cajas' ? 'selected' : ''}>Caja</option>
-                </select>
-                <button onclick="this.closest('.material-row').remove()" class="text-red-500 px-2 hover:bg-red-50 rounded">✕</button>
-            `;
+			div.innerHTML = `
+        			<div class="flex-1 relative">
+            <input type="text" placeholder="Escribí para buscar..." 
+                   class="material-autocomplete w-full px-3 py-2 border rounded-lg text-sm" 
+                   value="${initialData ? initialData.descripcion : ''}"
+                   autocomplete="off">
+            <div class="autocomplete-results hidden"></div>
+            <input type="hidden" class="material-codigo" value="${initialData ? initialData.codigo || '' : ''}">
+            <input type="hidden" class="material-es-nuevo" value="false">
+        </div>
+        <input type="number" placeholder="Cant" min="1" value="${initialData ? initialData.cantidad : '1'}" class="material-cant w-20 px-3 py-2 border rounded-lg text-sm">
+        <select class="material-unit w-24 px-3 py-2 border rounded-lg text-sm">
+            <option value="unidades" ${initialData?.unidad === 'unidades' ? 'selected' : ''}>Unid</option>
+            <option value="kg" ${initialData?.unidad === 'kg' ? 'selected' : ''}>Kg</option>
+            <option value="metros" ${initialData?.unidad === 'metros' ? 'selected' : ''}>m</option>
+            <option value="litros" ${initialData?.unidad === 'litros' ? 'selected' : ''}>L</option>
+            <option value="cajas" ${initialData?.unidad === 'cajas' ? 'selected' : ''}>Caja</option>
+        </select>
+        <button onclick="this.closest('.material-row').remove()" class="text-red-500 px-2 hover:bg-red-50 rounded">✕</button>
+    `;
 
-            const input = div.querySelector('.material-autocomplete');
-            const resultsDiv = div.querySelector('.autocomplete-results');
-            const unitSelect = div.querySelector('.material-unit');
-            const codigoInput = div.querySelector('.material-codigo');
+    const input = div.querySelector('.material-autocomplete');
+    const resultsDiv = div.querySelector('.autocomplete-results');
+    const unitSelect = div.querySelector('.material-unit');
+    const codigoInput = div.querySelector('.material-codigo');
+    const esNuevoInput = div.querySelector('.material-es-nuevo');
 
-            input.addEventListener('input', (e) => {
-                const value = e.target.value.toLowerCase();
-                if (value.length < 1) {
-                    resultsDiv.classList.add('hidden');
-                    return;
-                }
-
-                const matches = state.catalogo.filter(c => 
-                    c.activo !== false && (
-                        c.codigo.toLowerCase().includes(value) || 
-                        c.descripcion.toLowerCase().includes(value)
-                    )
-                ).slice(0, 5);
-
-                if (matches.length > 0) {
-                    resultsDiv.innerHTML = matches.map(m => `
-                        <div class="autocomplete-item" data-codigo="${m.codigo}" data-desc="${m.descripcion}" data-unit="${m.unidad}">
-                            <div class="font-medium">${m.descripcion}</div>
-                            <div class="text-xs text-gray-500">${m.codigo} • ${m.unidad}</div>
-                        </div>
-                    `).join('');
-                    resultsDiv.classList.remove('hidden');
-
-                    resultsDiv.querySelectorAll('.autocomplete-item').forEach(item => {
-                        item.addEventListener('click', () => {
-                            input.value = item.dataset.desc;
-                            codigoInput.value = item.dataset.codigo;
-                            unitSelect.value = item.dataset.unit;
-                            resultsDiv.classList.add('hidden');
-                        });
-                    });
-                } else {
-                    resultsDiv.classList.add('hidden');
-                }
-            });
-
-            document.addEventListener('click', (e) => {
-                if (!div.contains(e.target)) {
-                    resultsDiv.classList.add('hidden');
-                }
-            });
-
-            container.appendChild(div);
+    input.addEventListener('input', (e) => {
+        const value = e.target.value.toLowerCase();
+        if (value.length < 1) {
+            resultsDiv.classList.add('hidden');
+            return;
         }
+
+        const matches = state.catalogo.filter(c => 
+            c.activo !== false && (
+                c.codigo.toLowerCase().includes(value) || 
+                c.descripcion.toLowerCase().includes(value)
+            )
+        ).slice(0, 5);
+
+        if (matches.length > 0) {
+            resultsDiv.innerHTML = matches.map(m => `
+                <div class="autocomplete-item" data-codigo="${m.codigo}" data-desc="${m.descripcion}" data-unit="${m.unidad}">
+                    <div class="font-medium">${m.descripcion}</div>
+                    <div class="text-xs text-gray-500">${m.codigo} • ${m.unidad}</div>
+                </div>
+            `).join('');
+            
+            // Agregar opción de crear nuevo al final
+            resultsDiv.innerHTML += `
+                <div class="autocomplete-item bg-blue-50 border-t border-blue-100 text-blue-700 font-medium" onclick="convertirANuevoMaterial(this.closest('.material-row'))">
+                    <div class="flex items-center gap-2">
+                        <span class="text-lg">+</span>
+                        <span>Crear "${input.value}" como nuevo material</span>
+                    </div>
+                </div>
+            `;
+            
+            resultsDiv.classList.remove('hidden');
+
+            resultsDiv.querySelectorAll('.autocomplete-item:not(.bg-blue-50)').forEach(item => {
+                item.addEventListener('click', () => {
+                    input.value = item.dataset.desc;
+                    codigoInput.value = item.dataset.codigo;
+                    unitSelect.value = item.dataset.unit;
+                    esNuevoInput.value = "false";
+                    input.classList.remove('bg-yellow-50');
+                    resultsDiv.classList.add('hidden');
+                });
+            });
+        } else {
+            // No hay coincidencias, mostrar opción de crear nuevo
+            resultsDiv.innerHTML = `
+                <div class="autocomplete-item bg-blue-50 text-blue-700 font-medium p-3" onclick="convertirANuevoMaterial(this.closest('.material-row'))">
+                    <div class="flex items-center gap-2">
+                        <span class="text-lg">+</span>
+                        <div>
+                            <div>Crear "${input.value}" como nuevo material</div>
+                            <div class="text-xs text-blue-500">Se agregará al catálogo automáticamente</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            resultsDiv.classList.remove('hidden');
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!div.contains(e.target)) {
+            resultsDiv.classList.add('hidden');
+        }
+    });
+
+    container.appendChild(div);
+}
+	function convertirANuevoMaterial(row) {
+    const input = row.querySelector('.material-autocomplete');
+    const codigoInput = row.querySelector('.material-codigo');
+    const esNuevoInput = row.querySelector('.material-es-nuevo');
+    const resultsDiv = row.querySelector('.autocomplete-results');
+    const descripcion = input.value.trim();
+    
+    if (!descripcion) return alert('Ingresa una descripción primero');
+    
+    // Generar código automático basado en la descripción
+    const palabras = descripcion.split(' ');
+    let codigo = '';
+    if (palabras.length >= 2) {
+        codigo = (palabras[0].substring(0, 3) + palabras[1].substring(0, 2)).toUpperCase();
+    } else {
+        codigo = descripcion.substring(0, 5).toUpperCase();
+    }
+    // Asegurar unicidad sumando número aleatorio
+    codigo += Math.floor(Math.random() * 900) + 100;
+    
+    codigoInput.value = codigo;
+    esNuevoInput.value = "true";
+    input.classList.add('bg-yellow-50');
+    input.readOnly = true;
+    resultsDiv.classList.add('hidden');
+    
+    // Mostrar indicador visual
+    const indicador = document.createElement('div');
+    indicador.className = 'text-xs text-yellow-700 mt-1 flex items-center gap-1';
+    indicador.innerHTML = `<span class="font-bold">[NUEVO]</span> Código: ${codigo}`;
+    row.querySelector('.flex-1').appendChild(indicador);
+}
 
         function addMaterialRow() {
             createAutocompleteInput(document.getElementById('materiales-container'));
@@ -1919,43 +1978,89 @@
         }
 
         async function saveOrden() {
-            const fecha = document.getElementById('orden-fecha').value;
-            const destino = document.getElementById('orden-destino').value;
+    const fecha = document.getElementById('orden-fecha').value;
+    const destino = document.getElementById('orden-destino').value;
 
-            if (!fecha || !destino) return alert('Complete fecha y destino');
+    if (!fecha || !destino) return alert('Complete fecha y destino');
 
-            const materiales = [];
-            document.querySelectorAll('#materiales-container .material-row').forEach(row => {
-                const input = row.querySelector('.material-autocomplete');
-                const codigo = row.querySelector('.material-codigo').value;
-                const desc = input.value;
-                const cant = row.querySelector('.material-cant').value;
-                const unit = row.querySelector('.material-unit').value;
+    const materiales = [];
+    const nuevosMateriales = [];
+    
+    // Primero procesar todos los materiales de la orden
+    document.querySelectorAll('#materiales-container .material-row').forEach(row => {
+        const input = row.querySelector('.material-autocomplete');
+        const codigo = row.querySelector('.material-codigo').value;
+        const desc = input.value.trim();
+        const cant = row.querySelector('.material-cant').value;
+        const unit = row.querySelector('.material-unit').value;
+        const esNuevo = row.querySelector('.material-es-nuevo').value === "true";
 
-                if (desc && cant) {
-                    materiales.push({ codigo, descripcion: desc, cantidad: parseFloat(cant), unidad: unit });
-                }
+        if (desc && cant) {
+            materiales.push({ 
+                codigo: codigo || 'SIN-COD', 
+                descripcion: desc, 
+                cantidad: parseFloat(cant), 
+                unidad: unit 
             });
-
-            if (materiales.length === 0) return alert('Agregue al menos un material');
-
-            const orden = {
-                id: Date.now(),
-                fecha,
-                destino,
-                estado: 'abierto',
-                materiales,
-                creadoPor: CONFIG.currentUser,
-                fechaCreacion: new Date().toISOString()
-            };
-
-            state.ordenes.push(orden);
-            addAuditLog('CREACION', 'ORDEN', orden.id, `Orden creada para ${destino} por ${CONFIG.currentUser}`);
-            await saveToCloud();
-            closeModal('orden');
-            renderOrdenes();
-            updateDashboard();
+            
+            // Si es nuevo material, prepararlo para agregar al catálogo
+            if (esNuevo) {
+                nuevosMateriales.push({
+                    codigo: codigo || 'MAT' + Date.now(),
+                    descripcion: desc,
+                    unidad: unit,
+                    tipoControl: 'normal', // Por defecto normal
+                    stockMinimo: 3,
+                    activo: true,
+                    fechaCreacion: new Date().toISOString()
+                });
+            }
         }
+    });
+
+    if (materiales.length === 0) return alert('Agregue al menos un material');
+
+    // Crear los nuevos materiales en el catálogo primero
+    if (nuevosMateriales.length > 0) {
+        for (const mat of nuevosMateriales) {
+            // Verificar que no exista ya
+            const existe = state.catalogo.find(c => 
+                c.codigo === mat.codigo || 
+                c.descripcion.toLowerCase() === mat.descripcion.toLowerCase()
+            );
+            
+            if (!existe) {
+                mat.id = Date.now().toString() + Math.random().toString(36).substr(2, 5);
+                state.catalogo.push(mat);
+                addAuditLog('CREACION', 'CATALOGO', mat.id, `Material creado desde orden: ${mat.codigo} - ${mat.descripcion}`);
+            }
+        }
+    }
+
+    const orden = {
+        id: Date.now(),
+        fecha,
+        destino,
+        estado: 'abierto',
+        materiales,
+        creadoPor: CONFIG.currentUser,
+        fechaCreacion: new Date().toISOString()
+    };
+
+    state.ordenes.push(orden);
+    addAuditLog('CREACION', 'ORDEN', orden.id, `Orden creada para ${destino} por ${CONFIG.currentUser}`);
+    
+    // Si creamos materiales nuevos, sincronizar todo incluyendo el catálogo
+    await saveToCloud();
+    closeModal('orden');
+    renderOrdenes();
+    updateDashboard();
+    
+    // Mensaje confirmación si hubo materiales nuevos
+    if (nuevosMateriales.length > 0) {
+        alert(`✅ Orden guardada\n📦 ${nuevosMateriales.length} material(es) nuevo(s) agregado(s) al catálogo`);
+    }
+}
 
         function editarOrden(id) {
             const orden = state.ordenes.find(o => o.id === id);
@@ -1994,22 +2099,44 @@
                 let tieneRetazos = false;
                 
                 const materiales = [];
-                document.querySelectorAll('#edit-materiales-container .material-row').forEach(row => {
-                    const input = row.querySelector('.material-autocomplete');
-                    const codigo = row.querySelector('.material-codigo').value;
-                    const desc = input.value;
-                    const cant = row.querySelector('.material-cant').value;
-                    const unit = row.querySelector('.material-unit').value;
+                            const nuevosMaterialesEdit = [];
+            
+            document.querySelectorAll('#edit-materiales-container .material-row').forEach(row => {
+                const input = row.querySelector('.material-autocomplete');
+                const codigo = row.querySelector('.material-codigo').value;
+                const desc = input.value.trim();
+                const cant = row.querySelector('.material-cant').value;
+                const unit = row.querySelector('.material-unit').value;
+                const esNuevo = row.querySelector('.material-es-nuevo')?.value === "true";
 
-                    if (desc && cant) {
-                        const material = state.catalogo.find(c => 
-                            (codigo && c.codigo === codigo) || 
-                            c.descripcion.toLowerCase().trim() === desc.toLowerCase().trim()
-                        );
-                        
-                        materiales.push({ codigo, descripcion: desc, cantidad: parseFloat(cant), unidad: unit });
-                        
-                        if (material && material.tipoControl === 'retazos') {
+                if (desc && cant) {
+                    materiales.push({ codigo: codigo || 'SIN-COD', descripcion: desc, cantidad: parseFloat(cant), unidad: unit });
+                    
+                    if (esNuevo) {
+                        const existe = state.catalogo.find(c => c.descripcion.toLowerCase() === desc.toLowerCase());
+                        if (!existe) {
+                            const nuevoMat = {
+                                id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+                                codigo: codigo || 'MAT' + Date.now(),
+                                descripcion: desc,
+                                unidad: unit,
+                                tipoControl: 'normal',
+                                stockMinimo: 3,
+                                activo: true,
+                                fechaCreacion: new Date().toISOString()
+                            };
+                            state.catalogo.push(nuevoMat);
+                            nuevosMaterialesEdit.push(nuevoMat);
+                            addAuditLog('CREACION', 'CATALOGO', nuevoMat.id, `Material creado desde edición de orden: ${nuevoMat.codigo}`);
+                        }
+                    }
+                    
+                    const material = state.catalogo.find(c => 
+                        (codigo && c.codigo === codigo) || 
+                        c.descripcion.toLowerCase().trim() === desc.toLowerCase().trim()
+                    );
+                    
+                    if (material && material.tipoControl === 'retazos') {
                             tieneRetazos = true;
                             materialesRetazos.push({
                                 material,
