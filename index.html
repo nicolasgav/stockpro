@@ -590,16 +590,24 @@
                 <button onclick="closeModal('orden')" class="text-gray-400 hover:text-gray-600">✕</button>
             </div>
             <div class="p-6 space-y-4">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Fecha</label>
-                        <input type="date" id="orden-fecha" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Destino</label>
-                        <input type="text" id="orden-destino" placeholder="Ej: Obra Central" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
-                    </div>
-                </div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Fecha</label>
+        <input type="date" id="orden-fecha" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
+    </div>
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Destino</label>
+        <input type="text" id="orden-destino" placeholder="Ej: Obra Central" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
+    </div>
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Nombre del Comercio (Proveedor) *</label>
+        <input type="text" id="orden-proveedor" required placeholder="Ej: Ferretería El Tornillo" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
+    </div>
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Número de Presupuesto *</label>
+        <input type="text" id="orden-presupuesto" required placeholder="Ej: PRES-2024-001" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
+    </div>
+</div>
                 <div>
                     <div class="flex justify-between items-center mb-2">
                         <label class="block text-sm font-medium text-gray-700">Materiales</label>
@@ -636,6 +644,14 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Destino</label>
                     <input type="text" id="edit-orden-destino" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
+                </div>
+				                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Proveedor</label>
+                    <input type="text" id="edit-orden-proveedor" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Presupuesto</label>
+                    <input type="text" id="edit-orden-presupuesto" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Estado</label>
@@ -2209,15 +2225,17 @@ function crearNuevoMaterialIngreso(descripcion) {
         }
     }
 
-    const orden = {
-        id: Date.now(),
-        fecha,
-        destino,
-        estado: 'abierto',
-        materiales,
-        creadoPor: CONFIG.currentUser,
-        fechaCreacion: new Date().toISOString()
-    };
+const orden = {
+    id: Date.now(),
+    fecha,
+    destino,
+    proveedor: document.getElementById('orden-proveedor').value.trim(),
+    presupuesto: document.getElementById('orden-presupuesto').value.trim(),
+    estado: 'abierto',
+    materiales,
+    creadoPor: CONFIG.currentUser,
+    fechaCreacion: new Date().toISOString()
+};
 
     state.ordenes.push(orden);
     addAuditLog('CREACION', 'ORDEN', orden.id, `Orden creada para ${destino} por ${CONFIG.currentUser}`);
@@ -2243,8 +2261,10 @@ function crearNuevoMaterialIngreso(descripcion) {
             document.getElementById('edit-orden-fecha').value = orden.fecha;
             document.getElementById('edit-orden-destino').value = orden.destino;
             document.getElementById('edit-orden-estado').value = orden.estado;
-
-            const container = document.getElementById('edit-materiales-container');
+			document.getElementById('edit-orden-proveedor').value = orden.proveedor || '';
+			document.getElementById('edit-orden-presupuesto').value = orden.presupuesto || '';
+            
+			const container = document.getElementById('edit-materiales-container');
             container.innerHTML = '';
             orden.materiales.forEach(m => addEditMaterialRow(m));
 
@@ -2348,6 +2368,8 @@ function crearNuevoMaterialIngreso(descripcion) {
             orden.fecha = fecha;
             orden.destino = destino;
             orden.estado = estado;
+			orden.proveedor = document.getElementById('edit-orden-proveedor').value.trim();
+            orden.presupuesto = document.getElementById('edit-orden-presupuesto').value.trim();
             orden.materiales = materiales;
             orden.modificadoPor = CONFIG.currentUser;
             orden.fechaModificacion = new Date().toISOString();
@@ -2630,6 +2652,8 @@ function crearNuevoMaterialIngreso(descripcion) {
                 <div class="space-y-3">
                     <p><strong>Fecha:</strong> ${new Date(orden.fecha).toLocaleDateString('es-ES')}</p>
                     <p><strong>Destino:</strong> ${orden.destino}</p>
+					<p><strong>Proveedor:</strong> ${orden.proveedor || 'No especificado'}</p>
+					<p><strong>Presupuesto:</strong> ${orden.presupuesto || 'No especificado'}</p>
                     <p><strong>Creado por:</strong> <span class="user-badge bg-blue-100 text-blue-700">${orden.creadoPor || 'N/A'}</span></p>
                     <p><strong>Estado:</strong> <span class="px-2 py-1 rounded-full text-xs ${orden.estado === 'abierto' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}">${orden.estado}</span></p>
                     <div class="mt-4">
