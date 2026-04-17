@@ -242,7 +242,8 @@
                                     <tr>
                                         <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Código</th>
                                         <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Descripción</th>
-                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Control</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Detalles</th>
+										<th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Control</th>
                                         <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Unidad</th>
                                         <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Stock Mín.</th>
                                         <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Estado</th>
@@ -543,6 +544,10 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Stock Mínimo</label>
                     <input type="number" id="catalogo-stock-min" min="1" value="3" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
+                </div>
+				<div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Detalles</label>
+                    <input type="text" id="catalogo-detalles" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500" placeholder="Ej: Color rojo, 220V, calibre 12...">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Observaciones</label>
@@ -1195,7 +1200,8 @@
                 <tr class="border-b hover:bg-gray-50">
                     <td class="px-4 py-3 text-sm font-mono font-medium text-blue-600">${c.codigo}</td>
                     <td class="px-4 py-3 text-sm">${c.descripcion}</td>
-                    <td class="px-4 py-3">${tipoLabel}</td>
+                    <td class="px-4 py-3 text-sm text-gray-600">${c.detalles || '-'}</td>
+					<td class="px-4 py-3">${tipoLabel}</td>
                     <td class="px-4 py-3 text-sm capitalize">${c.unidad}</td>
                     <td class="px-4 py-3 text-sm">${c.stockMinimo}</td>
                     <td class="px-4 py-3">
@@ -1230,7 +1236,8 @@
                 document.getElementById('catalogo-tipo-control').value = item.tipoControl || 'normal';
                 document.getElementById('catalogo-unidad').value = item.unidad;
                 document.getElementById('catalogo-stock-min').value = item.stockMinimo;
-                document.getElementById('catalogo-notas').value = item.notas || '';
+                document.getElementById('catalogo-detalles').value = item.detalles || '';
+				document.getElementById('catalogo-notas').value = item.notas || '';
             } else {
                 document.getElementById('catalogo-modal-title').textContent = 'Nuevo Material';
                 const nextNum = state.catalogo.length + 1;
@@ -1253,7 +1260,8 @@
                 id: id || Date.now().toString(),
                 codigo: codigo,
                 descripcion: document.getElementById('catalogo-descripcion').value.trim(),
-                tipoControl: document.getElementById('catalogo-tipo-control').value,
+                detalles: document.getElementById('catalogo-detalles').value.trim(),
+				tipoControl: document.getElementById('catalogo-tipo-control').value,
                 unidad: document.getElementById('catalogo-unidad').value,
                 stockMinimo: parseInt(document.getElementById('catalogo-stock-min').value) || 3,
                 notas: document.getElementById('catalogo-notas').value,
@@ -1406,12 +1414,12 @@ function initIngresoForm() {
         ).slice(0, 5);
 
         if (matches.length > 0) {
-            resultsDiv.innerHTML = matches.map(m => `
-                <div class="autocomplete-item" onclick="seleccionarMaterialIngreso('${m.id}', '${m.codigo}', '${m.descripcion}', '${m.tipoControl || 'normal'}', '${m.unidad}')">
-                    <div class="font-medium">${m.descripcion}</div>
-                    <div class="text-xs text-gray-500">${m.codigo} • ${m.unidad} ${m.tipoControl === 'retazos' ? '📏' : ''}</div>
-                </div>
-            `).join('');
+			resultsDiv.innerHTML = matches.map(m => `
+				<div class="autocomplete-item" onclick="seleccionarMaterialIngreso('${m.id}', '${m.codigo}', '${m.descripcion}', '${m.tipoControl || 'normal'}', '${m.unidad}')">
+                <div class="font-medium">${m.descripcion}</div>
+                <div class="text-xs text-gray-500">${m.codigo} • ${m.unidad}${m.detalles ? ' • ' + m.detalles : ''} ${m.tipoControl === 'retazos' ? '📏' : ''}</div>
+				</div>
+			`).join('');
             
             // Opción crear nuevo
             resultsDiv.innerHTML += `
@@ -2073,7 +2081,7 @@ function crearNuevoMaterialIngreso(descripcion) {
             resultsDiv.innerHTML = matches.map(m => `
                 <div class="autocomplete-item" data-codigo="${m.codigo}" data-desc="${m.descripcion}" data-unit="${m.unidad}">
                     <div class="font-medium">${m.descripcion}</div>
-                    <div class="text-xs text-gray-500">${m.codigo} • ${m.unidad}</div>
+                    <div class="text-xs text-gray-500">${m.codigo} • ${m.unidad}${m.detalles ? ' • ' + m.detalles : ''}</div>
                 </div>
             `).join('');
             
