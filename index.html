@@ -2054,25 +2054,27 @@ function crearNuevoMaterialIngreso(descripcion) {
     				div.className = 'material-row flex gap-2 items-start bg-gray-50 p-2 rounded-lg relative';
 
 			div.innerHTML = `
-        			<div class="flex-1 relative">
-            <input type="text" placeholder="Escribí para buscar..." 
-                   class="material-autocomplete w-full px-3 py-2 border rounded-lg text-sm" 
-                   value="${initialData ? initialData.descripcion : ''}"
-                   autocomplete="off">
-            <div class="autocomplete-results hidden"></div>
-            <input type="hidden" class="material-codigo" value="${initialData ? initialData.codigo || '' : ''}">
-            <input type="hidden" class="material-es-nuevo" value="false">
-        </div>
-        <input type="number" placeholder="Cant" min="1" value="${initialData ? initialData.cantidad : '1'}" class="material-cant w-20 px-3 py-2 border rounded-lg text-sm">
-        <select class="material-unit w-24 px-3 py-2 border rounded-lg text-sm">
-            <option value="unidades" ${initialData?.unidad === 'unidades' ? 'selected' : ''}>Unid</option>
-            <option value="kg" ${initialData?.unidad === 'kg' ? 'selected' : ''}>Kg</option>
-            <option value="metros" ${initialData?.unidad === 'metros' ? 'selected' : ''}>m</option>
-            <option value="litros" ${initialData?.unidad === 'litros' ? 'selected' : ''}>L</option>
-            <option value="cajas" ${initialData?.unidad === 'cajas' ? 'selected' : ''}>Caja</option>
-        </select>
-        <button onclick="this.closest('.material-row').remove()" class="text-red-500 px-2 hover:bg-red-50 rounded">✕</button>
-    `;
+				<div class="flex-1 relative">
+					<input type="text" placeholder="Escribí para buscar..." 
+						class="material-autocomplete w-full px-3 py-2 border rounded-lg text-sm" 
+						value="${initialData ? initialData.descripcion : ''}"
+						autocomplete="off">
+						<div class="autocomplete-results hidden"></div>
+						<input type="hidden" class="material-codigo" value="${initialData ? initialData.codigo || '' : ''}">
+						<input type="hidden" class="material-es-nuevo" value="false">
+						<input type="hidden" class="material-detalles" value="${initialData ? initialData.detalles || '' : ''}">
+						<div class="material-detalles-display text-xs text-blue-600 mt-1 bg-blue-50 px-2 py-1 rounded hidden"></div>
+				</div>
+					<input type="number" placeholder="Cant" min="1" value="${initialData ? initialData.cantidad : '1'}" class="material-cant w-20 px-3 py-2 border rounded-lg text-sm">
+					<select class="material-unit w-24 px-3 py-2 border rounded-lg text-sm">
+						<option value="unidades" ${initialData?.unidad === 'unidades' ? 'selected' : ''}>Unid</option>
+						<option value="kg" ${initialData?.unidad === 'kg' ? 'selected' : ''}>Kg</option>
+						<option value="metros" ${initialData?.unidad === 'metros' ? 'selected' : ''}>m</option>
+						<option value="litros" ${initialData?.unidad === 'litros' ? 'selected' : ''}>L</option>
+						<option value="cajas" ${initialData?.unidad === 'cajas' ? 'selected' : ''}>Caja</option>
+					</select>
+					<button onclick="this.closest('.material-row').remove()" class="text-red-500 px-2 hover:bg-red-50 rounded">✕</button>
+			`;
 
     const input = div.querySelector('.material-autocomplete');
     const resultsDiv = div.querySelector('.autocomplete-results');
@@ -2122,17 +2124,16 @@ function crearNuevoMaterialIngreso(descripcion) {
 				input.classList.remove('bg-yellow-50');
 				resultsDiv.classList.add('hidden');
         
-				// MOSTRAR DETALLES DEL MATERIAL SELECCIONADO
-				const detalles = item.dataset.detalles;
-				if (detalles) {
-					let detalleDiv = row.querySelector('.material-detalles-info');
-					if (!detalleDiv) {
-						detalleDiv = document.createElement('div');
-						detalleDiv.className = 'material-detalles-info text-xs text-blue-600 mt-1 bg-blue-50 px-2 py-1 rounded';
-						row.querySelector('.flex-1').appendChild(detalleDiv);
-					}
-					detalleDiv.textContent = '📋 ' + detalles;
-				}
+				// Guardar y mostrar detalles del material seleccionado
+				const detallesInput = div.querySelector('.material-detalles');
+				const detallesDisplay = div.querySelector('.material-detalles-display');
+				detallesInput.value = item.dataset.detalles || '';
+				if (item.dataset.detalles) {
+					detallesDisplay.textContent = '📋 ' + item.dataset.detalles;
+					detallesDisplay.classList.remove('hidden');
+				} else {
+					detallesDisplay.classList.add('hidden');
+				}	
 			});
 		});
         } else {
@@ -2212,20 +2213,22 @@ function crearNuevoMaterialIngreso(descripcion) {
     
     // Primero procesar todos los materiales de la orden
     document.querySelectorAll('#materiales-container .material-row').forEach(row => {
-        const input = row.querySelector('.material-autocomplete');
-        const codigo = row.querySelector('.material-codigo').value;
-        const desc = input.value.trim();
-        const cant = row.querySelector('.material-cant').value;
-        const unit = row.querySelector('.material-unit').value;
-        const esNuevo = row.querySelector('.material-es-nuevo').value === "true";
+    const input = row.querySelector('.material-autocomplete');
+    const codigo = row.querySelector('.material-codigo').value;
+    const desc = input.value.trim();
+    const cant = row.querySelector('.material-cant').value;
+    const unit = row.querySelector('.material-unit').value;
+    const esNuevo = row.querySelector('.material-es-nuevo').value === "true";
+    const detalles = row.querySelector('.material-detalles').value;
 
-        if (desc && cant) {
-            materiales.push({ 
-                codigo: codigo || 'SIN-COD', 
-                descripcion: desc, 
-                cantidad: parseFloat(cant), 
-                unidad: unit 
-            });
+    if (desc && cant) {
+        materiales.push({ 
+            codigo: codigo || 'SIN-COD', 
+            descripcion: desc, 
+            cantidad: parseFloat(cant), 
+            unidad: unit,
+            detalles: detalles
+        });
             
             // Si es nuevo material, prepararlo para agregar al catálogo
             if (esNuevo) {
@@ -2336,9 +2339,10 @@ const orden = {
                 const cant = row.querySelector('.material-cant').value;
                 const unit = row.querySelector('.material-unit').value;
                 const esNuevo = row.querySelector('.material-es-nuevo')?.value === "true";
+                const detalles = row.querySelector('.material-detalles').value;
 
-                if (desc && cant) {
-                    materiales.push({ codigo: codigo || 'SIN-COD', descripcion: desc, cantidad: parseFloat(cant), unidad: unit });
+				if (desc && cant) {
+					materiales.push({ codigo: codigo || 'SIN-COD', descripcion: desc, cantidad: parseFloat(cant), unidad: unit, detalles });
                     
                     if (esNuevo) {
                         const existe = state.catalogo.find(c => c.descripcion.toLowerCase() === desc.toLowerCase());
@@ -2390,16 +2394,17 @@ const orden = {
             // Solo actualizar datos sin cerrar
             const materiales = [];
             document.querySelectorAll('#edit-materiales-container .material-row').forEach(row => {
-                const input = row.querySelector('.material-autocomplete');
-                const codigo = row.querySelector('.material-codigo').value;
-                const desc = input.value;
-                const cant = row.querySelector('.material-cant').value;
-                const unit = row.querySelector('.material-unit').value;
+				const input = row.querySelector('.material-autocomplete');
+				const codigo = row.querySelector('.material-codigo').value;
+				const desc = input.value;
+				const cant = row.querySelector('.material-cant').value;
+				const unit = row.querySelector('.material-unit').value;
+				const detalles = row.querySelector('.material-detalles').value;
 
-                if (desc && cant) {
-                    materiales.push({ codigo, descripcion: desc, cantidad: parseFloat(cant), unidad: unit });
-                }
-            });
+				if (desc && cant) {
+					materiales.push({ codigo, descripcion: desc, cantidad: parseFloat(cant), unidad: unit, detalles });
+				}
+			});
 
             orden.fecha = fecha;
             orden.destino = destino;
@@ -2702,7 +2707,7 @@ const orden = {
 									<div class="flex-1">
 										<span class="font-medium">${m.descripcion}</span>
 										${m.codigo ? `<span class="text-xs text-blue-600 ml-2">(${m.codigo})</span>` : ''}
-										${material && material.detalles ? `<div class="text-xs text-blue-700 mt-1">📋 ${material.detalles}</div>` : ''}
+										${(material && material.detalles) || m.detalles ? `<div class="text-xs text-blue-700 mt-1">📋 ${material && material.detalles ? material.detalles : m.detalles}</div>` : ''}
 									</div>
 									<span class="text-gray-600 ml-4">${m.cantidad} ${m.unidad}</span>
 								</div>
