@@ -2049,38 +2049,40 @@ function crearNuevoMaterialIngreso(descripcion) {
             addMaterialRow();
         }
 
-        function createAutocompleteInput(container, initialData = null, isNewMaterial = false) {
-    				const div = document.createElement('div');
-    				div.className = 'material-row flex gap-2 items-start bg-gray-50 p-2 rounded-lg relative';
+	function createAutocompleteInput(container, initialData = null, isNewMaterial = false) {
+    const div = document.createElement('div');
+    div.className = 'material-row flex gap-2 items-start bg-gray-50 p-2 rounded-lg relative';
 
-			div.innerHTML = `
-				<div class="flex-1 relative">
-					<input type="text" placeholder="Escribí para buscar..." 
-						class="material-autocomplete w-full px-3 py-2 border rounded-lg text-sm" 
-						value="${initialData ? initialData.descripcion : ''}"
-						autocomplete="off">
-						<div class="autocomplete-results hidden"></div>
-						<input type="hidden" class="material-codigo" value="${initialData ? initialData.codigo || '' : ''}">
-						<input type="hidden" class="material-es-nuevo" value="false">
-						<input type="hidden" class="material-detalles" value="${initialData ? initialData.detalles || '' : ''}">
-						<div class="material-detalles-display text-xs text-blue-600 mt-1 bg-blue-50 px-2 py-1 rounded hidden"></div>
-				</div>
-					<input type="number" placeholder="Cant" min="1" value="${initialData ? initialData.cantidad : '1'}" class="material-cant w-20 px-3 py-2 border rounded-lg text-sm">
-					<select class="material-unit w-24 px-3 py-2 border rounded-lg text-sm">
-						<option value="unidades" ${initialData?.unidad === 'unidades' ? 'selected' : ''}>Unid</option>
-						<option value="kg" ${initialData?.unidad === 'kg' ? 'selected' : ''}>Kg</option>
-						<option value="metros" ${initialData?.unidad === 'metros' ? 'selected' : ''}>m</option>
-						<option value="litros" ${initialData?.unidad === 'litros' ? 'selected' : ''}>L</option>
-						<option value="cajas" ${initialData?.unidad === 'cajas' ? 'selected' : ''}>Caja</option>
-					</select>
-					<button onclick="this.closest('.material-row').remove()" class="text-red-500 px-2 hover:bg-red-50 rounded">✕</button>
-			`;
+    div.innerHTML = `
+        <div class="flex-1 relative">
+            <input type="text" placeholder="Escribí para buscar..." 
+                   class="material-autocomplete w-full px-3 py-2 border rounded-lg text-sm" 
+                   value="${initialData ? initialData.descripcion : ''}"
+                   autocomplete="off">
+            <div class="autocomplete-results hidden"></div>
+            <input type="hidden" class="material-codigo" value="${initialData ? initialData.codigo || '' : ''}">
+            <input type="hidden" class="material-es-nuevo" value="false">
+            <input type="hidden" class="material-detalles" value="${initialData ? initialData.detalles || '' : ''}">
+            <div class="material-detalles-display text-xs text-blue-600 mt-1 bg-blue-50 px-2 py-1 rounded hidden"></div>
+        </div>
+        <input type="number" placeholder="Cant" min="1" value="${initialData ? initialData.cantidad : '1'}" class="material-cant w-20 px-3 py-2 border rounded-lg text-sm">
+        <select class="material-unit w-24 px-3 py-2 border rounded-lg text-sm">
+            <option value="unidades" ${initialData?.unidad === 'unidades' ? 'selected' : ''}>Unid</option>
+            <option value="kg" ${initialData?.unidad === 'kg' ? 'selected' : ''}>Kg</option>
+            <option value="metros" ${initialData?.unidad === 'metros' ? 'selected' : ''}>m</option>
+            <option value="litros" ${initialData?.unidad === 'litros' ? 'selected' : ''}>L</option>
+            <option value="cajas" ${initialData?.unidad === 'cajas' ? 'selected' : ''}>Caja</option>
+        </select>
+        <button onclick="this.closest('.material-row').remove()" class="text-red-500 px-2 hover:bg-red-50 rounded">✕</button>
+    `;
 
     const input = div.querySelector('.material-autocomplete');
     const resultsDiv = div.querySelector('.autocomplete-results');
     const unitSelect = div.querySelector('.material-unit');
     const codigoInput = div.querySelector('.material-codigo');
     const esNuevoInput = div.querySelector('.material-es-nuevo');
+    const detallesInput = div.querySelector('.material-detalles');
+    const detallesDisplay = div.querySelector('.material-detalles-display');
 
     input.addEventListener('input', (e) => {
         const value = e.target.value.toLowerCase();
@@ -2098,11 +2100,11 @@ function crearNuevoMaterialIngreso(descripcion) {
 
         if (matches.length > 0) {
             resultsDiv.innerHTML = matches.map(m => `
-				<div class="autocomplete-item" data-codigo="${m.codigo}" data-desc="${m.descripcion}" data-unit="${m.unidad}" data-detalles="${m.detalles || ''}">
-					<div class="font-medium">${m.descripcion}</div>
-					<div class="text-xs text-gray-500">${m.codigo} • ${m.unidad}${m.detalles ? ' • ' + m.detalles : ''}</div>
-				</div>
-			`).join('');
+                <div class="autocomplete-item" data-codigo="${m.codigo}" data-desc="${m.descripcion}" data-unit="${m.unidad}" data-detalles="${m.detalles || ''}">
+                    <div class="font-medium">${m.descripcion}</div>
+                    <div class="text-xs text-gray-500">${m.codigo} • ${m.unidad}${m.detalles ? ' • ' + m.detalles : ''}</div>
+                </div>
+            `).join('');
             
             // Agregar opción de crear nuevo al final
             resultsDiv.innerHTML += `
@@ -2115,27 +2117,26 @@ function crearNuevoMaterialIngreso(descripcion) {
             `;
             
             resultsDiv.classList.remove('hidden');
-			resultsDiv.querySelectorAll('.autocomplete-item:not(.bg-blue-50)').forEach(item => {
-				item.addEventListener('click', () => {
-				input.value = item.dataset.desc;
-				codigoInput.value = item.dataset.codigo;
-				unitSelect.value = item.dataset.unit;
-				esNuevoInput.value = "false";
-				input.classList.remove('bg-yellow-50');
-				resultsDiv.classList.add('hidden');
-        
-				// Guardar y mostrar detalles del material seleccionado
-				const detallesInput = div.querySelector('.material-detalles');
-				const detallesDisplay = div.querySelector('.material-detalles-display');
-				detallesInput.value = item.dataset.detalles || '';
-				if (item.dataset.detalles) {
-					detallesDisplay.textContent = '📋 ' + item.dataset.detalles;
-					detallesDisplay.classList.remove('hidden');
-				} else {
-					detallesDisplay.classList.add('hidden');
-				}	
-			});
-		});
+
+            resultsDiv.querySelectorAll('.autocomplete-item:not(.bg-blue-50)').forEach(item => {
+                item.addEventListener('click', () => {
+                    input.value = item.dataset.desc;
+                    codigoInput.value = item.dataset.codigo;
+                    unitSelect.value = item.dataset.unit;
+                    esNuevoInput.value = "false";
+                    input.classList.remove('bg-yellow-50');
+                    resultsDiv.classList.add('hidden');
+                    
+                    // GUARDAR Y MOSTRAR DETALLES
+                    detallesInput.value = item.dataset.detalles || '';
+                    if (item.dataset.detalles) {
+                        detallesDisplay.textContent = '📋 ' + item.dataset.detalles;
+                        detallesDisplay.classList.remove('hidden');
+                    } else {
+                        detallesDisplay.classList.add('hidden');
+                    }
+                });
+            });
         } else {
             // No hay coincidencias, mostrar opción de crear nuevo
             resultsDiv.innerHTML = `
@@ -2160,7 +2161,7 @@ function crearNuevoMaterialIngreso(descripcion) {
     });
 
     container.appendChild(div);
-}
+	}
 	function convertirANuevoMaterial(row) {
     const input = row.querySelector('.material-autocomplete');
     const codigoInput = row.querySelector('.material-codigo');
@@ -2202,7 +2203,7 @@ function crearNuevoMaterialIngreso(descripcion) {
             createAutocompleteInput(document.getElementById('edit-materiales-container'), data);
         }
 
-        async function saveOrden() {
+		async function saveOrden() {
     const fecha = document.getElementById('orden-fecha').value;
     const destino = document.getElementById('orden-destino').value;
 
@@ -2213,22 +2214,22 @@ function crearNuevoMaterialIngreso(descripcion) {
     
     // Primero procesar todos los materiales de la orden
     document.querySelectorAll('#materiales-container .material-row').forEach(row => {
-    const input = row.querySelector('.material-autocomplete');
-    const codigo = row.querySelector('.material-codigo').value;
-    const desc = input.value.trim();
-    const cant = row.querySelector('.material-cant').value;
-    const unit = row.querySelector('.material-unit').value;
-    const esNuevo = row.querySelector('.material-es-nuevo').value === "true";
-    const detalles = row.querySelector('.material-detalles').value;
+        const input = row.querySelector('.material-autocomplete');
+        const codigo = row.querySelector('.material-codigo').value;
+        const desc = input.value.trim();
+        const cant = row.querySelector('.material-cant').value;
+        const unit = row.querySelector('.material-unit').value;
+        const esNuevo = row.querySelector('.material-es-nuevo').value === "true";
+        const detalles = row.querySelector('.material-detalles').value;
 
-    if (desc && cant) {
-        materiales.push({ 
-            codigo: codigo || 'SIN-COD', 
-            descripcion: desc, 
-            cantidad: parseFloat(cant), 
-            unidad: unit,
-            detalles: detalles
-        });
+        if (desc && cant) {
+            materiales.push({ 
+                codigo: codigo || 'SIN-COD', 
+                descripcion: desc, 
+                cantidad: parseFloat(cant), 
+                unidad: unit,
+                detalles: detalles
+            });
             
             // Si es nuevo material, prepararlo para agregar al catálogo
             if (esNuevo) {
@@ -2264,17 +2265,17 @@ function crearNuevoMaterialIngreso(descripcion) {
         }
     }
 
-const orden = {
-    id: Date.now(),
-    fecha,
-    destino,
-    proveedor: document.getElementById('orden-proveedor').value.trim(),
-    presupuesto: document.getElementById('orden-presupuesto').value.trim(),
-    estado: 'abierto',
-    materiales,
-    creadoPor: CONFIG.currentUser,
-    fechaCreacion: new Date().toISOString()
-};
+    const orden = {
+        id: Date.now(),
+        fecha,
+        destino,
+        proveedor: document.getElementById('orden-proveedor').value.trim(),
+        presupuesto: document.getElementById('orden-presupuesto').value.trim(),
+        estado: 'abierto',
+        materiales,
+        creadoPor: CONFIG.currentUser,
+        fechaCreacion: new Date().toISOString()
+    };
 
     state.ordenes.push(orden);
     addAuditLog('CREACION', 'ORDEN', orden.id, `Orden creada para ${destino} por ${CONFIG.currentUser}`);
@@ -2685,79 +2686,79 @@ const orden = {
         }
 
         function verOrden(id) {
-            const orden = state.ordenes.find(o => o.id === id);
-            if (!orden) return;
+    const orden = state.ordenes.find(o => o.id === id);
+    if (!orden) return;
 
-            document.getElementById('ver-orden-titulo').textContent = `Orden #${id}`;
-            document.getElementById('ver-orden-contenido').innerHTML = `
-                <div class="space-y-3">
-                    <p><strong>Fecha:</strong> ${new Date(orden.fecha).toLocaleDateString('es-ES')}</p>
-                    <p><strong>Destino:</strong> ${orden.destino}</p>
-					<p><strong>Proveedor:</strong> ${orden.proveedor || 'No especificado'}</p>
-					<p><strong>Presupuesto:</strong> ${orden.presupuesto || 'No especificado'}</p>
-                    <p><strong>Creado por:</strong> <span class="user-badge bg-blue-100 text-blue-700">${orden.creadoPor || 'N/A'}</span></p>
-                    <p><strong>Estado:</strong> <span class="px-2 py-1 rounded-full text-xs ${orden.estado === 'abierto' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}">${orden.estado}</span></p>
-                    <div class="mt-4">
-                        <strong>Materiales:</strong>
-                        <div class="mt-2 space-y-2">
-                           ${orden.materiales.map(m => {
-								const material = state.catalogo.find(c => c.codigo === m.codigo || c.descripcion === m.descripcion);
-								return `
-								<div class="bg-gray-50 p-2 rounded-lg flex justify-between items-center">
-									<div class="flex-1">
-										<span class="font-medium">${m.descripcion}</span>
-										${m.codigo ? `<span class="text-xs text-blue-600 ml-2">(${m.codigo})</span>` : ''}
-										${(material && material.detalles) || m.detalles ? `<div class="text-xs text-blue-700 mt-1">📋 ${material && material.detalles ? material.detalles : m.detalles}</div>` : ''}
-									</div>
-									<span class="text-gray-600 ml-4">${m.cantidad} ${m.unidad}</span>
-								</div>
-								`;
-					}).join('')}
-			            ${orden.recepciones && orden.recepciones.length > 0 ? `
+    document.getElementById('ver-orden-titulo').textContent = `Orden #${id}`;
+    document.getElementById('ver-orden-contenido').innerHTML = `
+        <div class="space-y-3">
+            <p><strong>Fecha:</strong> ${new Date(orden.fecha).toLocaleDateString('es-ES')}</p>
+            <p><strong>Destino:</strong> ${orden.destino}</p>
+            <p><strong>Proveedor:</strong> ${orden.proveedor || 'No especificado'}</p>
+            <p><strong>Presupuesto:</strong> ${orden.presupuesto || 'No especificado'}</p>
+            <p><strong>Creado por:</strong> <span class="user-badge bg-blue-100 text-blue-700">${orden.creadoPor || 'N/A'}</span></p>
+            <p><strong>Estado:</strong> <span class="px-2 py-1 rounded-full text-xs ${orden.estado === 'abierto' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}">${orden.estado}</span></p>
             <div class="mt-4">
-                <strong>Historial de Recepciones:</strong>
+                <strong>Materiales:</strong>
                 <div class="mt-2 space-y-2">
-                    ${orden.recepciones.map((r, i) => `
-                        <div class="bg-${r.esParcial ? 'orange' : 'green'}-50 p-2 rounded-lg text-sm border-l-4 border-${r.esParcial ? 'orange' : 'green'}-400">
-                            <div class="flex justify-between">
-                                <span class="font-medium">${new Date(r.fecha).toLocaleDateString()} ${new Date(r.fecha).toLocaleTimeString()}</span>
-                                <span class="text-xs bg-${r.esParcial ? 'orange' : 'green'}-100 text-${r.esParcial ? 'orange' : 'green'}-800 px-2 rounded">${r.esParcial ? 'Parcial' : 'Completa'}</span>
+                    ${orden.materiales.map(m => {
+                        const material = state.catalogo.find(c => c.codigo === m.codigo || c.descripcion === m.descripcion);
+                        const detallesMostrar = (material && material.detalles) || m.detalles || '';
+                        return `
+                        <div class="bg-gray-50 p-2 rounded-lg flex justify-between items-start">
+                            <div class="flex-1">
+                                <span class="font-medium">${m.descripcion}</span>
+                                ${m.codigo ? `<span class="text-xs text-blue-600 ml-2">(${m.codigo})</span>` : ''}
+                                ${detallesMostrar ? `<div class="text-xs text-blue-700 mt-1">📋 ${detallesMostrar}</div>` : ''}
                             </div>
-                            <p class="text-gray-600 mt-1">Por: ${r.usuario}</p>
-                            ${r.observaciones ? `<p class="text-gray-500 italic mt-1">"${r.observaciones}"</p>` : ''}
-                            <div class="mt-1 text-xs text-gray-500">
-                                ${r.materiales.length} materiales recibidos
-                            </div>
+                            <span class="text-gray-600 ml-4 whitespace-nowrap">${m.cantidad} ${m.unidad}</span>
                         </div>
-                    `).join('')}
-                </div>
-            </div>
-            ` : ''}
-            
-            ${orden.materialesPendientes && orden.materialesPendientes.length > 0 ? `
-            <div class="mt-4 bg-orange-50 p-3 rounded-lg border border-orange-200">
-                <strong class="text-orange-800">⏳ Materiales Pendientes:</strong>
-                <div class="mt-2 space-y-1">
-                    ${orden.materialesPendientes.map(m => `
-                        <div class="flex justify-between text-sm text-orange-900">
-                            <span>${m.descripcion}</span>
-                            <span class="font-bold">${m.cantidad} ${m.unidad}</span>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-            ` : ''}
+                        `;
+                    }).join('')}
+                    ${orden.recepciones && orden.recepciones.length > 0 ? `
+                    <div class="mt-4">
+                        <strong>Historial de Recepciones:</strong>
+                        <div class="mt-2 space-y-2">
+                            ${orden.recepciones.map((r, i) => `
+                                <div class="bg-${r.esParcial ? 'orange' : 'green'}-50 p-2 rounded-lg text-sm border-l-4 border-${r.esParcial ? 'orange' : 'green'}-400">
+                                    <div class="flex justify-between">
+                                        <span class="font-medium">${new Date(r.fecha).toLocaleDateString()} ${new Date(r.fecha).toLocaleTimeString()}</span>
+                                        <span class="text-xs bg-${r.esParcial ? 'orange' : 'green'}-100 text-${r.esParcial ? 'orange' : 'green'}-800 px-2 rounded">${r.esParcial ? 'Parcial' : 'Completa'}</span>
+                                    </div>
+                                    <p class="text-gray-600 mt-1">Por: ${r.usuario}</p>
+                                    ${r.observaciones ? `<p class="text-gray-500 italic mt-1">"${r.observaciones}"</p>` : ''}
+                                    <div class="mt-1 text-xs text-gray-500">
+                                        ${r.materiales.length} materiales recibidos
+                                    </div>
+                                </div>
+                            `).join('')}
                         </div>
                     </div>
+                    ` : ''}
+                    ${orden.materialesPendientes && orden.materialesPendientes.length > 0 ? `
+                    <div class="mt-4 bg-orange-50 p-3 rounded-lg border border-orange-200">
+                        <strong class="text-orange-800">⏳ Materiales Pendientes:</strong>
+                        <div class="mt-2 space-y-1">
+                            ${orden.materialesPendientes.map(m => `
+                                <div class="flex justify-between text-sm text-orange-900">
+                                    <span>${m.descripcion}</span>
+                                    <span class="font-bold">${m.cantidad} ${m.unidad}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
                 </div>
-            `;
+            </div>
+        </div>
+    `;
 
-            document.getElementById('ver-orden-acciones').innerHTML = orden.estado === 'abierto' 
-                ? `<button onclick="cerrarOrden(${orden.id}); closeModal('ver-orden');" class="px-6 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700">Autorizar y Cerrar</button>`
-                : '<span class="text-gray-500">Orden procesada</span>';
+    document.getElementById('ver-orden-acciones').innerHTML = orden.estado === 'abierto' 
+        ? `<button onclick="cerrarOrden(${orden.id}); closeModal('ver-orden');" class="px-6 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700">Autorizar y Cerrar</button>`
+        : '<span class="text-gray-500">Orden procesada</span>';
 
-            document.getElementById('modal-ver-orden').classList.remove('hidden');
-        }
+    document.getElementById('modal-ver-orden').classList.remove('hidden');
+}
 async function cerrarOrden(id) {
     const orden = state.ordenes.find(o => o.id === id);
     if (!orden || orden.estado === 'cerrado') return;
