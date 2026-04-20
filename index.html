@@ -1606,7 +1606,11 @@ function crearNuevoMaterialIngreso(descripcion) {
         const cantidad = parseInt(document.getElementById('ingreso-cantidad').value);
         if (!cantidad || cantidad < 1) return alert('Ingresa una cantidad válida');
 
-        const existente = state.stock.find(s => s.materialId === material.id);
+        const detalleIngreso = document.getElementById('ingreso-observaciones').value.trim();
+        const existente = state.stock.find(s => 
+            s.materialId === material.id && 
+            (s.detalles || '').toLowerCase().trim() === detalleIngreso.toLowerCase().trim()
+        );
         if (existente) {
             existente.cantidad += cantidad;
             existente.ultimoIngreso = new Date().toISOString();
@@ -1617,6 +1621,7 @@ function crearNuevoMaterialIngreso(descripcion) {
                 materialId: material.id,
                 codigo: material.codigo,
                 descripcion: material.descripcion,
+                detalles: detalleIngreso,
                 cantidad: cantidad,
                 unidad: material.unidad,
                 stockMinimo: material.stockMinimo,
@@ -1625,8 +1630,8 @@ function crearNuevoMaterialIngreso(descripcion) {
                 origen: origen || 'Ingreso directo'
             });
         }
-        addAuditLog('INGRESO', 'STOCK', material.id, `Ingresados ${cantidad} ${material.unidad} de ${material.codigo}`);
-        alert(`✅ Ingresados ${cantidad} ${material.unidad} de ${material.descripcion}`);
+        addAuditLog('INGRESO', 'STOCK', material.id, `Ingresados ${cantidad} ${material.unidad} de ${material.codigo}${detalleIngreso ? ' ('+detalleIngreso+')' : ''}`);
+        alert(`✅ Ingresados ${cantidad} ${material.unidad} de ${material.descripcion}${detalleIngreso ? ' - '+detalleIngreso : ''}`);
     }
 
     await saveToCloud();
@@ -1651,13 +1656,30 @@ function crearNuevoMaterialIngreso(descripcion) {
                 return;
             }
 
-            container.innerHTML = materialesFiltrados.map(m => {
-                if (m.tipoControl === 'retazos') {
-                    const retazosMaterial = state.retazos.filter(r => r.materialId === m.id && r.estado === 'disponible');
-                    const totalMedida = retazosMaterial.reduce((sum, r) => sum + r.medida, 0);
-                    const isCritical = retazosMaterial.length <= (m.stockMinimo || 3);
+            // Primero obtener todos los items de stock normales que coincidan con la búsqueda
+            const stockFiltrado = state.stock.filter(s => {
+                const material = state.catalogo.find(c => c.id === s.materialId);
+                if (!material || material.activo === false) return false;
+                if (material.tipoControl === 'retazos') return false;
+                return material.codigo.toLowerCase().includes(search) || 
+                       material.descripcion.toLowerCase().includes(search) ||
+                       (s.detalles || '').toLowerCase().includes(search);
+            });
+            
+            const stockPorMaterial = {};
+            stockFiltrado.forEach(s => {
+                if (!stockPorMaterial[s.materialId]) stockPorMaterial[s.materialId] = [];
+                stockPorMaterial[s.materialId].push(s);
+            });
+            
+            let html = '';
+            
+            materialesFiltrados.filter(m => m.tipoControl === 'retazos').forEach(m => {
+                const retazosMaterial = state.retazos.filter(r => r.materialId === m.id && r.estado === 'disponible');
+                const totalMedida = retazosMaterial.reduce((sum, r) => sum + r.medida, 0);
+                const isCritical = retazosMaterial.length <= (m.stockMinimo || 3);
 
-                    return `
+                html += `
                     <div class="bg-white p-4 rounded-2xl shadow-sm border ${isCritical ? 'border-red-300 bg-red-50' : 'border-gray-100'}">
                         <div class="flex justify-between items-start mb-2">
                             <div>
@@ -1671,7 +1693,6 @@ function crearNuevoMaterialIngreso(descripcion) {
                                 <span class="text-sm ${isCritical ? 'text-red-600' : 'text-gray-600'}">${totalMedida.toFixed(2)} ${m.unidad} total</span>
                             </div>
                         </div>
-
                         <div class="mt-3 space-y-1 max-h-32 overflow-y-auto">
                             ${retazosMaterial.slice(0, 5).map(r => `
                                 <div class="retazo-card bg-gray-50 p-2 rounded text-sm flex justify-between items-center">
@@ -1681,17 +1702,17 @@ function crearNuevoMaterialIngreso(descripcion) {
                             `).join('')}
                             ${retazosMaterial.length > 5 ? `<p class="text-xs text-gray-400 text-center">+ ${retazosMaterial.length - 5} más...</p>` : ''}
                         </div>
-
                         ${isCritical ? `<p class="text-xs text-red-600 mt-2 font-semibold">⚠️ Stock crítico (mín: ${m.stockMinimo || 3})</p>` : ''}
                     </div>
-                    `;
-                } else {
-                    const stockItem = state.stock.find(s => s.materialId === m.id);
-                    const cantidad = stockItem ? stockItem.cantidad : 0;
-                    const isCritical = cantidad <= (m.stockMinimo || 3);
-
-                    return `
-                    <div class="bg-white p-4 rounded-2xl shadow-sm border ${isCritical ? 'border-red-300 bg-red-50' : 'border-gray-100'}">
+                `;
+            });
+            
+            materialesFiltrados.filter(m => m.tipoControl !== 'retazos').forEach(m => {
+                const variantes = stockPorMaterial[m.id] || [];
+                
+                if (variantes.length === 0) {
+                    html += `
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 opacity-70">
                         <div class="flex justify-between items-start">
                             <div>
                                 <span class="text-xs font-mono text-blue-600 bg-blue-50 px-2 py-1 rounded">${m.codigo}</span>
@@ -1699,19 +1720,48 @@ function crearNuevoMaterialIngreso(descripcion) {
                                 <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">∑ Suma Normal</span>
                             </div>
                             <div class="text-right">
-                                <span class="text-2xl font-bold ${isCritical ? 'text-red-600' : 'text-blue-600'}">${cantidad}</span>
-                                <p class="text-xs ${isCritical ? 'text-red-500' : 'text-gray-400'}">${m.unidad}</p>
+                                <span class="text-2xl font-bold text-gray-400">0</span>
+                                <p class="text-xs text-gray-400">${m.unidad}</p>
                             </div>
                         </div>
                         <div class="mt-3 pt-3 border-t flex justify-between items-center">
                             <span class="text-xs text-gray-500">Mín: ${m.stockMinimo || 3}</span>
-                            ${stockItem ? `<button onclick="ajustarStock('${stockItem.id}')" class="text-sm text-blue-600 hover:underline">Ajustar</button>` : ''}
                         </div>
-                        ${isCritical ? `<p class="text-xs text-red-600 mt-2 font-semibold">⚠️ Stock crítico</p>` : ''}
+                        <p class="text-xs text-red-600 mt-2 font-semibold">⚠️ Sin stock</p>
                     </div>
                     `;
+                } else {
+                    variantes.forEach(stockItem => {
+                        const cantidad = stockItem.cantidad;
+                        const isCritical = cantidad <= (m.stockMinimo || 3);
+                        const detalleLabel = stockItem.detalles ? `<span class="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded mt-1 inline-block">📋 ${stockItem.detalles}</span>` : '';
+
+                        html += `
+                        <div class="bg-white p-4 rounded-2xl shadow-sm border ${isCritical ? 'border-red-300 bg-red-50' : 'border-gray-100'}">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <span class="text-xs font-mono text-blue-600 bg-blue-50 px-2 py-1 rounded">${m.codigo}</span>
+                                    <h4 class="font-bold text-lg mt-1">${m.descripcion}</h4>
+                                    ${detalleLabel}
+                                    <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full ml-1">∑ Normal</span>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-2xl font-bold ${isCritical ? 'text-red-600' : 'text-blue-600'}">${cantidad}</span>
+                                    <p class="text-xs ${isCritical ? 'text-red-500' : 'text-gray-400'}">${m.unidad}</p>
+                                </div>
+                            </div>
+                            <div class="mt-3 pt-3 border-t flex justify-between items-center">
+                                <span class="text-xs text-gray-500">Mín: ${m.stockMinimo || 3}</span>
+                                <button onclick="ajustarStock('${stockItem.id}')" class="text-sm text-blue-600 hover:underline">Ajustar</button>
+                            </div>
+                            ${isCritical ? `<p class="text-xs text-red-600 mt-2 font-semibold">⚠️ Stock crítico</p>` : ''}
+                        </div>
+                        `;
+                    });
                 }
-            }).join('');
+            });
+            
+            container.innerHTML = html || '<div class="col-span-3 text-center text-gray-400 py-8">Sin materiales registrados</div>';
 
             const critico = state.catalogo.filter(c => {
                 if (c.activo === false) return false;
@@ -1781,8 +1831,14 @@ function crearNuevoMaterialIngreso(descripcion) {
                     const retazosDisp = state.retazos.filter(r => r.materialId === material.id && r.estado === 'disponible');
                     disponibleHtml = `<p class="text-xs text-gray-500">${retazosDisp.length} retazos disponibles (Total: ${retazosDisp.reduce((a,b)=>a+b.medida,0)} ${m.unidad})</p>`;
                 } else {
-                    const stockItem = state.stock.find(s => s.descripcion.toLowerCase() === m.descripcion.toLowerCase());
-                    disponibleHtml = `<p class="text-xs text-gray-500">Disp: ${stockItem ? stockItem.cantidad : 0} ${m.unidad}</p>`;
+                    const stockItem = state.stock.find(s => 
+                        s.descripcion.toLowerCase() === m.descripcion.toLowerCase() &&
+                        (s.detalles || '').toLowerCase().trim() === (m.detalles || '').toLowerCase().trim()
+                    );
+                    const dispTotal = state.stock
+                        .filter(s => s.descripcion.toLowerCase() === m.descripcion.toLowerCase())
+                        .reduce((sum, s) => sum + s.cantidad, 0);
+                    disponibleHtml = `<p class="text-xs text-gray-500">Disp: ${stockItem ? stockItem.cantidad : 0} ${m.unidad} (Total: ${dispTotal})</p>`;
                 }
 
                 container.innerHTML += `
@@ -1847,12 +1903,15 @@ function crearNuevoMaterialIngreso(descripcion) {
                             alert(`No hay suficientes metros de ${desc}. Se retiraron ${medidaAcumulada} de ${cantidad} solicitados`);
                         }
                     } else {
-                        const stockItem = state.stock.find(s => s.descripcion.toLowerCase() === desc.toLowerCase());
+                        const stockItem = state.stock.find(s => 
+                            s.descripcion.toLowerCase() === desc.toLowerCase() &&
+                            (s.detalles || '').toLowerCase().trim() === (m.detalles || '').toLowerCase().trim()
+                        );
                         if (stockItem && stockItem.cantidad >= cantidad) {
                             stockItem.cantidad -= cantidad;
-                            materialesRetiro.push({ descripcion: desc, cantidad, unidad, tipo: 'normal' });
+                            materialesRetiro.push({ descripcion: desc, detalles: m.detalles || '', cantidad, unidad, tipo: 'normal' });
                         } else {
-                            alert(`Stock insuficiente para ${desc}`);
+                            alert(`Stock insuficiente para ${desc}${m.detalles ? ' ('+m.detalles+')' : ''}`);
                             return;
                         }
                     }
@@ -1984,14 +2043,23 @@ function crearNuevoMaterialIngreso(descripcion) {
                 });
             } else {
                 const cantidad = parseInt(document.getElementById('retiro-cantidad-normal').value);
-                const stockItem = state.stock.find(s => s.materialId === materialId);
-
+                const stockItems = state.stock.filter(s => s.materialId === materialId);
+                
+                if (stockItems.length === 0) return alert('No hay stock de este material');
+                
                 if (!cantidad || cantidad < 1) return alert('Ingrese cantidad válida');
-                if (!stockItem || stockItem.cantidad < cantidad) return alert('Stock insuficiente');
+                
+                let stockItem = stockItems[0];
+                if (stockItems.length > 1) {
+                    stockItem = stockItems.sort((a, b) => b.cantidad - a.cantidad)[0];
+                }
+                
+                if (stockItem.cantidad < cantidad) return alert('Stock insuficiente');
 
                 stockItem.cantidad -= cantidad;
                 materiales.push({
                     descripcion: material.descripcion,
+                    detalles: stockItem.detalles || '',
                     cantidad: cantidad,
                     unidad: material.unidad,
                     tipo: 'normal'
@@ -2031,11 +2099,13 @@ function crearNuevoMaterialIngreso(descripcion) {
                         <span class="user-badge bg-blue-100 text-blue-700">${r.usuario || 'N/A'}</span>
                     </td>
                     <td class="px-4 py-3 text-sm">
-                        ${r.materiales.map(m => m.tipo === 'retazo' 
-                            ? `${m.descripcion} (${m.medida}${m.unidad})` 
-                            : `${m.descripcion} (${m.cantidad})`
-                        ).join(', ')}
-                    </td>
+                        ${r.materiales.map(m => {
+                            const det = m.detalles ? ` [${m.detalles}]` : '';
+                            return m.tipo === 'retazo' 
+                                ? `${m.descripcion}${det} (${m.medida}${m.unidad})` 
+                                : `${m.descripcion}${det} (${m.cantidad})`;
+                        }).join(', ')}
+                    </td>       
                 </tr>
             `).join('') || '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-400">Sin retiros registrados</td></tr>';
         }
@@ -2049,12 +2119,12 @@ function crearNuevoMaterialIngreso(descripcion) {
             addMaterialRow();
         }
 
-	function createAutocompleteInput(container, initialData = null, isNewMaterial = false) {
+	    function createAutocompleteInput(container, initialData = null, isNewMaterial = false) {
     const div = document.createElement('div');
-    div.className = 'material-row flex gap-2 items-start bg-gray-50 p-2 rounded-lg relative';
+    div.className = 'material-row flex flex-wrap gap-2 items-start bg-gray-50 p-2 rounded-lg relative';
 
     div.innerHTML = `
-        <div class="flex-1 relative">
+        <div class="flex-[2] relative min-w-[200px]">
             <input type="text" placeholder="Escribí para buscar..." 
                    class="material-autocomplete w-full px-3 py-2 border rounded-lg text-sm" 
                    value="${initialData ? initialData.descripcion : ''}"
@@ -2062,8 +2132,11 @@ function crearNuevoMaterialIngreso(descripcion) {
             <div class="autocomplete-results hidden"></div>
             <input type="hidden" class="material-codigo" value="${initialData ? initialData.codigo || '' : ''}">
             <input type="hidden" class="material-es-nuevo" value="false">
-            <input type="hidden" class="material-detalles" value="${initialData ? initialData.detalles || '' : ''}">
-            <div class="material-detalles-display text-xs text-blue-600 mt-1 bg-blue-50 px-2 py-1 rounded hidden"></div>
+        </div>
+        <div class="flex-[1] min-w-[120px]">
+            <input type="text" placeholder="Detalle (ej: color, medida...)" 
+                   class="material-detalles-input w-full px-3 py-2 border rounded-lg text-sm" 
+                   value="${initialData ? initialData.detalles || '' : ''}">
         </div>
         <input type="number" placeholder="Cant" min="1" value="${initialData ? initialData.cantidad : '1'}" class="material-cant w-20 px-3 py-2 border rounded-lg text-sm">
         <select class="material-unit w-24 px-3 py-2 border rounded-lg text-sm">
@@ -2119,7 +2192,7 @@ function crearNuevoMaterialIngreso(descripcion) {
             resultsDiv.classList.remove('hidden');
 
             resultsDiv.querySelectorAll('.autocomplete-item:not(.bg-blue-50)').forEach(item => {
-                item.addEventListener('click', () => {
+				item.addEventListener('click', () => {
                     input.value = item.dataset.desc;
                     codigoInput.value = item.dataset.codigo;
                     unitSelect.value = item.dataset.unit;
@@ -2127,15 +2200,12 @@ function crearNuevoMaterialIngreso(descripcion) {
                     input.classList.remove('bg-yellow-50');
                     resultsDiv.classList.add('hidden');
                     
-                    // GUARDAR Y MOSTRAR DETALLES
-                    detallesInput.value = item.dataset.detalles || '';
-                    if (item.dataset.detalles) {
-                        detallesDisplay.textContent = '📋 ' + item.dataset.detalles;
-                        detallesDisplay.classList.remove('hidden');
-                    } else {
-                        detallesDisplay.classList.add('hidden');
+                    // AUTOCOMPLETAR DETALLE VISIBLE
+                    const detalleInput = div.querySelector('.material-detalles-input');
+                    if (detalleInput && item.dataset.detalles) {
+                        detalleInput.value = item.dataset.detalles;
                     }
-                });
+                });	
             });
         } else {
             // No hay coincidencias, mostrar opción de crear nuevo
@@ -2213,14 +2283,14 @@ function crearNuevoMaterialIngreso(descripcion) {
     const nuevosMateriales = [];
     
     // Primero procesar todos los materiales de la orden
-    document.querySelectorAll('#materiales-container .material-row').forEach(row => {
+	    document.querySelectorAll('#materiales-container .material-row').forEach(row => {
         const input = row.querySelector('.material-autocomplete');
         const codigo = row.querySelector('.material-codigo').value;
         const desc = input.value.trim();
         const cant = row.querySelector('.material-cant').value;
         const unit = row.querySelector('.material-unit').value;
         const esNuevo = row.querySelector('.material-es-nuevo').value === "true";
-        const detalles = row.querySelector('.material-detalles').value;
+        const detalles = row.querySelector('.material-detalles-input').value.trim();
 
         if (desc && cant) {
             materiales.push({ 
@@ -2333,14 +2403,14 @@ function crearNuevoMaterialIngreso(descripcion) {
                 const materiales = [];
                             const nuevosMaterialesEdit = [];
             
-            document.querySelectorAll('#edit-materiales-container .material-row').forEach(row => {
+                        document.querySelectorAll('#edit-materiales-container .material-row').forEach(row => {
                 const input = row.querySelector('.material-autocomplete');
                 const codigo = row.querySelector('.material-codigo').value;
                 const desc = input.value.trim();
                 const cant = row.querySelector('.material-cant').value;
                 const unit = row.querySelector('.material-unit').value;
                 const esNuevo = row.querySelector('.material-es-nuevo')?.value === "true";
-                const detalles = row.querySelector('.material-detalles').value;
+                const detalles = row.querySelector('.material-detalles-input').value.trim();
 
 				if (desc && cant) {
 					materiales.push({ codigo: codigo || 'SIN-COD', descripcion: desc, cantidad: parseFloat(cant), unidad: unit, detalles });
@@ -2394,13 +2464,13 @@ function crearNuevoMaterialIngreso(descripcion) {
 
             // Solo actualizar datos sin cerrar
             const materiales = [];
-            document.querySelectorAll('#edit-materiales-container .material-row').forEach(row => {
+                        document.querySelectorAll('#edit-materiales-container .material-row').forEach(row => {
 				const input = row.querySelector('.material-autocomplete');
 				const codigo = row.querySelector('.material-codigo').value;
 				const desc = input.value;
 				const cant = row.querySelector('.material-cant').value;
 				const unit = row.querySelector('.material-unit').value;
-				const detalles = row.querySelector('.material-detalles').value;
+				const detalles = row.querySelector('.material-detalles-input').value.trim();
 
 				if (desc && cant) {
 					materiales.push({ codigo, descripcion: desc, cantidad: parseFloat(cant), unidad: unit, detalles });
@@ -2583,7 +2653,7 @@ function crearNuevoMaterialIngreso(descripcion) {
         async function procesarCierreOrdenNormal(ordenId, materiales) {
             const orden = state.ordenes.find(o => o.id === ordenId);
             
-            materiales.forEach(m => {
+                    materiales.forEach(m => {
                 const material = state.catalogo.find(c => 
                     (m.codigo && c.codigo === m.codigo) || 
                     c.descripcion.toLowerCase().trim() === m.descripcion.toLowerCase().trim()
@@ -2591,6 +2661,7 @@ function crearNuevoMaterialIngreso(descripcion) {
 
                 const existente = state.stock.find(s => 
                     s.descripcion.toLowerCase().trim() === m.descripcion.toLowerCase().trim() && 
+                    (s.detalles || '').toLowerCase().trim() === (m.detalles || '').toLowerCase().trim() &&
                     s.unidad === m.unidad
                 );
                 
@@ -2602,6 +2673,7 @@ function crearNuevoMaterialIngreso(descripcion) {
                         materialId: material ? material.id : null,
                         codigo: material ? material.codigo : (m.codigo || 'SIN-COD'),
                         descripcion: m.descripcion,
+                        detalles: m.detalles || '',
                         cantidad: m.cantidad,
                         unidad: m.unidad,
                         stockMinimo: material ? material.stockMinimo : 3,
@@ -2650,7 +2722,10 @@ function crearNuevoMaterialIngreso(descripcion) {
                     <td class="px-4 py-3 text-sm font-medium">#${o.id}</td>
                     <td class="px-4 py-3 text-sm">${new Date(o.fecha).toLocaleDateString('es-ES')}</td>
                     <td class="px-4 py-3 text-sm">${o.destino}</td>
-                    <td class="px-4 py-3 text-sm">${o.materiales.length} items</td>
+                           <td class="px-4 py-3 text-sm">
+                        ${o.materiales.length} items
+                        ${o.materiales.some(m => m.detalles) ? '<span class="text-xs text-blue-500">📋</span>' : ''}
+                    </td>
                     <td class="px-4 py-3 text-sm">
                         <span class="user-badge bg-gray-100 text-gray-700">${o.creadoPor || 'N/A'}</span>
                     </td>
@@ -2703,7 +2778,7 @@ function crearNuevoMaterialIngreso(descripcion) {
                 <div class="mt-2 space-y-2">
                     ${orden.materiales.map(m => {
                         const material = state.catalogo.find(c => c.codigo === m.codigo || c.descripcion === m.descripcion);
-                        const detallesMostrar = (material && material.detalles) || m.detalles || '';
+                        const detallesMostrar = m.detalles || (material && material.detalles) || '';
                         return `
                         <div class="bg-gray-50 p-2 rounded-lg flex justify-between items-start">
                             <div class="flex-1">
@@ -2792,6 +2867,7 @@ async function cerrarOrden(id) {
                         <div>
                             <label for="recv-check-${idx}" class="font-medium text-gray-900 cursor-pointer">${m.descripcion}</label>
                             ${m.codigo ? `<span class="text-xs text-blue-600 ml-2">(${m.codigo})</span>` : ''}
+                            ${m.detalles ? `<span class="text-xs text-blue-700 bg-blue-50 px-2 py-0.5 rounded ml-1">📋 ${m.detalles}</span>` : ''}
                             <span class="text-xs ${esRetazo ? 'text-purple-600' : 'text-gray-500'} ml-2">
                                 ${esRetazo ? '📏 Por retazos' : '∑ Normal'}
                             </span>
@@ -2985,8 +3061,13 @@ async function confirmarRecepcion() {
             });
             
         } else {
-            // Stock normal
-            const existente = state.stock.find(s => s.materialId === materialId);
+            // Stock normal - buscar por descripcion + detalle
+            const detalleMaterial = orden.materiales[idx]?.detalles || '';
+            const existente = state.stock.find(s => 
+                s.descripcion.toLowerCase().trim() === descripcion.toLowerCase().trim() && 
+                (s.detalles || '').toLowerCase().trim() === detalleMaterial.toLowerCase().trim() &&
+                s.unidad === unidad
+            );
             if (existente) {
                 existente.cantidad += recibido;
                 existente.ultimoIngreso = new Date().toISOString();
@@ -2996,6 +3077,7 @@ async function confirmarRecepcion() {
                     materialId: materialId || null,
                     codigo: codigo || 'SIN-COD',
                     descripcion: descripcion,
+                    detalles: detalleMaterial,
                     cantidad: recibido,
                     unidad: unidad,
                     stockMinimo: material ? material.stockMinimo : 3,
@@ -3298,8 +3380,9 @@ async function confirmarRecepcion() {
                     const count = state.retazos.filter(r => r.materialId === c.id && r.estado === 'disponible').length;
                     return count <= (c.stockMinimo || 3);
                 } else {
-                    const stockItem = state.stock.find(s => s.materialId === c.id);
-                    return (stockItem ? stockItem.cantidad : 0) <= (c.stockMinimo || 3);
+                    const variantes = state.stock.filter(s => s.materialId === c.id);
+                    if (variantes.length === 0) return true;
+                    return variantes.some(v => v.cantidad <= (c.stockMinimo || 3));
                 }
             }).length;
             const totalMateriales = state.catalogo.filter(c => c.activo !== false).length;
