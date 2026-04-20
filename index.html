@@ -1415,9 +1415,9 @@ function initIngresoForm() {
 
         if (matches.length > 0) {
 			resultsDiv.innerHTML = matches.map(m => `
-				<div class="autocomplete-item" onclick="seleccionarMaterialIngreso('${m.id}', '${m.codigo}', '${m.descripcion}', '${m.tipoControl || 'normal'}', '${m.unidad}')">
-                <div class="font-medium">${m.descripcion}</div>
-                <div class="text-xs text-gray-500">${m.codigo} • ${m.unidad}${m.detalles ? ' • ' + m.detalles : ''} ${m.tipoControl === 'retazos' ? '📏' : ''}</div>
+				<div class="autocomplete-item" onclick="seleccionarMaterialIngreso('${m.id}', '${m.codigo}', '${m.descripcion}', '${m.tipoControl || 'normal'}', '${m.unidad}', '${m.detalles || ''}')">
+					<div class="font-medium">${m.descripcion}</div>
+					<div class="text-xs text-gray-500">${m.codigo} • ${m.unidad}${m.detalles ? ' • ' + m.detalles : ''} ${m.tipoControl === 'retazos' ? '📏' : ''}</div>
 				</div>
 			`).join('');
             
@@ -1454,19 +1454,23 @@ function initIngresoForm() {
     });
 }
 
-function seleccionarMaterialIngreso(id, codigo, descripcion, tipoControl, unidad) {
+function seleccionarMaterialIngreso(id, codigo, descripcion, tipoControl, unidad, detalles = '') {
     document.getElementById('ingreso-material-autocomplete').value = descripcion;
     document.getElementById('ingreso-material-id').value = id;
     document.getElementById('ingreso-material-codigo').value = codigo;
     document.getElementById('ingreso-material-es-nuevo').value = 'false';
     document.getElementById('ingreso-autocomplete-results').classList.add('hidden');
     
-    // Mostrar indicador de tipo
-    const indicador = document.getElementById('ingreso-material-indicador');
-    indicador.classList.remove('hidden');
-    indicador.innerHTML = tipoControl === 'retazos' 
-        ? '<span class="text-purple-600 font-medium">📏 Control por Retazos</span>'
-        : '<span class="text-gray-600">∑ Control Normal</span>';
+   // Mostrar indicador de tipo + detalles
+	const indicador = document.getElementById('ingreso-material-indicador');
+	indicador.classList.remove('hidden');
+	let html = tipoControl === 'retazos' 
+		? '<span class="text-purple-600 font-medium">📏 Control por Retazos</span>'
+		: '<span class="text-gray-600">∑ Control Normal</span>';
+	if (detalles) {
+		html += `<div class="mt-1 text-blue-700 bg-blue-50 px-2 py-1 rounded text-xs">📋 ${detalles}</div>`;
+	}
+	indicador.innerHTML = html;
     
     // Configurar vistas según tipo
     document.getElementById('ingreso-unidad').value = unidad;
@@ -1924,15 +1928,28 @@ function crearNuevoMaterialIngreso(descripcion) {
                         </label>
                     `).join('');
                 }
+				// Mostrar detalles del material
+				const detallesRetazoDiv = document.getElementById('retiro-detalles-retazo') || document.createElement('div');
+				detallesRetazoDiv.id = 'retiro-detalles-retazo';
+				detallesRetazoDiv.className = 'mt-2 p-2 bg-blue-50 rounded-lg text-sm text-blue-800';
+				detallesRetazoDiv.innerHTML = material.detalles ? `📋 <strong>Detalles:</strong> ${material.detalles}` : '';
+				document.getElementById('retiro-retazos-section').insertBefore(detallesRetazoDiv, document.getElementById('retiro-retazos-section').firstChild);
             } else {
-                document.getElementById('retiro-retazos-section').classList.add('hidden');
-                document.getElementById('retiro-normal-section').classList.remove('hidden');
+					document.getElementById('retiro-retazos-section').classList.add('hidden');
+					document.getElementById('retiro-normal-section').classList.remove('hidden');
 
-                const stockItem = state.stock.find(s => s.materialId === materialId);
-                const disponible = stockItem ? stockItem.cantidad : 0;
-                document.getElementById('retiro-disponible-normal').textContent = `${disponible} ${material.unidad}`;
-                document.getElementById('retiro-cantidad-normal').max = disponible;
-            }
+					const stockItem = state.stock.find(s => s.materialId === materialId);
+					const disponible = stockItem ? stockItem.cantidad : 0;
+					document.getElementById('retiro-disponible-normal').textContent = `${disponible} ${material.unidad}`;
+					document.getElementById('retiro-cantidad-normal').max = disponible;
+    
+					// MOSTRAR DETALLES DEL MATERIAL
+					const detallesDiv = document.getElementById('retiro-detalles-material') || document.createElement('div');
+					detallesDiv.id = 'retiro-detalles-material';
+					detallesDiv.className = 'mt-2 p-2 bg-blue-50 rounded-lg text-sm text-blue-800';
+					detallesDiv.innerHTML = material.detalles ? `📋 <strong>Detalles:</strong> ${material.detalles}` : '';
+					document.getElementById('retiro-normal-section').insertBefore(detallesDiv, document.getElementById('retiro-normal-section').firstChild);
+			}
         }
 
         async function procesarRetiroIndividual() {
@@ -2079,11 +2096,11 @@ function crearNuevoMaterialIngreso(descripcion) {
 
         if (matches.length > 0) {
             resultsDiv.innerHTML = matches.map(m => `
-                <div class="autocomplete-item" data-codigo="${m.codigo}" data-desc="${m.descripcion}" data-unit="${m.unidad}">
-                    <div class="font-medium">${m.descripcion}</div>
-                    <div class="text-xs text-gray-500">${m.codigo} • ${m.unidad}${m.detalles ? ' • ' + m.detalles : ''}</div>
-                </div>
-            `).join('');
+				<div class="autocomplete-item" data-codigo="${m.codigo}" data-desc="${m.descripcion}" data-unit="${m.unidad}" data-detalles="${m.detalles || ''}">
+					<div class="font-medium">${m.descripcion}</div>
+					<div class="text-xs text-gray-500">${m.codigo} • ${m.unidad}${m.detalles ? ' • ' + m.detalles : ''}</div>
+				</div>
+			`).join('');
             
             // Agregar opción de crear nuevo al final
             resultsDiv.innerHTML += `
@@ -2096,17 +2113,28 @@ function crearNuevoMaterialIngreso(descripcion) {
             `;
             
             resultsDiv.classList.remove('hidden');
-
-            resultsDiv.querySelectorAll('.autocomplete-item:not(.bg-blue-50)').forEach(item => {
-                item.addEventListener('click', () => {
-                    input.value = item.dataset.desc;
-                    codigoInput.value = item.dataset.codigo;
-                    unitSelect.value = item.dataset.unit;
-                    esNuevoInput.value = "false";
-                    input.classList.remove('bg-yellow-50');
-                    resultsDiv.classList.add('hidden');
-                });
-            });
+			resultsDiv.querySelectorAll('.autocomplete-item:not(.bg-blue-50)').forEach(item => {
+				item.addEventListener('click', () => {
+				input.value = item.dataset.desc;
+				codigoInput.value = item.dataset.codigo;
+				unitSelect.value = item.dataset.unit;
+				esNuevoInput.value = "false";
+				input.classList.remove('bg-yellow-50');
+				resultsDiv.classList.add('hidden');
+        
+				// MOSTRAR DETALLES DEL MATERIAL SELECCIONADO
+				const detalles = item.dataset.detalles;
+				if (detalles) {
+					let detalleDiv = row.querySelector('.material-detalles-info');
+					if (!detalleDiv) {
+						detalleDiv = document.createElement('div');
+						detalleDiv.className = 'material-detalles-info text-xs text-blue-600 mt-1 bg-blue-50 px-2 py-1 rounded';
+						row.querySelector('.flex-1').appendChild(detalleDiv);
+					}
+					detalleDiv.textContent = '📋 ' + detalles;
+				}
+			});
+		});
         } else {
             // No hay coincidencias, mostrar opción de crear nuevo
             resultsDiv.innerHTML = `
@@ -2667,15 +2695,19 @@ const orden = {
                     <div class="mt-4">
                         <strong>Materiales:</strong>
                         <div class="mt-2 space-y-2">
-                            ${orden.materiales.map(m => `
-                                <div class="bg-gray-50 p-2 rounded-lg flex justify-between items-center">
-                                    <div>
-                                        <span class="font-medium">${m.descripcion}</span>
-                                        ${m.codigo ? `<span class="text-xs text-blue-600 ml-2">(${m.codigo})</span>` : ''}
-                                    </div>
-                                    <span class="text-gray-600">${m.cantidad} ${m.unidad}</span>
-                                </div>
-                            `).join('')}
+                           ${orden.materiales.map(m => {
+								const material = state.catalogo.find(c => c.codigo === m.codigo || c.descripcion === m.descripcion);
+								return `
+								<div class="bg-gray-50 p-2 rounded-lg flex justify-between items-center">
+									<div class="flex-1">
+										<span class="font-medium">${m.descripcion}</span>
+										${m.codigo ? `<span class="text-xs text-blue-600 ml-2">(${m.codigo})</span>` : ''}
+										${material && material.detalles ? `<div class="text-xs text-blue-700 mt-1">📋 ${material.detalles}</div>` : ''}
+									</div>
+									<span class="text-gray-600 ml-4">${m.cantidad} ${m.unidad}</span>
+								</div>
+								`;
+					}).join('')}
 			            ${orden.recepciones && orden.recepciones.length > 0 ? `
             <div class="mt-4">
                 <strong>Historial de Recepciones:</strong>
