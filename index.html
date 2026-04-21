@@ -1334,26 +1334,30 @@
 			const preview = document.getElementById('csv-preview');
 			state.pendingImport = [];
 
-			lines.slice(0, 10).forEach(line => {
-			const cols = line.split(',').map(c => c.trim());
-			// Ahora esperamos 6 columnas: código, descripción, detalle, unidad, stockMinimo, tipoControl
-			if (cols.length >= 2 && cols[0]) {
-				// Si tiene 5 o menos columnas, asume formato viejo (sin detalle)
-				// Si tiene 6 o más, usa formato nuevo (con detalle)
-				const tieneDetalle = cols.length >= 6;
+			// Procesar TODAS las líneas para la importación real
+			lines.forEach(line => {
+				const cols = line.split(',').map(c => c.trim());
+				// Ahora esperamos 6 columnas: código, descripción, detalle, unidad, stockMinimo, tipoControl
+				if (cols.length >= 2 && cols[0]) {
+					// Si tiene 5 o menos columnas, asume formato viejo (sin detalle)
+					// Si tiene 6 o más, usa formato nuevo (con detalle)
+					const tieneDetalle = cols.length >= 6;
             
-				state.pendingImport.push({
-					codigo: cols[0].toUpperCase(),
-					descripcion: cols[1],
-					detalles: tieneDetalle ? cols[2] : '',
-					unidad: tieneDetalle ? cols[3] : (cols[2] || 'unidades'),
-					stockMinimo: parseInt(tieneDetalle ? cols[4] : (cols[3] || 3)) || 3,
-					tipoControl: (tieneDetalle ? cols[5] : (cols[4] || 'normal')).toLowerCase() === 'retazos' ? 'retazos' : 'normal'
-				});
-			}
-		});
+					state.pendingImport.push({
+						codigo: cols[0].toUpperCase(),
+						descripcion: cols[1],
+						detalles: tieneDetalle ? cols[2] : '',
+						unidad: tieneDetalle ? cols[3] : (cols[2] || 'unidades'),
+						stockMinimo: parseInt(tieneDetalle ? cols[4] : (cols[3] || 3)) || 3,
+						tipoControl: (tieneDetalle ? cols[5] : (cols[4] || 'normal')).toLowerCase() === 'retazos' ? 'retazos' : 'normal'
+					});
+				}
+			});
 
-		preview.innerHTML = state.pendingImport.map(i => `
+			// Mostrar solo las primeras 10 en la vista previa (para no saturar la pantalla)
+			const previewItems = state.pendingImport.slice(0, 10);
+    
+			preview.innerHTML = previewItems.map(i => `
 			<div class="flex gap-2 text-xs items-center py-1 border-b border-gray-100">
 				<span class="font-mono text-blue-600 w-20">${i.codigo}</span>
 				<span class="flex-1 truncate">${i.descripcion}</span>
@@ -1361,6 +1365,15 @@
 				<span class="text-xs ${i.tipoControl === 'retazos' ? 'text-purple-600' : 'text-gray-500'}">${i.tipoControl === 'retazos' ? '📏' : '∑'}</span>
 			</div>
 		`).join('');
+
+		// Si hay más de 10, mostrar indicador
+		if (state.pendingImport.length > 10) {
+			preview.innerHTML += `
+			<div class="text-xs text-gray-400 text-center py-2 italic">
+                ... y ${state.pendingImport.length - 10} materiales más
+            </div>
+        `;
+		}
 
 		document.getElementById('btn-import').disabled = state.pendingImport.length === 0;
 	}
