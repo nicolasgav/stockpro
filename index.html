@@ -1847,9 +1847,9 @@ function crearNuevoMaterialIngreso(descripcion) {
                             <p class="font-medium">${m.descripcion}</p>
                             ${disponibleHtml}
                         </div>
-                        <input type="number" min="0" max="${m.cantidad}" value="0" 
-                               class="retiro-cant-obra w-20 px-2 py-1 border rounded text-center" 
-                               data-desc="${m.descripcion}" data-unit="${m.unidad}" data-codigo="${m.codigo || ''}">
+                        <input 	type="number" min="0" max="${m.cantidad}" value="0" 
+								class="retiro-cant-obra w-20 px-2 py-1 border rounded text-center" 
+								data-desc="${m.descripcion}" data-unit="${m.unidad}" data-codigo="${m.codigo || ''}" data-detalles="${m.detalles || ''}">
                     </div>
                 `;
             });
@@ -1903,18 +1903,19 @@ function crearNuevoMaterialIngreso(descripcion) {
                             alert(`No hay suficientes metros de ${desc}. Se retiraron ${medidaAcumulada} de ${cantidad} solicitados`);
                         }
                     } else {
-                        const stockItem = state.stock.find(s => 
-                            s.descripcion.toLowerCase() === desc.toLowerCase() &&
-                            (s.detalles || '').toLowerCase().trim() === (m.detalles || '').toLowerCase().trim()
-                        );
-                        if (stockItem && stockItem.cantidad >= cantidad) {
-                            stockItem.cantidad -= cantidad;
-                            materialesRetiro.push({ descripcion: desc, detalles: m.detalles || '', cantidad, unidad, tipo: 'normal' });
-                        } else {
-                            alert(`Stock insuficiente para ${desc}${m.detalles ? ' ('+m.detalles+')' : ''}`);
-                            return;
-                        }
-                    }
+						const detalles = input.dataset.detalles || '';
+						const stockItem = state.stock.find(s => 
+						s.descripcion.toLowerCase() === desc.toLowerCase() &&
+						(s.detalles || '').toLowerCase().trim() === detalles.toLowerCase().trim()
+					);
+						if (stockItem && stockItem.cantidad >= cantidad) {
+							stockItem.cantidad -= cantidad;
+							materialesRetiro.push({ descripcion: desc, detalles: detalles, cantidad, unidad, tipo: 'normal' });
+						} else {
+							alert(`Stock insuficiente para ${desc}${detalles ? ' ('+detalles+')' : ''}`);
+							return;
+						}
+					}
                 }
             });
 
