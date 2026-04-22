@@ -741,39 +741,27 @@
     </div>
 
     <div id="modal-retiro-individual" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div class="p-6 border-b border-gray-100 bg-orange-50">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+            <div class="p-6 border-b border-gray-100 bg-orange-50 flex-shrink-0">
                 <h3 class="text-xl font-bold text-orange-900">Retiro Individual</h3>
+                <p class="text-sm text-orange-700 mt-1">Podés retirar uno o varios materiales a la vez</p>
             </div>
-            <div class="p-6 space-y-4">
+            <div class="flex-1 overflow-y-auto p-6 space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Destino</label>
                     <input type="text" id="retiro-destino" placeholder="Ej: Mantenimiento" class="w-full px-4 py-2 border border-gray-200 rounded-xl">
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Material a Retirar</label>
-                    <select id="retiro-material-tipo" onchange="onRetiroMaterialChange()" class="w-full px-4 py-2 border border-gray-200 rounded-xl mb-2">
-                        <option value="">Seleccionar material...</option>
-                    </select>
+                
+                <div class="flex justify-between items-center">
+                    <label class="block text-sm font-medium text-gray-700">Materiales a retirar</label>
+                    <button onclick="addRetiroMaterialRow()" class="text-sm text-blue-600 hover:underline font-medium">+ Agregar material</button>
                 </div>
-
-                <!-- Sección para stock normal -->
-                <div id="retiro-normal-section" class="hidden">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Cantidad a retirar</label>
-                    <input type="number" id="retiro-cantidad-normal" min="1" class="w-full px-4 py-2 border border-gray-200 rounded-xl">
-                    <p class="text-sm text-gray-500 mt-1">Disponible: <span id="retiro-disponible-normal" class="font-semibold"></span></p>
-                </div>
-
-                <!-- Sección para retazos -->
-                <div id="retiro-retazos-section" class="hidden">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Seleccionar Retazos</label>
-                    <div id="retiro-retazos-list" class="space-y-2 max-h-60 overflow-y-auto"></div>
-                </div>
-
-                <div class="flex justify-end gap-3 pt-4 border-t">
-                    <button onclick="closeModal('retiro-individual')" class="px-6 py-2 text-gray-600 hover:bg-gray-100 rounded-xl">Cancelar</button>
-                    <button onclick="procesarRetiroIndividual()" class="px-6 py-2 bg-orange-600 text-white rounded-xl hover:bg-orange-700">Procesar Retiro</button>
-                </div>
+                
+                <div id="retiro-materiales-container" class="space-y-3"></div>
+            </div>
+            <div class="p-6 border-t border-gray-100 flex justify-end gap-3 flex-shrink-0 bg-white">
+                <button onclick="closeModal('retiro-individual')" class="px-6 py-2 text-gray-600 hover:bg-gray-100 rounded-xl">Cancelar</button>
+                <button onclick="procesarRetiroIndividual()" class="px-6 py-2 bg-orange-600 text-white rounded-xl hover:bg-orange-700">Procesar Retiro</button>
             </div>
         </div>
     </div>
@@ -2020,25 +2008,183 @@ async function procesarRetiroObra() {
     alert('Retiro procesado correctamente');
 }
 
-        function openRetiroIndividualModal() {
-            document.getElementById('retiro-destino').value = '';
-            document.getElementById('retiro-material-tipo').value = '';
-            document.getElementById('retiro-normal-section').classList.add('hidden');
-            document.getElementById('retiro-retazos-section').classList.add('hidden');
+    function openRetiroIndividualModal() {
+		document.getElementById('retiro-destino').value = '';
+		document.getElementById('retiro-materiales-container').innerHTML = '';
+		addRetiroMaterialRow();
+		document.getElementById('modal-retiro-individual').classList.remove('hidden');
+	}
+	
+	function addRetiroMaterialRow() {
+		const container = document.getElementById('retiro-materiales-container');
+		const idx = container.children.length;
+    
+		const div = document.createElement('div');
+		div.className = 'retiro-material-row bg-gray-50 p-3 rounded-xl border border-gray-200 space-y-2';
+		div.dataset.index = idx;
+    
+		div.innerHTML = `
+			<div class="flex justify-between items-start">
+				<label class="text-xs font-semibold text-gray-600">Material #${idx + 1}</label>
+				<button onclick="this.closest('.retiro-material-row').remove()" class="text-red-500 hover:text-red-700 text-xs" title="Eliminar">✕</button>
+			</div>
+			<div class="relative">
+				<input type="text" placeholder="Escribí para buscar material..." 
+					class="retiro-autocomplete w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+					autocomplete="off">
+					<div class="autocomplete-results hidden"></div>
+					<input type="hidden" class="retiro-material-id">
+					<input type="hidden" class="retiro-material-codigo">
+					<input type="hidden" class="retiro-tipo-control" value="normal">
+			</div>
+			<div class="retiro-detalles-indicador text-xs hidden"></div>
+        
+			<!-- Sección para stock normal -->
+			<div class="retiro-normal-section hidden">
+				<div class="flex items-center gap-2">
+					<input type="number" min="1" placeholder="Cantidad" 
+						class="retiro-cantidad w-24 px-3 py-2 border border-gray-200 rounded-lg text-sm">
+						<span class="retiro-unidad text-sm text-gray-500">unidades</span>
+				</div>
+				<p class="text-xs text-gray-500 mt-1">Disponible: <span class="retiro-disponible font-semibold text-gray-700">0</span></p>
+			</div>
+        
+			<!-- Sección para retazos -->
+			<div class="retiro-retazos-section hidden">
+				<p class="text-xs text-gray-600 mb-1">Seleccionar retazos disponibles:</p>
+				<div class="retiro-retazos-list space-y-1 max-h-40 overflow-y-auto"></div>
+			</div>
+			`;
+    
+			container.appendChild(div);
+			setupRetiroAutocomplete(div);
+	}
 
-            const select = document.getElementById('retiro-material-tipo');
-            select.innerHTML = '<option value="">Seleccionar material...</option>';
-
-            state.catalogo.filter(c => c.activo !== false).forEach(c => {
-                const option = document.createElement('option');
-                option.value = c.id;
-                option.textContent = `${c.codigo} - ${c.descripcion}`;
-                option.dataset.tipo = c.tipoControl || 'normal';
-                select.appendChild(option);
+	function setupRetiroAutocomplete(row) {
+		const input = row.querySelector('.retiro-autocomplete');
+		const resultsDiv = row.querySelector('.autocomplete-results');
+		const materialIdInput = row.querySelector('.retiro-material-id');
+		const materialCodigoInput = row.querySelector('.retiro-material-codigo');
+		const tipoControlInput = row.querySelector('.retiro-tipo-control');
+		const detallesIndicador = row.querySelector('.retiro-detalles-indicador');
+		const normalSection = row.querySelector('.retiro-normal-section');
+		const retazosSection = row.querySelector('.retiro-retazos-section');
+		const cantidadInput = row.querySelector('.retiro-cantidad');
+		const unidadSpan = row.querySelector('.retiro-unidad');
+		const disponibleSpan = row.querySelector('.retiro-disponible');
+		const retazosList = row.querySelector('.retiro-retazos-list');
+    
+		input.addEventListener('input', (e) => {
+			const value = e.target.value.toLowerCase();
+        
+			if (value.length < 1) {
+				resultsDiv.classList.add('hidden');
+				return;
+			}
+        
+			const matches = state.catalogo.filter(c => 
+				c.activo !== false && (
+					c.codigo.toLowerCase().includes(value) || 
+					c.descripcion.toLowerCase().includes(value)
+				)
+			).slice(0, 5);
+        
+        if (matches.length > 0) {
+            resultsDiv.innerHTML = matches.map(m => `
+                <div class="autocomplete-item" 
+                     data-id="${m.id}" 
+                     data-codigo="${m.codigo}" 
+                     data-desc="${m.descripcion}" 
+                     data-unidad="${m.unidad}"
+                     data-tipo="${m.tipoControl || 'normal'}"
+                     data-detalles="${m.detalles || ''}">
+                    <div class="font-medium">${m.descripcion}</div>
+                    <div class="text-xs text-gray-500">${m.codigo} • ${m.unidad}${m.detalles ? ' • ' + m.detalles : ''} ${m.tipoControl === 'retazos' ? '📏' : ''}</div>
+                </div>
+            `).join('');
+            
+            resultsDiv.classList.remove('hidden');
+            
+            resultsDiv.querySelectorAll('.autocomplete-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const materialId = item.dataset.id;
+                    const tipoControl = item.dataset.tipo;
+                    const unidad = item.dataset.unidad;
+                    const detalles = item.dataset.detalles;
+                    
+                    input.value = item.dataset.desc;
+                    materialIdInput.value = materialId;
+                    materialCodigoInput.value = item.dataset.codigo;
+                    tipoControlInput.value = tipoControl;
+                    resultsDiv.classList.add('hidden');
+                    
+                    // Mostrar indicador de detalles
+                    if (detalles) {
+                        detallesIndicador.classList.remove('hidden');
+                        detallesIndicador.innerHTML = `<span class="text-blue-700 bg-blue-50 px-2 py-1 rounded">📋 ${detalles}</span>`;
+                    } else {
+                        detallesIndicador.classList.add('hidden');
+                    }
+                    
+                    if (tipoControl === 'retazos') {
+                        normalSection.classList.add('hidden');
+                        retazosSection.classList.remove('hidden');
+                        cargarRetazosDisponibles(retazosList, materialId, unidad);
+                    } else {
+                        retazosSection.classList.add('hidden');
+                        normalSection.classList.remove('hidden');
+                        unidadSpan.textContent = unidad;
+                        
+                        const stockItem = state.stock.find(s => s.materialId === materialId);
+                        const disponible = stockItem ? stockItem.cantidad : 0;
+                        disponibleSpan.textContent = `${disponible} ${unidad}`;
+                        cantidadInput.max = disponible;
+                    }
+                });
             });
-
-            document.getElementById('modal-retiro-individual').classList.remove('hidden');
+        } else {
+            resultsDiv.innerHTML = `
+                <div class="autocomplete-item text-gray-400 italic p-2">
+                    No se encontraron materiales
+                </div>
+            `;
+            resultsDiv.classList.remove('hidden');
         }
+    });
+    
+    // Cerrar al hacer click fuera
+    document.addEventListener('click', (e) => {
+        if (!row.contains(e.target)) {
+            resultsDiv.classList.add('hidden');
+        }
+    });
+	}
+
+	function cargarRetazosDisponibles(container, materialId, unidad) {
+    const retazosDisp = state.retazos.filter(r => r.materialId === materialId && r.estado === 'disponible')
+        .sort((a, b) => new Date(a.fechaIngreso) - new Date(b.fechaIngreso));
+    
+    if (retazosDisp.length === 0) {
+        container.innerHTML = '<p class="text-xs text-red-500">⚠️ No hay retazos disponibles</p>';
+        return;
+    }
+    
+    const totalDisp = retazosDisp.reduce((sum, r) => sum + r.medida, 0);
+    
+    container.innerHTML = `
+        <p class="text-xs text-gray-500 mb-1">${retazosDisp.length} retazos (Total: ${totalDisp.toFixed(2)} ${unidad})</p>
+        ${retazosDisp.map(r => `
+            <label class="flex items-center gap-2 p-2 bg-white rounded border cursor-pointer hover:bg-blue-50">
+                <input type="checkbox" class="retiro-retazo-check" value="${r.id}" data-medida="${r.medida}" data-unidad="${unidad}">
+                <div class="flex-1">
+                    <span class="font-mono text-xs text-gray-500">${r.id}</span>
+                    <span class="font-bold text-sm ml-2">${r.medida} ${r.unidad}</span>
+                </div>
+                <span class="text-xs text-gray-400">${new Date(r.fechaIngreso).toLocaleDateString()}</span>
+            </label>
+        `).join('')}
+    `;
+	}
 
         function onRetiroMaterialChange() {
             const select = document.getElementById('retiro-material-tipo');
@@ -2094,76 +2240,102 @@ async function procesarRetiroObra() {
         }
 
         async function procesarRetiroIndividual() {
-            const destino = document.getElementById('retiro-destino').value;
-            if (!destino) return alert('Ingrese el destino');
+    const destino = document.getElementById('retiro-destino').value.trim();
+    if (!destino) return alert('Ingrese el destino');
 
-            const materialId = document.getElementById('retiro-material-tipo').value;
-            if (!materialId) return alert('Seleccione un material');
+    const materiales = [];
+    let hayError = false;
 
-            const material = state.catalogo.find(c => c.id === materialId);
-            const materiales = [];
+    document.querySelectorAll('.retiro-material-row').forEach(row => {
+        const materialId = row.querySelector('.retiro-material-id').value;
+        const tipoControl = row.querySelector('.retiro-tipo-control').value;
+        const material = state.catalogo.find(c => c.id === materialId);
+        
+        if (!materialId || !material) {
+            return; // Saltar filas vacías
+        }
 
-            if (material.tipoControl === 'retazos') {
-                const checkboxes = document.querySelectorAll('.retazo-checkbox:checked');
-                if (checkboxes.length === 0) return alert('Seleccione al menos un retazo');
-
-                checkboxes.forEach(cb => {
-                    const retazo = state.retazos.find(r => r.id === cb.value);
-                    if (retazo) {
-                        retazo.estado = 'usado';
-                        retazo.fechaRetiro = new Date().toISOString();
-                        retazo.usuarioRetiro = CONFIG.currentUser;
-                        retazo.destinoObra = destino;
-                        materiales.push({
-                            descripcion: material.descripcion,
-                            tipo: 'retazo',
-                            retazoId: retazo.id,
-                            medida: retazo.medida,
-                            unidad: material.unidad
-                        });
-                    }
-                });
-            } else {
-                const cantidad = parseInt(document.getElementById('retiro-cantidad-normal').value);
-                const stockItems = state.stock.filter(s => s.materialId === materialId);
-                
-                if (stockItems.length === 0) return alert('No hay stock de este material');
-                
-                if (!cantidad || cantidad < 1) return alert('Ingrese cantidad válida');
-                
-                let stockItem = stockItems[0];
-                if (stockItems.length > 1) {
-                    stockItem = stockItems.sort((a, b) => b.cantidad - a.cantidad)[0];
-                }
-                
-                if (stockItem.cantidad < cantidad) return alert('Stock insuficiente');
-
-                stockItem.cantidad -= cantidad;
-                materiales.push({
-                    descripcion: material.descripcion,
-                    detalles: stockItem.detalles || '',
-                    cantidad: cantidad,
-                    unidad: material.unidad,
-                    tipo: 'normal'
-                });
+        if (tipoControl === 'retazos') {
+            const checkboxes = row.querySelectorAll('.retiro-retazo-check:checked');
+            if (checkboxes.length === 0) {
+                alert(`Seleccione al menos un retazo de ${material.descripcion}`);
+                hayError = true;
+                return;
             }
 
-            state.retiros.push({
-                id: Date.now(),
-                fecha: new Date().toISOString(),
-                tipo: 'individual',
-                destino: destino,
-                usuario: CONFIG.currentUser,
-                materiales: materiales
+            checkboxes.forEach(cb => {
+                const retazo = state.retazos.find(r => r.id === cb.value);
+                if (retazo) {
+                    retazo.estado = 'usado';
+                    retazo.fechaRetiro = new Date().toISOString();
+                    retazo.usuarioRetiro = CONFIG.currentUser;
+                    retazo.destinoObra = destino;
+                    materiales.push({
+                        descripcion: material.descripcion,
+                        tipo: 'retazo',
+                        retazoId: retazo.id,
+                        medida: retazo.medida,
+                        unidad: cb.dataset.unidad
+                    });
+                }
             });
+        } else {
+            const cantidad = parseInt(row.querySelector('.retiro-cantidad').value);
+            const stockItems = state.stock.filter(s => s.materialId === materialId);
+            
+            if (stockItems.length === 0) {
+                alert(`No hay stock de ${material.descripcion}`);
+                hayError = true;
+                return;
+            }
+            
+            if (!cantidad || cantidad < 1) {
+                alert(`Ingrese cantidad válida para ${material.descripcion}`);
+                hayError = true;
+                return;
+            }
+            
+            let stockItem = stockItems[0];
+            if (stockItems.length > 1) {
+                stockItem = stockItems.sort((a, b) => b.cantidad - a.cantidad)[0];
+            }
+            
+            if (stockItem.cantidad < cantidad) {
+                alert(`Stock insuficiente para ${material.descripcion}`);
+                hayError = true;
+                return;
+            }
 
-            addAuditLog('RETIRO', 'INDIVIDUAL', materialId, `Retiro individual a ${destino} - ${materiales.length} items`);
-            await saveToCloud();
-            closeModal('retiro-individual');
-            renderRetiros();
-            updateDashboard();
-            alert('Retiro procesado correctamente');
+            stockItem.cantidad -= cantidad;
+            materiales.push({
+                descripcion: material.descripcion,
+                detalles: stockItem.detalles || '',
+                cantidad: cantidad,
+                unidad: material.unidad,
+                tipo: 'normal'
+            });
         }
+    });
+
+    if (hayError) return;
+    if (materiales.length === 0) return alert('Agregue al menos un material para retirar');
+
+    state.retiros.push({
+        id: Date.now(),
+        fecha: new Date().toISOString(),
+        tipo: 'individual',
+        destino: destino,
+        usuario: CONFIG.currentUser,
+        materiales: materiales
+    });
+
+    addAuditLog('RETIRO', 'INDIVIDUAL', '', `Retiro individual a ${destino} - ${materiales.length} items`);
+    await saveToCloud();
+    closeModal('retiro-individual');
+    renderRetiros();
+    updateDashboard();
+    alert(`Retiro procesado correctamente\n📦 ${materiales.length} materiales retirados`);
+}
 
         function renderRetiros() {
             const sorted = [...state.retiros].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
