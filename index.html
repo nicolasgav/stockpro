@@ -681,13 +681,13 @@
     </div>
 
     <div id="modal-ver-orden" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
-            <div class="p-6 border-b border-gray-100 flex justify-between items-center">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center flex-shrink-0">
                 <h3 class="text-xl font-bold" id="ver-orden-titulo">Detalle Orden</h3>
                 <button onclick="closeModal('ver-orden')" class="text-gray-400 hover:text-gray-600">✕</button>
             </div>
-            <div class="p-6" id="ver-orden-contenido"></div>
-            <div class="p-6 border-t flex justify-end gap-3" id="ver-orden-acciones"></div>
+            <div class="p-6 overflow-y-auto flex-1" id="ver-orden-contenido"></div>
+            <div class="p-6 border-t flex justify-end gap-3 flex-shrink-0 bg-white" id="ver-orden-acciones"></div>
         </div>
     </div>
 
