@@ -1048,53 +1048,65 @@
         }
 
         async function saveToCloud() {
-            showLoading(true);
-            try {
-                const data = {
-                    ordenes: state.ordenes,
-                    stock: state.stock,
-                    retiros: state.retiros,
-                    tareas: state.tareas,
-                    catalogo: state.catalogo,
-                    retazos: state.retazos,
-                    usuarios: state.usuarios,
-                    audit_log: state.audit_log,
-                    lastUpdate: new Date().toISOString()
-                };
+			showLoading(true);
+			try {
+				const data = {
+					ordenes: state.ordenes,
+					stock: state.stock,
+					retiros: state.retiros,
+					tareas: state.tareas,
+					catalogo: state.catalogo,
+					retazos: state.retazos,
+					usuarios: state.usuarios,
+					audit_log: state.audit_log,
+					lastUpdate: new Date().toISOString()
+				};
 
-                let response;
-                if (CONFIG.binId) {
-                    response = await fetch(`${CONFIG.baseUrl}/${CONFIG.binId}`, {
-                        method: 'PUT',
-                        headers: {
-                            'X-Master-Key': CONFIG.apiKey,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(data)
-                    });
-                } else {
-                    response = await fetch(`${CONFIG.baseUrl}`, {
-                        method: 'POST',
-                        headers: {
-                            'X-Master-Key': CONFIG.apiKey,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(data)
-                    });
-                    const result = await response.json();
-                    CONFIG.binId = result.metadata.id;
-                    localStorage.setItem('stockpro_bin_id', CONFIG.binId);
-                }
+				// Verificar tamaño aproximado (JSONBin gratuito suele tener límite ~100KB-500KB)
+				const jsonString = JSON.stringify(data);
+				const sizeKB = (jsonString.length / 1024).toFixed(1);
+				console.log('Tamaño payload:', sizeKB + 'KB');
 
-                updateLastSync();
-                showLoading(false);
-                return true;
-            } catch (err) {
-                showLoading(false);
-                alert('Error al guardar: ' + err.message);
-                return false;
-            }
-        }
+				let response;
+				if (CONFIG.binId) {
+					response = await fetch(`${CONFIG.baseUrl}/${CONFIG.binId}`, {
+						method: 'PUT',
+						headers: {
+							'X-Master-Key': CONFIG.apiKey,
+							'Content-Type': 'application/json'
+						},
+						body: jsonString
+					});
+				} else {
+					response = await fetch(`${CONFIG.baseUrl}`, {
+						method: 'POST',
+						headers: {
+							'X-Master-Key': CONFIG.apiKey,
+							'Content-Type': 'application/json'
+						},
+						body: jsonString
+					});
+					const result = await response.json();
+					CONFIG.binId = result.metadata.id;
+					localStorage.setItem('stockpro_bin_id', CONFIG.binId);
+				}
+
+				// 🔴 ESTA VERIFICACIÓN FALTABA
+				if (!response.ok) {
+					const errorBody = await response.text();
+					throw new Error(`JSONBin error ${response.status}: ${errorBody}`);
+				}
+
+				updateLastSync();
+				showLoading(false);
+				return true;
+			} catch (err) {
+				showLoading(false);
+				console.error('Error guardando en JSONBin:', err);
+				alert('❌ Error al guardar en la nube:\n' + err.message + '\n\nLos cambios se perderán al recargar.');
+				return false;
+			}
+		}
 
         function showLoading(show) {
             document.getElementById('loading').classList.toggle('hidden', !show);
@@ -1339,31 +1351,40 @@
 		document.getElementById('btn-import').disabled = state.pendingImport.length === 0;
 	}
 
-        async function processImport() {
-            let importados = 0;
-            let actualizados = 0;
+    async function processImport() {
+		let importados = 0;
+		let actualizados = 0;
 
-            state.pendingImport.forEach(item => {
-                const existente = state.catalogo.find(c => c.codigo === item.codigo);
-                if (existente) {
-                    Object.assign(existente, item);
-                    actualizados++;
-                } else {
-                    item.id = Date.now().toString() + Math.random();
-                    item.activo = true;
-                    item.fechaCreacion = new Date().toISOString();
-                    state.catalogo.push(item);
-                    importados++;
-                }
-            });
+		state.pendingImport.forEach(item => {
+			const existente = state.catalogo.find(c => c.codigo === item.codigo);
+			if (existente) {
+				Object.assign(existente, item);
+				actualizados++;
+			} else {
+				item.id = Date.now().toString() + Math.random();
+				item.activo = true;
+				item.fechaCreacion = new Date().toISOString();
+				state.catalogo.push(item);
+				importados++;
+			}
+		});
 
-            addAuditLog('IMPORTACION', 'CATALOGO', '', `Importados ${importados} nuevos, ${actualizados} actualizados`);
-            await saveToCloud();
-            closeModal('import');
-            renderCatalogo();
-            updateDashboard();
-            alert(`Importación completada:\n✅ ${importados} nuevos\n📝 ${actualizados} actualizados`);
-        }
+		addAuditLog('IMPORTACION', 'CATALOGO', '', `Importados ${importados} nuevos, ${actualizados} actualizados`);
+
+		// 🔴 AHORA VERIFICAMOS QUE REALMENTE SE GUARDÓ
+		const guardado = await saveToCloud();
+    
+		if (!guardado) {
+			// Si falló el guardado, NO cerrar modal ni mostrar éxito
+			alert('⚠️ Los materiales se cargaron en pantalla pero NO se guardaron en la nube.\n\nRevisa:\n• Tu conexión a internet\n• Que el archivo no sea muy grande\n• Tu API Key de JSONBin');
+			return;
+		}
+
+		closeModal('import');
+		renderCatalogo();
+		updateDashboard();
+		alert(`✅ Importación completada y guardada:\n• ${importados} nuevos\n• ${actualizados} actualizados`);
+	}
 
 		// INGRESO DIRECTO - MULTI-MATERIAL
 
