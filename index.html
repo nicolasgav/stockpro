@@ -345,75 +345,48 @@
                 </section>
 
                 <!-- INGRESO DIRECTO -->
-                <section id="ingreso" class="hidden fade-in space-y-6">
-                    <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-2xl md:text-3xl font-bold text-gray-800">Ingreso Directo</h2>
-                    </div>
+				<section id="ingreso" class="hidden fade-in space-y-6">
+					<div class="flex justify-between items-center mb-6">
+						<h2 class="text-2xl md:text-3xl font-bold text-gray-800">Ingreso Directo</h2>
+					</div>
 
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 max-w-3xl">
-                        <form id="form-ingreso" onsubmit="handleIngresoDirecto(event)" class="space-y-4">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div class="md:col-span-2">
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Material del Catálogo *</label>
-                                    <div class="relative">
-    <input type="text" id="ingreso-material-autocomplete" placeholder="Escribí para buscar o crear..." 
-           class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500" 
-           autocomplete="off" required>
-    <div id="ingreso-autocomplete-results" class="autocomplete-results hidden"></div>
-    <input type="hidden" id="ingreso-material-id">
-    <input type="hidden" id="ingreso-material-codigo">
-    <input type="hidden" id="ingreso-material-es-nuevo" value="false">
-    <div id="ingreso-material-indicador" class="mt-1 text-xs hidden"></div>
-</div>
-                                    <p class="text-xs text-gray-500 mt-1" id="tipo-control-hint"></p>
-                                </div>
-                            </div>
+					<div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 max-w-4xl">
+						<form id="form-ingreso" onsubmit="handleIngresoDirecto(event)" class="space-y-4">
+            
+							<!-- Campos comunes para TODOS los materiales -->
+							<div class="bg-blue-50 p-4 rounded-xl border border-blue-200 mb-4">
+								<h3 class="text-sm font-semibold text-blue-800 mb-3">Datos comunes del ingreso</h3>
+								<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+									<div>
+										<label class="block text-sm font-medium text-gray-700 mb-2">Origen/Procedencia</label>
+										<input type="text" id="ingreso-origen" placeholder="Ej: Sobrante obra Centro" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
+									</div>
+									<div>
+										<label class="block text-sm font-medium text-gray-700 mb-2">Ubicación</label>
+										<input type="text" id="ingreso-ubicacion" placeholder="Ej: Depósito A" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
+									</div>
+								</div>
+								<div class="mt-3">
+									<label class="block text-sm font-medium text-gray-700 mb-2">Observaciones generales</label>
+									<textarea id="ingreso-observaciones" rows="2" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500"></textarea>
+								</div>
+							</div>
 
-                            <!-- Ingreso Normal -->
-                            <div id="ingreso-normal-section" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Cantidad</label>
-                                    <input type="number" id="ingreso-cantidad" min="1" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500" placeholder="0">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Unidad</label>
-                                    <input type="text" id="ingreso-unidad" class="w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-100" readonly>
-                                </div>
-                            </div>
+							<!-- Lista de materiales a ingresar -->
+							<div class="flex justify-between items-center mb-2">
+								<h3 class="text-lg font-bold text-gray-800">Materiales a ingresar</h3>
+								<button type="button" onclick="addIngresoMaterialRow()" class="text-sm text-blue-600 hover:underline font-medium">+ Agregar material</button>
+							</div>
+            
+							<div id="ingreso-materiales-container" class="space-y-4"></div>
 
-                            <!-- Ingreso por Retazos -->
-                            <div id="ingreso-retazos-section" class="hidden space-y-3">
-                                <div class="flex justify-between items-center">
-                                    <label class="block text-sm font-medium text-gray-700">Medidas de cada retazo</label>
-                                    <button type="button" onclick="addRetazoRow()" class="text-sm text-blue-600 hover:underline">+ Agregar retazo</button>
-                                </div>
-                                <div id="retazos-container" class="space-y-2"></div>
-                                <p class="text-xs text-gray-500">Ingresá la medida de cada cable/pieza individual. Ej: 4.5 metros</p>
-                            </div>
-
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Origen/Procedencia</label>
-                                    <input type="text" id="ingreso-origen" placeholder="Ej: Sobrante obra Centro" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Ubicación</label>
-                                    <input type="text" id="ingreso-ubicacion" placeholder="Ej: Depósito A" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Observaciones</label>
-                                <textarea id="ingreso-observaciones" rows="2" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500"></textarea>
-                            </div>
-
-                            <div class="flex justify-end gap-3 pt-4 border-t">
-                                <button type="reset" class="px-6 py-2 text-gray-600 hover:bg-gray-100 rounded-xl">Limpiar</button>
-                                <button type="submit" class="px-6 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700">Agregar al Stock</button>
-                            </div>
-                        </form>
-                    </div>
-                </section>
+							<div class="flex justify-end gap-3 pt-4 border-t">
+								<button type="reset" onclick="resetIngresoForm()" class="px-6 py-2 text-gray-600 hover:bg-gray-100 rounded-xl">Limpiar todo</button>
+								<button type="submit" class="px-6 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 font-medium">Agregar todo al Stock</button>
+							</div>
+						</form>
+					</div>
+				</section>
 
                 <!-- PLANIFICADOR -->
                 <section id="planificador" class="hidden fade-in space-y-6">
@@ -1392,22 +1365,81 @@
             alert(`Importación completada:\n✅ ${importados} nuevos\n📝 ${actualizados} actualizados`);
         }
 
-        // INGRESO DIRECTO - NUEVO SISTEMA AUTOCOMPLETE CON CREACIÓN
+		// INGRESO DIRECTO - MULTI-MATERIAL
+
 function initIngresoForm() {
-    // Limpiar el campo
-    document.getElementById('ingreso-material-autocomplete').value = '';
-    document.getElementById('ingreso-material-id').value = '';
-    document.getElementById('ingreso-material-codigo').value = '';
-    document.getElementById('ingreso-material-es-nuevo').value = 'false';
-    document.getElementById('ingreso-material-indicador').classList.add('hidden');
-    document.getElementById('ingreso-material-autocomplete').readOnly = false;
-    document.getElementById('ingreso-material-autocomplete').classList.remove('bg-yellow-50');
+    document.getElementById('ingreso-materiales-container').innerHTML = '';
+    addIngresoMaterialRow();
+}
+
+function addIngresoMaterialRow() {
+    const container = document.getElementById('ingreso-materiales-container');
+    const idx = container.children.length;
     
-    // Setup del autocomplete
-    const input = document.getElementById('ingreso-material-autocomplete');
+    const div = document.createElement('div');
+    div.className = 'ingreso-material-row bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-3';
+    div.dataset.index = idx;
+    
+    div.innerHTML = `
+        <div class="flex justify-between items-start">
+            <h4 class="text-sm font-semibold text-gray-600">Material #${idx + 1}</h4>
+            <button type="button" onclick="this.closest('.ingreso-material-row').remove()" class="text-red-500 hover:text-red-700 text-sm" title="Eliminar">✕</button>
+        </div>
+        
+        <div class="relative">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Material del Catálogo *</label>
+            <input type="text" placeholder="Escribí para buscar o crear..." 
+                   class="ingreso-autocomplete w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500" 
+                   autocomplete="off" required>
+            <div class="autocomplete-results hidden"></div>
+            <input type="hidden" class="ingreso-material-id">
+            <input type="hidden" class="ingreso-material-codigo">
+            <input type="hidden" class="ingreso-material-es-nuevo" value="false">
+            <div class="ingreso-material-indicador mt-1 text-xs hidden"></div>
+            <p class="text-xs text-gray-500 mt-1 tipo-control-hint"></p>
+        </div>
+
+        <!-- Sección Normal -->
+        <div class="ingreso-normal-section hidden grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Cantidad</label>
+                <input type="number" min="1" class="ingreso-cantidad w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500" placeholder="0">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Unidad</label>
+                <input type="text" class="ingreso-unidad w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-100" readonly>
+            </div>
+        </div>
+
+        <!-- Sección Retazos -->
+        <div class="ingreso-retazos-section hidden space-y-2">
+            <div class="flex justify-between items-center">
+                <label class="block text-sm font-medium text-gray-700">Medidas de cada retazo</label>
+                <button type="button" onclick="addIngresoRetazoRow(this.closest('.ingreso-retazos-section'))" class="text-sm text-blue-600 hover:underline">+ Agregar retazo</button>
+            </div>
+            <div class="ingreso-retazos-container space-y-2"></div>
+            <p class="text-xs text-gray-500">Ingresá la medida de cada cable/pieza individual. Ej: 4.5 metros</p>
+        </div>
+    `;
+    
+    container.appendChild(div);
+    setupIngresoAutocomplete(div);
+}
+
+function setupIngresoAutocomplete(row) {
+    const input = row.querySelector('.ingreso-autocomplete');
+    const resultsDiv = row.querySelector('.autocomplete-results');
+    const materialIdInput = row.querySelector('.ingreso-material-id');
+    const materialCodigoInput = row.querySelector('.ingreso-material-codigo');
+    const esNuevoInput = row.querySelector('.ingreso-material-es-nuevo');
+    const indicador = row.querySelector('.ingreso-material-indicador');
+    const tipoControlHint = row.querySelector('.tipo-control-hint');
+    const normalSection = row.querySelector('.ingreso-normal-section');
+    const retazosSection = row.querySelector('.ingreso-retazos-section');
+    const unidadInput = row.querySelector('.ingreso-unidad');
+    
     input.addEventListener('input', (e) => {
         const value = e.target.value.toLowerCase();
-        const resultsDiv = document.getElementById('ingreso-autocomplete-results');
         
         if (value.length < 1) {
             resultsDiv.classList.add('hidden');
@@ -1422,16 +1454,21 @@ function initIngresoForm() {
         ).slice(0, 5);
 
         if (matches.length > 0) {
-			resultsDiv.innerHTML = matches.map(m => `
-				<div class="autocomplete-item" onclick="seleccionarMaterialIngreso('${m.id}', '${m.codigo}', '${m.descripcion}', '${m.tipoControl || 'normal'}', '${m.unidad}', '${m.detalles || ''}')">
-					<div class="font-medium">${m.descripcion}</div>
-					<div class="text-xs text-gray-500">${m.codigo} • ${m.unidad}${m.detalles ? ' • ' + m.detalles : ''} ${m.tipoControl === 'retazos' ? '📏' : ''}</div>
-				</div>
-			`).join('');
+            resultsDiv.innerHTML = matches.map(m => `
+                <div class="autocomplete-item" 
+                     data-id="${m.id}" 
+                     data-codigo="${m.codigo}" 
+                     data-desc="${m.descripcion}" 
+                     data-tipo="${m.tipoControl || 'normal'}"
+                     data-unidad="${m.unidad}"
+                     data-detalles="${m.detalles || ''}">
+                    <div class="font-medium">${m.descripcion}</div>
+                    <div class="text-xs text-gray-500">${m.codigo} • ${m.unidad}${m.detalles ? ' • ' + m.detalles : ''} ${m.tipoControl === 'retazos' ? '📏' : ''}</div>
+                </div>
+            `).join('');
             
-            // Opción crear nuevo
             resultsDiv.innerHTML += `
-                <div class="autocomplete-item bg-blue-50 text-blue-700 font-medium border-t border-blue-100" onclick="crearNuevoMaterialIngreso('${input.value}')">
+                <div class="autocomplete-item bg-blue-50 text-blue-700 font-medium border-t border-blue-100" onclick="crearNuevoMaterialIngresoRow(this.closest('.ingreso-material-row'))">
                     <div class="flex items-center gap-2">
                         <span class="text-lg">+</span>
                         <span>Crear "${input.value}" como nuevo</span>
@@ -1440,7 +1477,7 @@ function initIngresoForm() {
             `;
         } else {
             resultsDiv.innerHTML = `
-                <div class="autocomplete-item bg-blue-50 text-blue-700 font-medium p-3" onclick="crearNuevoMaterialIngreso('${input.value}')">
+                <div class="autocomplete-item bg-blue-50 text-blue-700 font-medium p-3" onclick="crearNuevoMaterialIngresoRow(this.closest('.ingreso-material-row'))">
                     <div class="flex items-center gap-2">
                         <span class="text-lg">+</span>
                         <div>
@@ -1452,54 +1489,70 @@ function initIngresoForm() {
             `;
         }
         resultsDiv.classList.remove('hidden');
+
+        resultsDiv.querySelectorAll('.autocomplete-item:not(.bg-blue-50)').forEach(item => {
+            item.addEventListener('click', () => {
+                const tipoControl = item.dataset.tipo;
+                const unidad = item.dataset.unidad;
+                const detalles = item.dataset.detalles;
+                
+                input.value = item.dataset.desc;
+                materialIdInput.value = item.dataset.id;
+                materialCodigoInput.value = item.dataset.codigo;
+                esNuevoInput.value = "false";
+                resultsDiv.classList.add('hidden');
+                
+                // Mostrar indicador
+                indicador.classList.remove('hidden');
+                let html = tipoControl === 'retazos' 
+                    ? '<span class="text-purple-600 font-medium">📏 Control por Retazos</span>'
+                    : '<span class="text-gray-600">∑ Control Normal</span>';
+                if (detalles) {
+                    html += `<div class="mt-1 text-blue-700 bg-blue-50 px-2 py-1 rounded text-xs">📋 ${detalles}</div>`;
+                }
+                indicador.innerHTML = html;
+                
+                tipoControlHint.textContent = tipoControl === 'retazos' 
+                    ? '💡 Modo Retazos: Ingresá cada pieza individual con su medida exacta' 
+                    : '💡 Modo Normal: Se suma la cantidad al stock existente';
+
+                if (tipoControl === 'retazos') {
+                    normalSection.classList.add('hidden');
+                    retazosSection.classList.remove('hidden');
+                    unidadInput.value = unidad;
+                    const retazosContainer = retazosSection.querySelector('.ingreso-retazos-container');
+                    retazosContainer.innerHTML = '';
+                    addIngresoRetazoRow(retazosSection);
+                } else {
+                    retazosSection.classList.add('hidden');
+                    normalSection.classList.remove('hidden');
+                    unidadInput.value = unidad;
+                }
+            });
+        });
     });
 
-    // Cerrar al hacer click fuera
     document.addEventListener('click', (e) => {
-        if (!e.target.closest('#ingreso-material-autocomplete') && !e.target.closest('#ingreso-autocomplete-results')) {
-            document.getElementById('ingreso-autocomplete-results').classList.add('hidden');
+        if (!row.contains(e.target)) {
+            resultsDiv.classList.add('hidden');
         }
     });
 }
 
-function seleccionarMaterialIngreso(id, codigo, descripcion, tipoControl, unidad, detalles = '') {
-    document.getElementById('ingreso-material-autocomplete').value = descripcion;
-    document.getElementById('ingreso-material-id').value = id;
-    document.getElementById('ingreso-material-codigo').value = codigo;
-    document.getElementById('ingreso-material-es-nuevo').value = 'false';
-    document.getElementById('ingreso-autocomplete-results').classList.add('hidden');
+function crearNuevoMaterialIngresoRow(row) {
+    const input = row.querySelector('.ingreso-autocomplete');
+    const materialIdInput = row.querySelector('.ingreso-material-id');
+    const materialCodigoInput = row.querySelector('.ingreso-material-codigo');
+    const esNuevoInput = row.querySelector('.ingreso-material-es-nuevo');
+    const resultsDiv = row.querySelector('.autocomplete-results');
+    const indicador = row.querySelector('.ingreso-material-indicador');
+    const tipoControlHint = row.querySelector('.tipo-control-hint');
+    const normalSection = row.querySelector('.ingreso-normal-section');
+    const retazosSection = row.querySelector('.ingreso-retazos-section');
+    const unidadInput = row.querySelector('.ingreso-unidad');
     
-   // Mostrar indicador de tipo + detalles
-	const indicador = document.getElementById('ingreso-material-indicador');
-	indicador.classList.remove('hidden');
-	let html = tipoControl === 'retazos' 
-		? '<span class="text-purple-600 font-medium">📏 Control por Retazos</span>'
-		: '<span class="text-gray-600">∑ Control Normal</span>';
-	if (detalles) {
-		html += `<div class="mt-1 text-blue-700 bg-blue-50 px-2 py-1 rounded text-xs">📋 ${detalles}</div>`;
-	}
-	indicador.innerHTML = html;
-    
-    // Configurar vistas según tipo
-    document.getElementById('ingreso-unidad').value = unidad;
-    document.getElementById('tipo-control-hint').textContent = 
-        tipoControl === 'retazos' 
-            ? '💡 Modo Retazos: Ingresá cada pieza individual con su medida exacta' 
-            : '💡 Modo Normal: Se suma la cantidad al stock existente';
-
-    if (tipoControl === 'retazos') {
-        document.getElementById('ingreso-normal-section').classList.add('hidden');
-        document.getElementById('ingreso-retazos-section').classList.remove('hidden');
-        document.getElementById('retazos-container').innerHTML = '';
-        addRetazoRow();
-    } else {
-        document.getElementById('ingreso-normal-section').classList.remove('hidden');
-        document.getElementById('ingreso-retazos-section').classList.add('hidden');
-    }
-}
-
-function crearNuevoMaterialIngreso(descripcion) {
-    if (!descripcion.trim()) return alert('Ingresa una descripción primero');
+    const descripcion = input.value.trim();
+    if (!descripcion) return alert('Ingresa una descripción primero');
     
     // Generar código automático
     const palabras = descripcion.trim().split(' ');
@@ -1511,141 +1564,198 @@ function crearNuevoMaterialIngreso(descripcion) {
     }
     codigo += Math.floor(Math.random() * 900) + 100;
     
-    // Llenar campos
-    document.getElementById('ingreso-material-autocomplete').value = descripcion;
-    document.getElementById('ingreso-material-id').value = 'nuevo_' + Date.now();
-    document.getElementById('ingreso-material-codigo').value = codigo;
-    document.getElementById('ingreso-material-es-nuevo').value = 'true';
-    document.getElementById('ingreso-autocomplete-results').classList.add('hidden');
+    materialIdInput.value = 'nuevo_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+    materialCodigoInput.value = codigo;
+    esNuevoInput.value = 'true';
+    input.classList.add('bg-yellow-50');
+    input.readOnly = true;
+    resultsDiv.classList.add('hidden');
     
-    // Marcar visualmente
-    document.getElementById('ingreso-material-autocomplete').classList.add('bg-yellow-50');
-    document.getElementById('ingreso-material-autocomplete').readOnly = true;
-    
-    const indicador = document.getElementById('ingreso-material-indicador');
     indicador.classList.remove('hidden');
     indicador.innerHTML = `<span class="text-yellow-700 font-medium">[NUEVO MATERIAL]</span> Código: ${codigo}`;
     
-    // Por defecto, modo normal (puede cambiarse después en catálogo)
-    document.getElementById('ingreso-normal-section').classList.remove('hidden');
-    document.getElementById('ingreso-retazos-section').classList.add('hidden');
-    document.getElementById('ingreso-unidad').value = 'unidades';
-    document.getElementById('tipo-control-hint').textContent = '💡 Material nuevo: Se creará en el catálogo con control Normal (puedes cambiarlo después)';
+    retazosSection.classList.add('hidden');
+    normalSection.classList.remove('hidden');
+    unidadInput.value = 'unidades';
+    tipoControlHint.textContent = '💡 Material nuevo: Se creará en el catálogo con control Normal (puedes cambiarlo después)';
 }
 
-        function addRetazoRow() {
-            const container = document.getElementById('retazos-container');
-            const div = document.createElement('div');
-            div.className = 'flex gap-2 items-center';
-            div.innerHTML = `
-                <input type="number" step="0.01" min="0.01" placeholder="Medida (ej: 4.5)" class="retazo-medida flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm" required>
-                <span class="text-sm text-gray-500 unidad-label">metros</span>
-                <input type="text" placeholder="Obs. (opcional)" class="retazo-obs flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm">
-                <button type="button" onclick="this.parentElement.remove()" class="text-red-500 hover:bg-red-50 p-2 rounded">✕</button>
-            `;
-            container.appendChild(div);
-        }
+function addIngresoRetazoRow(retazosSection) {
+    const container = retazosSection.querySelector('.ingreso-retazos-container');
+    const div = document.createElement('div');
+    div.className = 'flex gap-2 items-center';
+    div.innerHTML = `
+        <input type="number" step="0.01" min="0.01" placeholder="Medida (ej: 4.5)" class="retazo-medida flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm" required>
+        <span class="text-sm text-gray-500 unidad-label">metros</span>
+        <input type="text" placeholder="Obs. (opcional)" class="retazo-obs flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm">
+        <button type="button" onclick="this.parentElement.remove()" class="text-red-500 hover:bg-red-50 p-2 rounded">✕</button>
+    `;
+    container.appendChild(div);
+}
 
-        async function handleIngresoDirecto(e) {
+function resetIngresoForm() {
+    document.getElementById('ingreso-materiales-container').innerHTML = '';
+    document.getElementById('ingreso-origen').value = '';
+    document.getElementById('ingreso-ubicacion').value = '';
+    document.getElementById('ingreso-observaciones').value = '';
+    addIngresoMaterialRow();
+}
+
+async function handleIngresoDirecto(e) {
     e.preventDefault();
-    const materialId = document.getElementById('ingreso-material-id').value;
-    const esNuevo = document.getElementById('ingreso-material-es-nuevo').value === 'true';
-    const codigo = document.getElementById('ingreso-material-codigo').value;
-    const descripcion = document.getElementById('ingreso-material-autocomplete').value;
     
-    if (!materialId || !descripcion) return alert('Selecciona o crea un material primero');
-
     const origen = document.getElementById('ingreso-origen').value;
     const ubicacion = document.getElementById('ingreso-ubicacion').value;
-    const observaciones = document.getElementById('ingreso-observaciones').value;
+    const observacionesGenerales = document.getElementById('ingreso-observaciones').value;
     
-    let material;
+    const materialesProcesados = [];
+    const nuevosMateriales = [];
+    let hayError = false;
     
-    // Si es material nuevo, crearlo primero en el catálogo
-    if (esNuevo) {
-        material = {
-            id: Date.now().toString(),
-            codigo: codigo,
-            descripcion: descripcion,
-            tipoControl: 'normal', // Por defecto, puede cambiarse después
-            unidad: 'unidades',
-            stockMinimo: 3,
-            activo: true,
-            fechaCreacion: new Date().toISOString()
-        };
-        state.catalogo.push(material);
-        addAuditLog('CREACION', 'CATALOGO', material.id, `Material creado desde ingreso directo: ${codigo} - ${descripcion}`);
-    } else {
-        material = state.catalogo.find(c => c.id === materialId);
-    }
-
-    // Procesar el ingreso según el tipo de control
-    if (material.tipoControl === 'retazos') {
-        // Para retazos, verificar que estén ingresando por retazos (aunque sea nuevo, si lo configuran como retazos después)
-        const retazos = [];
-        document.querySelectorAll('#retazos-container > div').forEach(div => {
-            const medida = parseFloat(div.querySelector('.retazo-medida').value);
-            const obs = div.querySelector('.retazo-obs').value;
-            if (medida > 0) {
-                const retazo = {
-                    id: 'RET-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 3).toUpperCase(),
-                    materialId: material.id,
-                    codigoMaterial: material.codigo,
-                    descripcionMaterial: material.descripcion,
-                    medida: medida,
-                    unidad: material.unidad,
-                    estado: 'disponible',
-                    ubicacion: ubicacion || 'Sin especificar',
-                    usuarioIngreso: CONFIG.currentUser,
-                    fechaIngreso: new Date().toISOString(),
-                    origen: origen || 'Ingreso directo',
-                    observaciones: obs
-                };
-                retazos.push(retazo);
-                state.retazos.push(retazo);
-            }
-        });
-
-        if (retazos.length === 0) return alert('Ingresa al menos una medida');
-
-        addAuditLog('INGRESO', 'RETAZOS', material.id, `Ingresados ${retazos.length} retazos de ${material.codigo}`);
-        alert(`✅ Ingresados ${retazos.length} retazos de ${material.descripcion}`);
-    } else {
-        const cantidad = parseInt(document.getElementById('ingreso-cantidad').value);
-        if (!cantidad || cantidad < 1) return alert('Ingresa una cantidad válida');
-
-        const detalleIngreso = document.getElementById('ingreso-observaciones').value.trim();
-        const existente = state.stock.find(s => 
-            s.materialId === material.id && 
-            (s.detalles || '').toLowerCase().trim() === detalleIngreso.toLowerCase().trim()
-        );
-        if (existente) {
-            existente.cantidad += cantidad;
-            existente.ultimoIngreso = new Date().toISOString();
-            existente.usuarioIngreso = CONFIG.currentUser;
+    // Procesar cada fila de material
+    document.querySelectorAll('.ingreso-material-row').forEach(row => {
+        const materialId = row.querySelector('.ingreso-material-id').value;
+        const esNuevo = row.querySelector('.ingreso-material-es-nuevo').value === 'true';
+        const codigo = row.querySelector('.ingreso-material-codigo').value;
+        const descripcion = row.querySelector('.ingreso-autocomplete').value;
+        
+        if (!materialId || !descripcion) {
+            alert('Completa todos los materales');
+            hayError = true;
+            return;
+        }
+        
+        let material;
+        
+        // Si es material nuevo, crearlo
+        if (esNuevo) {
+            material = {
+                id: materialId.replace('nuevo_', ''),
+                codigo: codigo,
+                descripcion: descripcion,
+                tipoControl: 'normal',
+                unidad: 'unidades',
+                stockMinimo: 3,
+                activo: true,
+                fechaCreacion: new Date().toISOString()
+            };
+            nuevosMateriales.push(material);
         } else {
-            state.stock.push({
-                id: Date.now().toString(),
-                materialId: material.id,
-                codigo: material.codigo,
-                descripcion: material.descripcion,
-                detalles: detalleIngreso,
-                cantidad: cantidad,
-                unidad: material.unidad,
-                stockMinimo: material.stockMinimo,
-                usuarioIngreso: CONFIG.currentUser,
-                fechaIngreso: new Date().toISOString(),
-                origen: origen || 'Ingreso directo'
+            material = state.catalogo.find(c => c.id === materialId);
+        }
+        
+        if (!material) {
+            alert(`Material no encontrado: ${descripcion}`);
+            hayError = true;
+            return;
+        }
+        
+        // Procesar según tipo de control
+        if (material.tipoControl === 'retazos') {
+            const retazos = [];
+            row.querySelectorAll('.ingreso-retazos-container > div').forEach(div => {
+                const medida = parseFloat(div.querySelector('.retazo-medida').value);
+                const obs = div.querySelector('.retazo-obs').value;
+                if (medida > 0) {
+                    retazos.push({
+                        id: 'RET-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 5).toUpperCase(),
+                        materialId: material.id,
+                        codigoMaterial: material.codigo,
+                        descripcionMaterial: material.descripcion,
+                        medida: medida,
+                        unidad: material.unidad,
+                        estado: 'disponible',
+                        ubicacion: ubicacion || 'Sin especificar',
+                        usuarioIngreso: CONFIG.currentUser,
+                        fechaIngreso: new Date().toISOString(),
+                        origen: origen || 'Ingreso directo',
+                        observaciones: obs || observacionesGenerales || 'Ingreso directo'
+                    });
+                }
+            });
+            
+            if (retazos.length === 0) {
+                alert(`Ingresa al menos una medida para ${material.descripcion}`);
+                hayError = true;
+                return;
+            }
+            
+            materialesProcesados.push({ tipo: 'retazos', material, retazos, count: retazos.length });
+        } else {
+            const cantidad = parseInt(row.querySelector('.ingreso-cantidad').value);
+            if (!cantidad || cantidad < 1) {
+                alert(`Ingresa una cantidad válida para ${material.descripcion}`);
+                hayError = true;
+                return;
+            }
+            
+            materialesProcesados.push({ 
+                tipo: 'normal', 
+                material, 
+                cantidad,
+                detalles: observacionesGenerales // o podrías agregar un campo de detalle por material
             });
         }
-        addAuditLog('INGRESO', 'STOCK', material.id, `Ingresados ${cantidad} ${material.unidad} de ${material.codigo}${detalleIngreso ? ' ('+detalleIngreso+')' : ''}`);
-        alert(`✅ Ingresados ${cantidad} ${material.unidad} de ${material.descripcion}${detalleIngreso ? ' - '+detalleIngreso : ''}`);
-    }
-
+    });
+    
+    if (hayError) return;
+    if (materialesProcesados.length === 0) return alert('Agrega al menos un material');
+    
+    // Crear materiales nuevos en el catálogo primero
+    nuevosMateriales.forEach(mat => {
+        state.catalogo.push(mat);
+        addAuditLog('CREACION', 'CATALOGO', mat.id, `Material creado desde ingreso directo: ${mat.codigo} - ${mat.descripcion}`);
+    });
+    
+    // Procesar ingresos
+    let totalRetazos = 0;
+    let totalNormales = 0;
+    
+    materialesProcesados.forEach(item => {
+        if (item.tipo === 'retazos') {
+            item.retazos.forEach(r => state.retazos.push(r));
+            totalRetazos += item.count;
+            addAuditLog('INGRESO', 'RETAZOS', item.material.id, `Ingresados ${item.count} retazos de ${item.material.codigo}`);
+        } else {
+            const existente = state.stock.find(s => 
+                s.materialId === item.material.id && 
+                (s.detalles || '').toLowerCase().trim() === (item.detalles || '').toLowerCase().trim()
+            );
+            
+            if (existente) {
+                existente.cantidad += item.cantidad;
+                existente.ultimoIngreso = new Date().toISOString();
+                existente.usuarioIngreso = CONFIG.currentUser;
+            } else {
+                state.stock.push({
+                    id: Date.now().toString() + Math.random(),
+                    materialId: item.material.id,
+                    codigo: item.material.codigo,
+                    descripcion: item.material.descripcion,
+                    detalles: item.detalles || '',
+                    cantidad: item.cantidad,
+                    unidad: item.material.unidad,
+                    stockMinimo: item.material.stockMinimo,
+                    usuarioIngreso: CONFIG.currentUser,
+                    fechaIngreso: new Date().toISOString(),
+                    origen: origen || 'Ingreso directo'
+                });
+            }
+            totalNormales++;
+            addAuditLog('INGRESO', 'STOCK', item.material.id, `Ingresados ${item.cantidad} ${item.material.unidad} de ${item.material.codigo}`);
+        }
+    });
+    
     await saveToCloud();
-    e.target.reset();
-    initIngresoForm(); // Reiniciar el formulario
+    resetIngresoForm();
     updateDashboard();
+    
+    let mensaje = '✅ Ingreso completado:\n';
+    if (totalNormales > 0) mensaje += `📦 ${totalNormales} material(es) normal(es)\n`;
+    if (totalRetazos > 0) mensaje += `📏 ${totalRetazos} retazo(s)\n`;
+    if (nuevosMateriales.length > 0) mensaje += `🆕 ${nuevosMateriales.length} material(es) nuevo(s) en catálogo`;
+    
+    alert(mensaje);
 }
 
         // STOCK Y RETAZOS
