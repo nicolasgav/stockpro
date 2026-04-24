@@ -7,6 +7,41 @@
     <title>StockPro Cloud - Multiusuario + Retazos</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+	
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCBwAHJZWjmdTV500n_o2lBLlJUxeLJwS8",
+            authDomain: "stock-infra.firebaseapp.com",
+            projectId: "stock-infra",
+            storageBucket: "stock-infra.firebasestorage.app",
+            messagingSenderId: "1043723929601",
+            appId: "1:1043723929601:web:4754aa1f18caa44be89800"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        window.firebaseApp = app;
+        window.firebaseAuth = auth;
+        window.firebaseDb = db;
+        window.firebaseFns = {
+            signInWithEmailAndPassword,
+            createUserWithEmailAndPassword,
+            onAuthStateChanged,
+            signOut,
+            doc,
+            setDoc,
+            getDoc,
+            onSnapshot,
+            enableIndexedDbPersistence
+        };
+    </script>
     <style>
         body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
         .fade-in { animation: fadeIn 0.3s ease-in; }
@@ -40,55 +75,38 @@
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800">
-    <!-- CONFIGURACIÓN JSONBin -->
+        <!-- LOGIN FIREBASE -->
     <div id="config-screen" class="fixed inset-0 bg-white z-50 flex items-center justify-center p-4">
         <div class="max-w-md w-full space-y-6">
             <div class="text-center">
                 <h1 class="text-3xl font-bold text-blue-600 mb-2">StockPro Cloud</h1>
                 <p class="text-gray-500">Sistema Completo de Gestión</p>
+                <p class="text-xs text-orange-600 mt-2 font-semibold">🔥 Versión Firebase</p>
             </div>
-            <div class="bg-blue-50 p-6 rounded-2xl border border-blue-200">
-                <h3 class="font-semibold text-blue-800 mb-4">Configuración JSONBin.io</h3>
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">API Key</label>
-                        <input type="password" id="api-key" placeholder="$2b$10$..." class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-                        <p class="text-xs text-gray-500 mt-1">Consíguela en jsonbin.io/api-keys</p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">ID del Bin (opcional)</label>
-                        <input type="text" id="bin-id" placeholder="Dejar vacío para crear nuevo" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-                    </div>
-                    <button onclick="saveConfig()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-medium hover:bg-blue-700 transition-colors">Conectar</button>
+            
+            <div id="firebase-login-form" class="bg-white p-6 rounded-2xl border border-gray-200 shadow-lg space-y-4">
+                <h3 class="font-semibold text-gray-800 text-center">Iniciar Sesión</h3>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                    <input type="email" id="fb-email" placeholder="usuario@empresa.com" 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
                 </div>
-            </div>
-            <div class="text-center text-sm text-gray-500">
-                <a href="https://jsonbin.io" target="_blank" class="text-blue-600 hover:underline">Crear cuenta gratis →</a>
-            </div>
-        </div>
-    </div>
-
-    <!-- LOGIN DE USUARIO -->
-    <div id="login-screen" class="fixed inset-0 bg-white z-50 flex items-center justify-center p-4 hidden">
-        <div class="max-w-md w-full space-y-6">
-            <div class="text-center">
-                <h1 class="text-3xl font-bold text-blue-600 mb-2">StockPro</h1>
-                <p class="text-gray-500">Selecciona tu usuario</p>
-            </div>
-            <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-lg">
-                <div id="user-list" class="space-y-2 mb-4">
-                    <!-- Usuarios se cargan dinámicamente -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Contraseña</label>
+                    <input type="password" id="fb-password" placeholder="••••••••" 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
                 </div>
-                <div class="border-t pt-4">
-                    <p class="text-sm text-gray-600 mb-2">¿Nuevo usuario?</p>
-                    <div class="flex gap-2">
-                        <input type="text" id="new-user-name" placeholder="Nombre completo" class="flex-1 px-4 py-2 border border-gray-300 rounded-xl text-sm">
-                        <button onclick="createUser()" class="bg-green-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-green-700">Crear</button>
-                    </div>
+                <div class="flex gap-2">
+                    <button onclick="firebaseLogin()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-medium hover:bg-blue-700 transition-colors">
+                        Ingresar
+                    </button>
+                    <button onclick="firebaseRegister()" class="flex-1 bg-green-600 text-white py-3 rounded-xl font-medium hover:bg-green-700 transition-colors">
+                        Registrarse
+                    </button>
                 </div>
-            </div>
-            <div class="text-center">
-                <button onclick="logout()" class="text-gray-500 hover:text-gray-700 text-sm">← Cambiar cuenta JSONBin</button>
+                <p class="text-xs text-gray-500 text-center">
+                    ¿Primera vez? Ingresá email y contraseña y hacé click en "Registrarse"
+                </p>
             </div>
         </div>
     </div>
@@ -821,13 +839,17 @@
     </div>
 
     <script>
-        // CONFIGURACIÓN
+        
+		// CONFIGURACIÓN FIREBASE
         const CONFIG = {
-            apiKey: localStorage.getItem('stockpro_api_key') || '',
-            binId: localStorage.getItem('stockpro_bin_id') || '',
-            baseUrl: 'https://api.jsonbin.io/v3/b',
-            currentUser: localStorage.getItem('stockpro_user') || ''
+            currentUser: null,
+            currentUserEmail: localStorage.getItem('stockpro_user_email') || '',
+            currentUserName: localStorage.getItem('stockpro_user_name') || ''
         };
+
+        // Referencias globales de Firestore
+        let db, auth;
+        let unsubscribeData = null; // para el listener en tiempo real
 
         // ESTADO GLOBAL
         let state = {
@@ -846,211 +868,225 @@
             pendingRetazosConfig: [] // Para configurar retazos antes de cerrar orden
         };
 
-        // INICIALIZACIÓN
+                // INICIALIZACIÓN
         document.addEventListener('DOMContentLoaded', () => {
-            if (CONFIG.apiKey) {
-                if (CONFIG.currentUser) {
-                    showApp();
-                    loadData();
-                } else {
-                    document.getElementById('config-screen').classList.add('hidden');
-                    document.getElementById('login-screen').classList.remove('hidden');
-                    loadUsers();
-                }
-            } else {
-                document.getElementById('config-screen').classList.remove('hidden');
-            }
-
+            initFirebase();
             setupDragAndDrop();
         });
-
-        // FUNCIONES DE USUARIO - CORREGIDAS PARA SINCRONIZACIÓN CLOUD
-        async function loadUsers() {
-            // Primero intentar cargar desde JSONBin si hay binId configurado
-            if (CONFIG.binId && CONFIG.apiKey) {
-                try {
-                    const response = await fetch(`${CONFIG.baseUrl}/${CONFIG.binId}/latest`, {
-                        headers: { 'X-Master-Key': CONFIG.apiKey }
-                    });
-                    if (response.ok) {
-                        const result = await response.json();
-                        if (result.record && result.record.usuarios) {
-                            state.usuarios = result.record.usuarios;
-                            // Actualizar localStorage como caché local
-                            localStorage.setItem('stockpro_users', JSON.stringify(state.usuarios));
-                        }
-                    }
-                } catch (err) {
-                    console.log('Error cargando usuarios de cloud:', err);
-                    // Fallback a localStorage
-                    const savedUsers = localStorage.getItem('stockpro_users');
-                    if (savedUsers) {
-                        state.usuarios = JSON.parse(savedUsers);
-                    }
+		        // INICIALIZACIÓN FIREBASE
+        function initFirebase() {
+            db = window.firebaseDb;
+            auth = window.firebaseAuth;
+            
+            // Activar persistencia offline (reemplaza tu localStorage)
+            window.firebaseFns.enableIndexedDbPersistence(db).catch(err => {
+                if (err.code == 'failed-precondition') {
+                    console.log('Persistencia offline: múltiples pestañas abiertas');
+                } else if (err.code == 'unimplemented') {
+                    console.log('Persistencia offline no soportada en este navegador');
                 }
-            } else {
-                // Sin configuración cloud, usar localStorage
-                const savedUsers = localStorage.getItem('stockpro_users');
-                if (savedUsers) {
-                    state.usuarios = JSON.parse(savedUsers);
+            });
+            
+            // Listener de autenticación
+            window.firebaseFns.onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    CONFIG.currentUser = user;
+                    CONFIG.currentUserEmail = user.email;
+                    CONFIG.currentUserName = user.displayName || user.email.split('@')[0];
+                    localStorage.setItem('stockpro_user_email', user.email);
+                    localStorage.setItem('stockpro_user_name', CONFIG.currentUserName);
+                    
+                    document.getElementById('config-screen').classList.add('hidden');
+                    showApp();
+                    startRealtimeSync(); // escucha cambios en tiempo real
+                } else {
+                    document.getElementById('config-screen').classList.remove('hidden');
+                    document.getElementById('app-container').classList.add('hidden');
                 }
-            }
-            renderUserList();
+            });
         }
 
-        function renderUserList() {
-            const container = document.getElementById('user-list');
-            if (state.usuarios.length === 0) {
-                container.innerHTML = '<p class="text-gray-500 text-center py-4">No hay usuarios creados aún</p>';
-                return;
+        // LOGIN / REGISTER
+        async function firebaseLogin() {
+            const email = document.getElementById('fb-email').value.trim();
+            const pass = document.getElementById('fb-password').value;
+            if (!email || !pass) return alert('Completá email y contraseña');
+            
+            try {
+                await window.firebaseFns.signInWithEmailAndPassword(auth, email, pass);
+            } catch (err) {
+                alert('Error: ' + err.message);
             }
-            container.innerHTML = state.usuarios.map(u => `
-                <button onclick="selectUser('${u}')" class="w-full text-left px-4 py-3 rounded-xl border border-gray-200 hover:bg-blue-50 hover:border-blue-300 transition-all flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">${u.charAt(0).toUpperCase()}</div>
-                    <span class="font-medium">${u}</span>
-                </button>
-            `).join('');
         }
 
-        async function createUser() {
-            const name = document.getElementById('new-user-name').value.trim();
-            if (!name) return alert('Ingresa un nombre');
-            if (state.usuarios.includes(name)) return alert('Este usuario ya existe');
-
-            state.usuarios.push(name);
+        async function firebaseRegister() {
+            const email = document.getElementById('fb-email').value.trim();
+            const pass = document.getElementById('fb-password').value;
+            if (!email || !pass) return alert('Completá email y contraseña');
+            if (pass.length < 6) return alert('La contraseña debe tener al menos 6 caracteres');
             
-            // Guardar en localStorage (caché local)
-            localStorage.setItem('stockpro_users', JSON.stringify(state.usuarios));
-            
-            // Si hay configuración cloud, sincronizar inmediatamente
-            if (CONFIG.binId && CONFIG.apiKey) {
-                await saveToCloud();
+            try {
+                await window.firebaseFns.createUserWithEmailAndPassword(auth, email, pass);
+                alert('✅ Usuario creado. Ya estás dentro.');
+            } catch (err) {
+                alert('Error: ' + err.message);
             }
-            
-            document.getElementById('new-user-name').value = '';
-            renderUserList();
         }
+		
+		        function showApp() {
+            document.getElementById('config-screen').classList.add('hidden');
+            document.getElementById('login-screen')?.classList.add('hidden');
+            document.getElementById('app-container').classList.remove('hidden');
 
-        function selectUser(user) {
-            CONFIG.currentUser = user;
-            localStorage.setItem('stockpro_user', user);
-            document.getElementById('login-screen').classList.add('hidden');
-            showApp();
-            loadData();
+            document.getElementById('user-name-display').textContent = CONFIG.currentUserName;
+            document.getElementById('user-avatar').textContent = CONFIG.currentUserName.charAt(0).toUpperCase();
+            document.getElementById('welcome-user').textContent = CONFIG.currentUserName;
         }
 
         function changeUser() {
-            localStorage.removeItem('stockpro_user');
-            location.reload();
-        }
-
-        // CONFIGURACIÓN JSONBin
-        async function saveConfig() {
-            const key = document.getElementById('api-key').value.trim();
-            const binId = document.getElementById('bin-id').value.trim();
-
-            if (!key) return alert('Ingresa tu API Key');
-
-            localStorage.setItem('stockpro_api_key', key);
-            localStorage.setItem('stockpro_bin_id', binId);
-            CONFIG.apiKey = key;
-            CONFIG.binId = binId;
-
-            // Si hay un binId existente, cargar usuarios desde allí
-            if (binId) {
-                await loadUsers();
-            } else {
-                // Si es nuevo bin, subir usuarios locales si existen
-                const savedUsers = localStorage.getItem('stockpro_users');
-                if (savedUsers) {
-                    state.usuarios = JSON.parse(savedUsers);
-                }
-            }
-
-            document.getElementById('config-screen').classList.add('hidden');
-            document.getElementById('login-screen').classList.remove('hidden');
-            renderUserList();
-        }
-
-        function showApp() {
-            document.getElementById('config-screen').classList.add('hidden');
-            document.getElementById('login-screen').classList.add('hidden');
-            document.getElementById('app-container').classList.remove('hidden');
-
-            document.getElementById('user-name-display').textContent = CONFIG.currentUser;
-            document.getElementById('user-avatar').textContent = CONFIG.currentUser.charAt(0).toUpperCase();
-            document.getElementById('welcome-user').textContent = CONFIG.currentUser;
+            logout();
         }
 
         function logout() {
-            localStorage.removeItem('stockpro_api_key');
-            localStorage.removeItem('stockpro_bin_id');
-            localStorage.removeItem('stockpro_user');
-            location.reload();
+            window.firebaseFns.signOut(auth).then(() => {
+                localStorage.removeItem('stockpro_user_email');
+                localStorage.removeItem('stockpro_user_name');
+                location.reload();
+            });
         }
-
-        // AUDITORÍA
-        function addAuditLog(accion, entidad, entidadId, detalle) {
-            const log = {
-                id: Date.now().toString(),
-                fecha: new Date().toISOString(),
-                usuario: CONFIG.currentUser,
-                accion: accion,
-                entidad: entidad,
-                entidadId: entidadId,
-                detalle: detalle
-            };
-            state.audit_log.unshift(log);
-            if (state.audit_log.length > 500) {
-                state.audit_log = state.audit_log.slice(0, 500);
-            }
-        }
+		
+		
+        // ✅ NUEVA - guarda solo string
+		function addAuditLog(accion, entidad, entidadId, detalle) {
+			const log = {
+				id: Date.now().toString(),
+				fecha: new Date().toISOString(),
+				usuario: CONFIG.currentUserName || CONFIG.currentUserEmail || 'Sistema',  // ← string plano
+				accion: accion,
+				entidad: entidad,
+				entidadId: entidadId,
+				detalle: detalle
+			};
+			state.audit_log.unshift(log);
+			if (state.audit_log.length > 500) {
+				state.audit_log = state.audit_log.slice(0, 500);
+			}
+		}
 
         // CARGAR Y GUARDAR DATOS
+		        // RUTA ÚNICA EN FIRESTORE: cada usuario tiene su propio documento
+			function getUserDocRef() {
+				if (!CONFIG.currentUser) return null;
+				// ID compartido para todos los usuarios de la empresa
+				return window.firebaseFns.doc(db, 'stockpro_data', 'empresa_principal');
+			}
+
+        // CARGAR DATOS (una sola vez al iniciar)
         async function loadData() {
             showLoading(true);
             try {
-                let data = { 
-                    ordenes: [], 
-                    stock: [], 
-                    retiros: [], 
-                    tareas: [], 
-                    catalogo: [],
-                    retazos: [],
-                    usuarios: [],
-                    audit_log: []
-                };
-
-                if (CONFIG.binId) {
-                    const response = await fetch(`${CONFIG.baseUrl}/${CONFIG.binId}/latest`, {
-                        headers: { 'X-Master-Key': CONFIG.apiKey }
+                const docRef = getUserDocRef();
+                const docSnap = await window.firebaseFns.getDoc(docRef);
+                
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    state.ordenes = data.ordenes || [];
+                    state.stock = data.stock || [];
+                    state.retiros = data.retiros || [];
+                    state.tareas = data.tareas || [];
+                    state.catalogo = data.catalogo || [];
+                    state.retazos = data.retazos || [];
+                    state.usuarios = data.usuarios || [];
+                    state.audit_log = data.audit_log || [];
+                } else {
+                    // Primer uso: crear documento vacío
+                    await window.firebaseFns.setDoc(docRef, {
+                        ordenes: [], stock: [], retiros: [], tareas: [],
+                        catalogo: [], retazos: [], usuarios: [], audit_log: [],
+                        createdAt: new Date().toISOString()
                     });
-                    const result = await response.json();
-                    data = result.record;
                 }
-
-                state.ordenes = data.ordenes || [];
-                state.stock = data.stock || [];
-                state.retiros = data.retiros || [];
-                state.tareas = data.tareas || [];
-                state.catalogo = data.catalogo || [];
-                state.retazos = data.retazos || [];
-                state.usuarios = data.usuarios || state.usuarios;
-                state.audit_log = data.audit_log || [];
-
+                
                 updateAll();
                 updateLastSync();
                 showLoading(false);
             } catch (err) {
                 showLoading(false);
-                alert('Error al cargar: ' + err.message);
+                console.error('Error cargando:', err);
+                alert('Error al cargar datos: ' + err.message);
             }
         }
 
-        async function saveToCloud() {
+        // SINCRONIZACIÓN EN TIEMPO REAL
+        function startRealtimeSync() {
+            if (unsubscribeData) unsubscribeData();
+            
+            const docRef = getUserDocRef();
+            if (!docRef) return;
+            
+            unsubscribeData = window.firebaseFns.onSnapshot(docRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    state.ordenes = data.ordenes || state.ordenes;
+                    state.stock = data.stock || state.stock;
+                    state.retiros = data.retiros || state.retiros;
+                    state.tareas = data.tareas || state.tareas;
+                    state.catalogo = data.catalogo || state.catalogo;
+                    state.retazos = data.retazos || state.retazos;
+                    state.usuarios = data.usuarios || state.usuarios;
+                    state.audit_log = data.audit_log || state.audit_log;
+                    
+                    updateAll();
+                    updateLastSync();
+                }
+            }, (err) => {
+                console.error('Error en sync:', err);
+            });
+        }
+
+        // GUARDAR EN FIRESTORE - VERSIÓN LIMPIA DEFINITIVA
+		async function saveToCloud() {
 			showLoading(true);
 			try {
-				const data = {
+				const docRef = getUserDocRef();
+				if (!docRef) {
+					showLoading(false);
+					return false;
+				}
+        
+				// LIMPIADOR: elimina objetos complejos no soportados por Firestore
+				function cleanForFirestore(obj) {
+					if (obj === null || obj === undefined) return null;
+					if (typeof obj === 'string' || typeof obj === 'number' || typeof obj === 'boolean') return obj;
+					if (obj instanceof Date) return obj.toISOString();
+					
+					if (Array.isArray(obj)) {
+						return obj.map(item => cleanForFirestore(item)).filter(item => item !== undefined);
+					}
+            
+					if (typeof obj === 'object') {
+						// RECHAZAR objetos con constructor complejo (UserImpl, etc.)
+						if (obj.constructor && obj.constructor.name !== 'Object' && obj.constructor.name !== 'Array') {
+							console.warn('Objeto no serializable eliminado:', obj.constructor.name);
+							return null;
+						}
+                
+						const cleaned = {};
+						for (const key in obj) {
+							if (obj.hasOwnProperty(key)) {
+								const val = cleanForFirestore(obj[key]);
+								if (val !== null && val !== undefined) {
+									cleaned[key] = val;
+								}
+							}
+						}
+						return cleaned;
+					}
+            
+					return String(obj);
+				}
+        
+				const data = cleanForFirestore({
 					ordenes: state.ordenes,
 					stock: state.stock,
 					retiros: state.retiros,
@@ -1059,55 +1095,27 @@
 					retazos: state.retazos,
 					usuarios: state.usuarios,
 					audit_log: state.audit_log,
-					lastUpdate: new Date().toISOString()
-				};
-
-				// Verificar tamaño aproximado (JSONBin gratuito suele tener límite ~100KB-500KB)
-				const jsonString = JSON.stringify(data);
-				const sizeKB = (jsonString.length / 1024).toFixed(1);
-				console.log('Tamaño payload:', sizeKB + 'KB');
-
-				let response;
-				if (CONFIG.binId) {
-					response = await fetch(`${CONFIG.baseUrl}/${CONFIG.binId}`, {
-						method: 'PUT',
-						headers: {
-							'X-Master-Key': CONFIG.apiKey,
-							'Content-Type': 'application/json'
-						},
-						body: jsonString
-					});
-				} else {
-					response = await fetch(`${CONFIG.baseUrl}`, {
-						method: 'POST',
-						headers: {
-							'X-Master-Key': CONFIG.apiKey,
-							'Content-Type': 'application/json'
-						},
-						body: jsonString
-					});
-					const result = await response.json();
-					CONFIG.binId = result.metadata.id;
-					localStorage.setItem('stockpro_bin_id', CONFIG.binId);
-				}
-
-				// 🔴 ESTA VERIFICACIÓN FALTABA
-				if (!response.ok) {
-					const errorBody = await response.text();
-					throw new Error(`JSONBin error ${response.status}: ${errorBody}`);
-				}
-
+					lastUpdate: new Date().toISOString(),
+					updatedBy: CONFIG.currentUserName
+				});
+        
+				await window.firebaseFns.setDoc(docRef, data);
+			
 				updateLastSync();
 				showLoading(false);
 				return true;
 			} catch (err) {
 				showLoading(false);
-				console.error('Error guardando en JSONBin:', err);
-				alert('❌ Error al guardar en la nube:\n' + err.message + '\n\nLos cambios se perderán al recargar.');
+				console.error('Error guardando:', err);
+				alert('❌ Error al guardar: ' + err.message);
 				return false;
 			}
 		}
+        
 
+        async function forceSync() {
+            await saveToCloud();
+        }
         function showLoading(show) {
             document.getElementById('loading').classList.toggle('hidden', !show);
             document.getElementById('sync-icon')?.classList.toggle('hidden', !show);
@@ -1376,7 +1384,7 @@
     
 		if (!guardado) {
 			// Si falló el guardado, NO cerrar modal ni mostrar éxito
-			alert('⚠️ Los materiales se cargaron en pantalla pero NO se guardaron en la nube.\n\nRevisa:\n• Tu conexión a internet\n• Que el archivo no sea muy grande\n• Tu API Key de JSONBin');
+			alert('⚠️ Los materiales se cargaron en pantalla pero NO se guardaron en la nube.\n\nRevisa:\n• Tu conexión a internet\n• Que el archivo no sea muy grande\n• Tu sesión de Firebase esté activa');
 			return;
 		}
 
@@ -2127,7 +2135,7 @@ async function procesarRetiroObra() {
         tipo: 'obra',
         destino: orden.destino,
         ordenId: orden.id,
-        usuario: CONFIG.currentUser,
+        usuario: CONFIG.currentUserName,
         materiales: materialesRetiro
     });
 
@@ -2456,7 +2464,7 @@ async function procesarRetiroObra() {
         fecha: new Date().toISOString(),
         tipo: 'individual',
         destino: destino,
-        usuario: CONFIG.currentUser,
+        usuario: CONFIG.currentUserName,
         materiales: materiales
     });
 
@@ -3495,7 +3503,7 @@ async function confirmarRecepcion() {
     if (!orden.recepciones) orden.recepciones = [];
     orden.recepciones.push({
         fecha: new Date().toISOString(),
-        usuario: CONFIG.currentUser,
+        usuario: CONFIG.currentUserName,
         materiales: materialesRecibidos,
         observaciones: observaciones,
         esParcial: !esCompleta
@@ -3646,7 +3654,7 @@ async function confirmarRecepcion() {
                 titulo: document.getElementById('task-titulo').value,
                 notas: document.getElementById('task-notas').value,
                 estado: document.getElementById('task-estado').value,
-                usuario: CONFIG.currentUser
+                usuario: CONFIG.currentUserName
             };
 
             if (id) {
