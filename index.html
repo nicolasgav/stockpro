@@ -353,15 +353,22 @@
                 </section>
 
                 <!-- STOCK -->
-                <section id="stock" class="hidden fade-in space-y-6">
-                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                        <h2 class="text-2xl md:text-3xl font-bold text-gray-800">Inventario</h2>
-                        <div class="flex gap-2">
-                            <input type="text" id="search-stock" placeholder="Buscar..." class="px-4 py-2 border border-gray-200 rounded-xl text-sm" onkeyup="renderStock()">
-                        </div>
-                    </div>
-                    <div id="stock-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-                </section>
+					<section id="stock" class="hidden fade-in space-y-6">
+						<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+							<h2 class="text-2xl md:text-3xl font-bold text-gray-800">Inventario</h2>
+							<div class="flex gap-2 flex-wrap">
+								<select id="filter-ubicacion" onchange="renderStock()" class="px-4 py-2 border border-gray-200 rounded-xl text-sm bg-white">
+									<option value="">📍 Todas las ubicaciones</option>
+								</select>
+									<input type="text" id="search-stock" placeholder="Buscar por código, nombre, origen..." class="px-4 py-2 border border-gray-200 rounded-xl text-sm" onkeyup="renderStock()">
+							</div>
+						</div>
+    
+						<!-- Chips de ubicaciones rápidas -->
+						<div id="ubicacion-chips" class="flex flex-wrap gap-2 mb-4"></div>
+		
+						<div id="stock-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+					</section>
 
                 <!-- RETIROS -->
                 <section id="retiros" class="hidden fade-in space-y-6">
@@ -1675,12 +1682,16 @@ function resetIngresoForm() {
     addIngresoMaterialRow();
 }
 
+// ============================================================
+// REEMPLAZAR la función handleIngresoDirecto completa
+// ============================================================
+
 async function handleIngresoDirecto(e) {
     e.preventDefault();
     
-    const origen = document.getElementById('ingreso-origen').value;
-    const ubicacion = document.getElementById('ingreso-ubicacion').value;
-    const observacionesGenerales = document.getElementById('ingreso-observaciones').value;
+    const origen = document.getElementById('ingreso-origen').value.trim();
+    const ubicacion = document.getElementById('ingreso-ubicacion').value.trim();
+    const observacionesGenerales = document.getElementById('ingreso-observaciones').value.trim();
     
     const materialesProcesados = [];
     const nuevosMateriales = [];
@@ -1694,7 +1705,7 @@ async function handleIngresoDirecto(e) {
         const descripcion = row.querySelector('.ingreso-autocomplete').value;
         
         if (!materialId || !descripcion) {
-            alert('Completa todos los materales');
+            alert('Completa todos los materiales');
             hayError = true;
             return;
         }
@@ -1729,7 +1740,7 @@ async function handleIngresoDirecto(e) {
             const retazos = [];
             row.querySelectorAll('.ingreso-retazos-container > div').forEach(div => {
                 const medida = parseFloat(div.querySelector('.retazo-medida').value);
-                const obs = div.querySelector('.retazo-obs').value;
+                const obs = div.querySelector('.retazo-obs').value.trim();
                 if (medida > 0) {
                     retazos.push({
                         id: 'RET-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 5).toUpperCase(),
@@ -1739,11 +1750,11 @@ async function handleIngresoDirecto(e) {
                         medida: medida,
                         unidad: material.unidad,
                         estado: 'disponible',
-                        ubicacion: ubicacion || 'Sin especificar',
-                        usuarioIngreso: CONFIG.currentUser,
+                        ubicacion: ubicacion || 'Sin especificar',           // ✅ GUARDAR UBICACIÓN
+                        usuarioIngreso: CONFIG.currentUserName,               // ✅ CORREGIDO: string plano
                         fechaIngreso: new Date().toISOString(),
-                        origen: origen || 'Ingreso directo',
-                        observaciones: obs || observacionesGenerales || 'Ingreso directo'
+                        origen: origen || 'Ingreso directo',                  // ✅ GUARDAR ORIGEN
+                        observaciones: obs || observacionesGenerales || 'Ingreso directo'  // ✅ GUARDAR OBS
                     });
                 }
             });
@@ -1767,7 +1778,9 @@ async function handleIngresoDirecto(e) {
                 tipo: 'normal', 
                 material, 
                 cantidad,
-                detalles: observacionesGenerales // o podrías agregar un campo de detalle por material
+                origen: origen || 'Ingreso directo',           // ✅ GUARDAR ORIGEN
+                ubicacion: ubicacion || 'Sin especificar',     // ✅ GUARDAR UBICACIÓN
+                observaciones: observacionesGenerales          // ✅ GUARDAR OBSERVACIONES
             });
         }
     });
@@ -1789,34 +1802,38 @@ async function handleIngresoDirecto(e) {
         if (item.tipo === 'retazos') {
             item.retazos.forEach(r => state.retazos.push(r));
             totalRetazos += item.count;
-            addAuditLog('INGRESO', 'RETAZOS', item.material.id, `Ingresados ${item.count} retazos de ${item.material.codigo}`);
+            addAuditLog('INGRESO', 'RETAZOS', item.material.id, `Ingresados ${item.count} retazos de ${item.material.codigo} | Origen: ${item.retazos[0].origen} | Ubicación: ${item.retazos[0].ubicacion}`);
         } else {
             const existente = state.stock.find(s => 
                 s.materialId === item.material.id && 
-                (s.detalles || '').toLowerCase().trim() === (item.detalles || '').toLowerCase().trim()
+                (s.detalles || '').toLowerCase().trim() === (item.material.detalles || '').toLowerCase().trim() &&
+                s.ubicacion === item.ubicacion  // ✅ Buscar también por ubicación
             );
             
             if (existente) {
                 existente.cantidad += item.cantidad;
                 existente.ultimoIngreso = new Date().toISOString();
-                existente.usuarioIngreso = CONFIG.currentUser;
+                existente.usuarioIngreso = CONFIG.currentUserName;  // ✅ CORREGIDO
+                existente.observaciones = item.observaciones || existente.observaciones;
             } else {
                 state.stock.push({
                     id: Date.now().toString() + Math.random(),
                     materialId: item.material.id,
                     codigo: item.material.codigo,
                     descripcion: item.material.descripcion,
-                    detalles: item.detalles || '',
+                    detalles: item.material.detalles || '',
                     cantidad: item.cantidad,
                     unidad: item.material.unidad,
                     stockMinimo: item.material.stockMinimo,
-                    usuarioIngreso: CONFIG.currentUser,
+                    usuarioIngreso: CONFIG.currentUserName,  // ✅ CORREGIDO
                     fechaIngreso: new Date().toISOString(),
-                    origen: origen || 'Ingreso directo'
+                    origen: item.origen,           // ✅ GUARDADO
+                    ubicacion: item.ubicacion,     // ✅ GUARDADO
+                    observaciones: item.observaciones  // ✅ GUARDADO
                 });
             }
             totalNormales++;
-            addAuditLog('INGRESO', 'STOCK', item.material.id, `Ingresados ${item.cantidad} ${item.material.unidad} de ${item.material.codigo}`);
+            addAuditLog('INGRESO', 'STOCK', item.material.id, `Ingresados ${item.cantidad} ${item.material.unidad} de ${item.material.codigo} | Origen: ${item.origen} | Ubicación: ${item.ubicacion}`);
         }
     });
     
@@ -1832,143 +1849,280 @@ async function handleIngresoDirecto(e) {
     alert(mensaje);
 }
 
-        // STOCK Y RETAZOS
-        function renderStock() {
-            const search = document.getElementById('search-stock')?.value.toLowerCase() || '';
-            const container = document.getElementById('stock-grid');
+// ============================================================
+// REEMPLAZAR la función renderStock completa
+// ============================================================
 
-            const materialesFiltrados = state.catalogo.filter(c => {
-                if (c.activo === false) return false;
-                return c.codigo.toLowerCase().includes(search) || 
-                       c.descripcion.toLowerCase().includes(search);
-            });
+function renderStock() {
+    const search = document.getElementById('search-stock')?.value.toLowerCase() || '';
+    const ubicacionFilter = document.getElementById('filter-ubicacion')?.value || '';
+    const container = document.getElementById('stock-grid');
+    const chipsContainer = document.getElementById('ubicacion-chips');
 
-            if (materialesFiltrados.length === 0) {
-                container.innerHTML = '<div class="col-span-3 text-center text-gray-400 py-8">Sin materiales registrados</div>';
-                return;
+    // Obtener todas las ubicaciones únicas disponibles
+    const ubicacionesStock = [...new Set(state.stock.map(s => s.ubicacion).filter(Boolean))].sort();
+    const ubicacionesRetazos = [...new Set(state.retazos.filter(r => r.estado === 'disponible').map(r => r.ubicacion).filter(Boolean))].sort();
+    const todasUbicaciones = [...new Set([...ubicacionesStock, ...ubicacionesRetazos])].sort();
+
+    // Actualizar selector de ubicaciones
+    const selectUbi = document.getElementById('filter-ubicacion');
+    if (selectUbi) {
+        const valorActual = selectUbi.value;
+        selectUbi.innerHTML = '<option value="">📍 Todas las ubicaciones</option>';
+        todasUbicaciones.forEach(u => {
+            const countStock = state.stock.filter(s => s.ubicacion === u).length;
+            const countRetazos = state.retazos.filter(r => r.ubicacion === u && r.estado === 'disponible').length;
+            const total = countStock + countRetazos;
+            selectUbi.innerHTML += `<option value="${u}" ${u === valorActual ? 'selected' : ''}>📍 ${u} (${total})</option>`;
+        });
+        selectUbi.value = valorActual;
+    }
+
+    // Renderizar chips de ubicaciones
+    if (chipsContainer) {
+        chipsContainer.innerHTML = todasUbicaciones.map(u => {
+            const isActive = ubicacionFilter === u;
+            const countStock = state.stock.filter(s => s.ubicacion === u).reduce((sum, s) => sum + s.cantidad, 0);
+            const countRetazos = state.retazos.filter(r => r.ubicacion === u && r.estado === 'disponible').length;
+            return `
+                <button onclick="filtrarPorUbicacion('${u}')" 
+                    class="px-3 py-1.5 rounded-full text-xs font-medium transition-all ${isActive 
+                        ? 'bg-blue-600 text-white shadow-md' 
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}">
+                    📍 ${u} ${countStock > 0 ? `<span class="${isActive ? 'text-blue-200' : 'text-gray-400'}">${countStock}u</span>` : ''} ${countRetazos > 0 ? `<span class="${isActive ? 'text-blue-200' : 'text-gray-400'}">${countRetazos}r</span>` : ''}
+                </button>
+            `;
+        }).join('') + (ubicacionFilter ? `
+            <button onclick="filtrarPorUbicacion('')" class="px-3 py-1.5 rounded-full text-xs font-medium bg-red-100 text-red-600 hover:bg-red-200 transition-all">
+                ✕ Limpiar filtro
+            </button>
+        ` : '');
+    }
+
+    const materialesFiltrados = state.catalogo.filter(c => {
+        if (c.activo === false) return false;
+        return c.codigo.toLowerCase().includes(search) || 
+               c.descripcion.toLowerCase().includes(search);
+    });
+
+    if (materialesFiltrados.length === 0) {
+        container.innerHTML = '<div class="col-span-3 text-center text-gray-400 py-8">Sin materiales registrados</div>';
+        return;
+    }
+
+    // Obtener stock normal filtrado (por búsqueda y ubicación)
+    const stockFiltrado = state.stock.filter(s => {
+        const material = state.catalogo.find(c => c.id === s.materialId);
+        if (!material || material.activo === false) return false;
+        if (material.tipoControl === 'retazos') return false;
+        
+        // Filtro por ubicación
+        if (ubicacionFilter && s.ubicacion !== ubicacionFilter) return false;
+        
+        // Filtro por búsqueda de texto
+        const matchSearch = !search || 
+               material.codigo.toLowerCase().includes(search) || 
+               material.descripcion.toLowerCase().includes(search) ||
+               (s.detalles || '').toLowerCase().includes(search) ||
+               (s.ubicacion || '').toLowerCase().includes(search) ||
+               (s.origen || '').toLowerCase().includes(search) ||
+               (s.observaciones || '').toLowerCase().includes(search);
+        
+        return matchSearch;
+    });
+    
+    const stockPorMaterial = {};
+    stockFiltrado.forEach(s => {
+        if (!stockPorMaterial[s.materialId]) stockPorMaterial[s.materialId] = [];
+        stockPorMaterial[s.materialId].push(s);
+    });
+    
+    let html = '';
+    
+    // === MATERIALES POR RETAZOS ===
+    materialesFiltrados.filter(m => m.tipoControl === 'retazos').forEach(m => {
+        let retazosMaterial = state.retazos.filter(r => r.materialId === m.id && r.estado === 'disponible');
+        
+        // Filtrar retazos por ubicación si hay filtro activo
+        if (ubicacionFilter) {
+            retazosMaterial = retazosMaterial.filter(r => r.ubicacion === ubicacionFilter);
+        }
+        
+        // Filtrar retazos por búsqueda de texto
+        if (search) {
+            retazosMaterial = retazosMaterial.filter(r => 
+                m.codigo.toLowerCase().includes(search) ||
+                m.descripcion.toLowerCase().includes(search) ||
+                (r.origen || '').toLowerCase().includes(search) ||
+                (r.observaciones || '').toLowerCase().includes(search)
+            );
+        }
+        
+        const totalMedida = retazosMaterial.reduce((sum, r) => sum + r.medida, 0);
+        const isCritical = retazosMaterial.length <= (m.stockMinimo || 3);
+
+        // AGRUPAR RETAZOS POR UBICACIÓN
+        const porUbicacion = {};
+        retazosMaterial.forEach(r => {
+            const ubi = r.ubicacion || 'Sin ubicación';
+            if (!porUbicacion[ubi]) porUbicacion[ubi] = { count: 0, medida: 0 };
+            porUbicacion[ubi].count++;
+            porUbicacion[ubi].medida += r.medida;
+        });
+
+        // Si no hay retazos después de filtrar, no mostrar este material
+        if (retazosMaterial.length === 0 && (ubicacionFilter || search)) return;
+
+        html += `
+            <div class="bg-white p-4 rounded-2xl shadow-sm border ${isCritical ? 'border-red-300 bg-red-50' : 'border-gray-100'}">
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <span class="text-xs font-mono text-blue-600 bg-blue-50 px-2 py-1 rounded">${m.codigo}</span>
+                        <h4 class="font-bold text-lg mt-1">${m.descripcion}</h4>
+                        <span class="text-xs text-purple-600 bg-purple-50 px-2 py-1 rounded-full">📏 Control por Retazos</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-2xl font-bold ${isCritical ? 'text-red-600' : 'text-blue-600'}">${retazosMaterial.length}</span>
+                        <p class="text-xs text-gray-500">piezas</p>
+                        <span class="text-sm ${isCritical ? 'text-red-600' : 'text-gray-600'}">${totalMedida.toFixed(2)} ${m.unidad} total</span>
+                    </div>
+                </div>
+                
+                <!-- UBICACIONES DE RETAZOS -->
+                ${Object.keys(porUbicacion).length > 0 ? `
+                <div class="mt-2 mb-2">
+                    <p class="text-xs font-semibold text-gray-500 mb-1">📍 Ubicaciones:</p>
+                    <div class="flex flex-wrap gap-1">
+                        ${Object.entries(porUbicacion).map(([ubi, data]) => `
+                            <span class="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors" 
+                                  onclick="filtrarPorUbicacion('${ubi}')" 
+                                  title="${data.count} piezas, ${data.medida.toFixed(2)} ${m.unidad}">
+                                📍 ${ubi} (${data.count})
+                            </span>
+                        `).join('')}
+                    </div>
+                </div>
+                ` : ''}
+
+                <div class="mt-3 space-y-1 max-h-32 overflow-y-auto">
+                    ${retazosMaterial.slice(0, 5).map(r => `
+                        <div class="retazo-card bg-gray-50 p-2 rounded text-sm flex justify-between items-center">
+                            <div class="flex items-center gap-2">
+                                <span class="font-mono text-xs text-gray-500">${r.id}</span>
+                                <span class="font-semibold">${r.medida} ${r.unidad}</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-xs text-gray-400 block">${r.ubicacion || 'Sin ubicación'}</span>
+                                ${r.origen ? `<span class="text-xs text-blue-500 block">${r.origen}</span>` : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                    ${retazosMaterial.length > 5 ? `<p class="text-xs text-gray-400 text-center">+ ${retazosMaterial.length - 5} más...</p>` : ''}
+                </div>
+                ${isCritical ? `<p class="text-xs text-red-600 mt-2 font-semibold">⚠️ Stock crítico (mín: ${m.stockMinimo || 3})</p>` : ''}
+            </div>
+        `;
+    });
+    
+    // === MATERIALES NORMALES ===
+    materialesFiltrados.filter(m => m.tipoControl !== 'retazos').forEach(m => {
+        const variantes = stockPorMaterial[m.id] || [];
+        
+        if (variantes.length === 0) {
+            // Solo mostrar "sin stock" si no hay filtro de ubicación activo
+            if (!ubicacionFilter) {
+                html += `
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 opacity-70">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="text-xs font-mono text-blue-600 bg-blue-50 px-2 py-1 rounded">${m.codigo}</span>
+                            <h4 class="font-bold text-lg mt-1">${m.descripcion}</h4>
+                            <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">∑ Suma Normal</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-2xl font-bold text-gray-400">0</span>
+                            <p class="text-xs text-gray-400">${m.unidad}</p>
+                        </div>
+                    </div>
+                    <div class="mt-3 pt-3 border-t flex justify-between items-center">
+                        <span class="text-xs text-gray-500">Mín: ${m.stockMinimo || 3}</span>
+                    </div>
+                    <p class="text-xs text-red-600 mt-2 font-semibold">⚠️ Sin stock</p>
+                </div>
+                `;
             }
-
-            // Primero obtener todos los items de stock normales que coincidan con la búsqueda
-            const stockFiltrado = state.stock.filter(s => {
-                const material = state.catalogo.find(c => c.id === s.materialId);
-                if (!material || material.activo === false) return false;
-                if (material.tipoControl === 'retazos') return false;
-                return material.codigo.toLowerCase().includes(search) || 
-                       material.descripcion.toLowerCase().includes(search) ||
-                       (s.detalles || '').toLowerCase().includes(search);
-            });
-            
-            const stockPorMaterial = {};
-            stockFiltrado.forEach(s => {
-                if (!stockPorMaterial[s.materialId]) stockPorMaterial[s.materialId] = [];
-                stockPorMaterial[s.materialId].push(s);
-            });
-            
-            let html = '';
-            
-            materialesFiltrados.filter(m => m.tipoControl === 'retazos').forEach(m => {
-                const retazosMaterial = state.retazos.filter(r => r.materialId === m.id && r.estado === 'disponible');
-                const totalMedida = retazosMaterial.reduce((sum, r) => sum + r.medida, 0);
-                const isCritical = retazosMaterial.length <= (m.stockMinimo || 3);
+        } else {
+            variantes.forEach(stockItem => {
+                const cantidad = stockItem.cantidad;
+                const isCritical = cantidad <= (m.stockMinimo || 3);
+                const detalleLabel = stockItem.detalles ? `<span class="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded mt-1 inline-block">📋 ${stockItem.detalles}</span>` : '';
+                
+                const origenLabel = stockItem.origen ? `<span class="text-xs text-green-600 bg-green-50 px-2 py-1 rounded mt-1 inline-block cursor-pointer hover:bg-green-100" onclick="document.getElementById('search-stock').value='${stockItem.origen}'; renderStock();">🏭 ${stockItem.origen}</span>` : '';
+                const ubicacionLabel = stockItem.ubicacion ? `<span class="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded mt-1 inline-block cursor-pointer hover:bg-orange-100" onclick="filtrarPorUbicacion('${stockItem.ubicacion}')">📍 ${stockItem.ubicacion}</span>` : '';
+                const obsLabel = stockItem.observaciones ? `<span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded mt-1 inline-block" title="${stockItem.observaciones}">📝 ${stockItem.observaciones.substring(0, 25)}${stockItem.observaciones.length > 25 ? '...' : ''}</span>` : '';
 
                 html += `
-                    <div class="bg-white p-4 rounded-2xl shadow-sm border ${isCritical ? 'border-red-300 bg-red-50' : 'border-gray-100'}">
-                        <div class="flex justify-between items-start mb-2">
-                            <div>
-                                <span class="text-xs font-mono text-blue-600 bg-blue-50 px-2 py-1 rounded">${m.codigo}</span>
-                                <h4 class="font-bold text-lg mt-1">${m.descripcion}</h4>
-                                <span class="text-xs text-purple-600 bg-purple-50 px-2 py-1 rounded-full">📏 Control por Retazos</span>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-2xl font-bold ${isCritical ? 'text-red-600' : 'text-blue-600'}">${retazosMaterial.length}</span>
-                                <p class="text-xs text-gray-500">piezas</p>
-                                <span class="text-sm ${isCritical ? 'text-red-600' : 'text-gray-600'}">${totalMedida.toFixed(2)} ${m.unidad} total</span>
-                            </div>
+                <div class="bg-white p-4 rounded-2xl shadow-sm border ${isCritical ? 'border-red-300 bg-red-50' : 'border-gray-100'}">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <span class="text-xs font-mono text-blue-600 bg-blue-50 px-2 py-1 rounded">${m.codigo}</span>
+                            <h4 class="font-bold text-lg mt-1">${m.descripcion}</h4>
+                            ${detalleLabel}
+                            <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full ml-1">∑ Normal</span>
                         </div>
-                        <div class="mt-3 space-y-1 max-h-32 overflow-y-auto">
-                            ${retazosMaterial.slice(0, 5).map(r => `
-                                <div class="retazo-card bg-gray-50 p-2 rounded text-sm flex justify-between items-center">
-                                    <span class="font-mono text-xs text-gray-500">${r.id}</span>
-                                    <span class="font-semibold">${r.medida} ${r.unidad}</span>
-                                </div>
-                            `).join('')}
-                            ${retazosMaterial.length > 5 ? `<p class="text-xs text-gray-400 text-center">+ ${retazosMaterial.length - 5} más...</p>` : ''}
+                        <div class="text-right">
+                            <span class="text-2xl font-bold ${isCritical ? 'text-red-600' : 'text-blue-600'}">${cantidad}</span>
+                            <p class="text-xs ${isCritical ? 'text-red-500' : 'text-gray-400'}">${m.unidad}</p>
                         </div>
-                        ${isCritical ? `<p class="text-xs text-red-600 mt-2 font-semibold">⚠️ Stock crítico (mín: ${m.stockMinimo || 3})</p>` : ''}
                     </div>
+                    
+                    <!-- INFO DE ORIGEN, UBICACIÓN Y OBS -->
+                    <div class="mt-2 flex flex-wrap gap-1">
+                        ${origenLabel}
+                        ${ubicacionLabel}
+                        ${obsLabel}
+                    </div>
+                    
+                    <div class="mt-3 pt-3 border-t flex justify-between items-center">
+                        <span class="text-xs text-gray-500">Mín: ${m.stockMinimo || 3}</span>
+                        <button onclick="ajustarStock('${stockItem.id}')" class="text-sm text-blue-600 hover:underline">Ajustar</button>
+                    </div>
+                    ${isCritical ? `<p class="text-xs text-red-600 mt-2 font-semibold">⚠️ Stock crítico</p>` : ''}
+                </div>
                 `;
             });
-            
-            materialesFiltrados.filter(m => m.tipoControl !== 'retazos').forEach(m => {
-                const variantes = stockPorMaterial[m.id] || [];
-                
-                if (variantes.length === 0) {
-                    html += `
-                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 opacity-70">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <span class="text-xs font-mono text-blue-600 bg-blue-50 px-2 py-1 rounded">${m.codigo}</span>
-                                <h4 class="font-bold text-lg mt-1">${m.descripcion}</h4>
-                                <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">∑ Suma Normal</span>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-2xl font-bold text-gray-400">0</span>
-                                <p class="text-xs text-gray-400">${m.unidad}</p>
-                            </div>
-                        </div>
-                        <div class="mt-3 pt-3 border-t flex justify-between items-center">
-                            <span class="text-xs text-gray-500">Mín: ${m.stockMinimo || 3}</span>
-                        </div>
-                        <p class="text-xs text-red-600 mt-2 font-semibold">⚠️ Sin stock</p>
-                    </div>
-                    `;
-                } else {
-                    variantes.forEach(stockItem => {
-                        const cantidad = stockItem.cantidad;
-                        const isCritical = cantidad <= (m.stockMinimo || 3);
-                        const detalleLabel = stockItem.detalles ? `<span class="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded mt-1 inline-block">📋 ${stockItem.detalles}</span>` : '';
-
-                        html += `
-                        <div class="bg-white p-4 rounded-2xl shadow-sm border ${isCritical ? 'border-red-300 bg-red-50' : 'border-gray-100'}">
-                            <div class="flex justify-between items-start">
-                                <div class="flex-1">
-                                    <span class="text-xs font-mono text-blue-600 bg-blue-50 px-2 py-1 rounded">${m.codigo}</span>
-                                    <h4 class="font-bold text-lg mt-1">${m.descripcion}</h4>
-                                    ${detalleLabel}
-                                    <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full ml-1">∑ Normal</span>
-                                </div>
-                                <div class="text-right">
-                                    <span class="text-2xl font-bold ${isCritical ? 'text-red-600' : 'text-blue-600'}">${cantidad}</span>
-                                    <p class="text-xs ${isCritical ? 'text-red-500' : 'text-gray-400'}">${m.unidad}</p>
-                                </div>
-                            </div>
-                            <div class="mt-3 pt-3 border-t flex justify-between items-center">
-                                <span class="text-xs text-gray-500">Mín: ${m.stockMinimo || 3}</span>
-                                <button onclick="ajustarStock('${stockItem.id}')" class="text-sm text-blue-600 hover:underline">Ajustar</button>
-                            </div>
-                            ${isCritical ? `<p class="text-xs text-red-600 mt-2 font-semibold">⚠️ Stock crítico</p>` : ''}
-                        </div>
-                        `;
-                    });
-                }
-            });
-            
-            container.innerHTML = html || '<div class="col-span-3 text-center text-gray-400 py-8">Sin materiales registrados</div>';
-
-            const critico = state.catalogo.filter(c => {
-                if (c.activo === false) return false;
-                if (c.tipoControl === 'retazos') {
-                    const count = state.retazos.filter(r => r.materialId === c.id && r.estado === 'disponible').length;
-                    return count <= (c.stockMinimo || 3);
-                } else {
-                    const stockItem = state.stock.find(s => s.materialId === c.id);
-                    return (stockItem ? stockItem.cantidad : 0) <= (c.stockMinimo || 3);
-                }
-            }).length;
-
-            document.getElementById('dash-critico').textContent = critico;
-            document.getElementById('summary-stock').textContent = state.stock.length + state.retazos.filter(r => r.estado === 'disponible').length;
         }
+    });
+    
+    container.innerHTML = html || '<div class="col-span-3 text-center text-gray-400 py-8">Sin resultados para los filtros aplicados</div>';
+
+    // Actualizar contador de críticos (sin filtro de ubicación para el dashboard)
+    const critico = state.catalogo.filter(c => {
+        if (c.activo === false) return false;
+        if (c.tipoControl === 'retazos') {
+            const count = state.retazos.filter(r => r.materialId === c.id && r.estado === 'disponible').length;
+            return count <= (c.stockMinimo || 3);
+        } else {
+            const stockItem = state.stock.find(s => s.materialId === c.id);
+            return (stockItem ? stockItem.cantidad : 0) <= (c.stockMinimo || 3);
+        }
+    }).length;
+
+    document.getElementById('dash-critico').textContent = critico;
+    document.getElementById('summary-stock').textContent = state.stock.length + state.retazos.filter(r => r.estado === 'disponible').length;
+}
+
+// ============================================================
+// AGREGAR esta nueva función (puede ir donde quieras en el <script>)
+// ============================================================
+
+function filtrarPorUbicacion(ubicacion) {
+    const select = document.getElementById('filter-ubicacion');
+    if (select) {
+        select.value = ubicacion;
+    }
+    renderStock();
+}
 
         async function ajustarStock(id) {
             const item = state.stock.find(s => s.id === id);
