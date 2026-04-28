@@ -885,6 +885,39 @@
             </form>
         </div>
     </div>
+	
+	    <!-- MODAL EDITAR INFO DE STOCK -->
+    <div id="modal-editar-stock" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+            <div class="p-6 border-b border-gray-100 bg-blue-50 flex justify-between items-center">
+                <h3 class="text-xl font-bold">Editar Información de Stock</h3>
+                <button onclick="closeModal('editar-stock')" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">✕</button>
+            </div>
+            <form id="form-editar-stock" onsubmit="guardarEdicionStock(event)" class="p-6 space-y-4">
+                <input type="hidden" id="edit-stock-id">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Material</label>
+                    <input type="text" id="edit-stock-material" readonly class="w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-100 text-gray-600">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Ubicación</label>
+                    <input type="text" id="edit-stock-ubicacion" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500" placeholder="Ej: Depósito A">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Origen</label>
+                    <input type="text" id="edit-stock-origen" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500" placeholder="Ej: Sobrante obra Centro">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Observaciones</label>
+                    <textarea id="edit-stock-observaciones" rows="2" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500"></textarea>
+                </div>
+                <div class="flex justify-end gap-3 pt-4 border-t">
+                    <button type="button" onclick="closeModal('editar-stock')" class="px-6 py-2 text-gray-600 hover:bg-gray-100 rounded-xl">Cancelar</button>
+                    <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-medium">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <script>
         
@@ -2006,16 +2039,19 @@ function renderStock() {
 
                 <div class="mt-3 space-y-1 max-h-32 overflow-y-auto">
                     ${retazosMaterial.slice(0, 5).map(r => `
-                        <div class="retazo-card bg-gray-50 p-2 rounded text-sm flex justify-between items-center">
-                            <div class="flex items-center gap-2">
-                                <span class="font-mono text-xs text-gray-500">${r.id}</span>
-                                <span class="font-semibold">${r.medida} ${r.unidad}</span>
-                            </div>
-                            <div class="text-right">
+                    <div class="retazo-card bg-gray-50 p-2 rounded text-sm flex justify-between items-center">
+                        <div class="flex items-center gap-2">
+                            <span class="font-mono text-xs text-gray-500">${r.id}</span>
+                            <span class="font-semibold">${r.medida} ${r.unidad}</span>
+                        </div>
+                        <div class="text-right flex items-center gap-2">
+                            <div>
                                 <span class="text-xs text-gray-400 block">${r.ubicacion || 'Sin ubicación'}</span>
                                 ${r.origen ? `<span class="text-xs text-blue-500 block">${r.origen}</span>` : ''}
                             </div>
+                            <button onclick="editarUbicacionRetazo('${r.id}')" class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200" title="Editar ubicación">✏️</button>
                         </div>
+                    </div>
                     `).join('')}
                     ${retazosMaterial.length > 5 ? `<p class="text-xs text-gray-400 text-center">+ ${retazosMaterial.length - 5} más...</p>` : ''}
                 </div>
@@ -2085,7 +2121,10 @@ function renderStock() {
                     
                     <div class="mt-3 pt-3 border-t flex justify-between items-center">
                         <span class="text-xs text-gray-500">Mín: ${m.stockMinimo || 3}</span>
-                        <button onclick="ajustarStock('${stockItem.id}')" class="text-sm text-blue-600 hover:underline">Ajustar</button>
+                        <div class="flex gap-3">
+                            <button onclick="ajustarStock('${stockItem.id}')" class="text-sm text-blue-600 hover:underline">Ajustar</button>
+                            <button onclick="editarInfoStock('${stockItem.id}')" class="text-sm text-green-600 hover:underline">Editar Info</button>
+                        </div>
                     </div>
                     ${isCritical ? `<p class="text-xs text-red-600 mt-2 font-semibold">⚠️ Stock crítico</p>` : ''}
                 </div>
@@ -4047,6 +4086,72 @@ async function confirmarRecepcion() {
                 event.target.classList.add('hidden');
             }
         }
+		
+		// ========== EDICIÓN DE UBICACIONES ==========
+
+		function editarInfoStock(id) {
+			const item = state.stock.find(s => s.id === id);
+			if (!item) return;
+    
+			document.getElementById('edit-stock-id').value = id;
+			document.getElementById('edit-stock-material').value = item.descripcion + (item.detalles ? ' (' + item.detalles + ')' : '');
+			document.getElementById('edit-stock-ubicacion').value = item.ubicacion || '';
+			document.getElementById('edit-stock-origen').value = item.origen || '';
+			document.getElementById('edit-stock-observaciones').value = item.observaciones || '';
+    
+			document.getElementById('modal-editar-stock').classList.remove('hidden');
+		}
+
+		async function guardarEdicionStock(e) {
+			e.preventDefault();
+			const id = document.getElementById('edit-stock-id').value;
+			const item = state.stock.find(s => s.id === id);
+			if (!item) return;
+    
+			const oldUbi = item.ubicacion || 'Sin especificar';
+			const oldOrigen = item.origen || '-';
+			const oldObs = item.observaciones || '-';
+    
+			item.ubicacion = document.getElementById('edit-stock-ubicacion').value.trim();
+			item.origen = document.getElementById('edit-stock-origen').value.trim();
+			item.observaciones = document.getElementById('edit-stock-observaciones').value.trim();
+		
+			addAuditLog('EDICION', 'STOCK', id, 
+				`Stock editado: ${item.descripcion} | Ubicación: ${oldUbi} → ${item.ubicacion || 'Sin especificar'} | Origen: ${oldOrigen} → ${item.origen || '-'}`
+			);
+    
+			await saveToCloud();
+			closeModal('editar-stock');
+			renderStock();
+			updateDashboard();
+		}
+
+		async function editarUbicacionRetazo(retazoId) {
+			const retazo = state.retazos.find(r => r.id === retazoId);
+			if (!retazo) return;
+    
+			const nuevaUbicacion = prompt(
+				`Editar ubicación del retazo\n\n` +
+				`ID: ${retazo.id}\n` +
+				`Material: ${retazo.descripcionMaterial}\n` +
+				`Medida: ${retazo.medida} ${retazo.unidad}\n\n` +
+				`Ubicación actual: ${retazo.ubicacion || 'Sin especificar'}\n\n` +
+				`Nueva ubicación:`,
+				retazo.ubicacion || ''
+			);
+    
+			if (nuevaUbicacion !== null) {
+				const oldUbi = retazo.ubicacion || 'Sin especificar';
+				retazo.ubicacion = nuevaUbicacion.trim();
+				addAuditLog('EDICION', 'RETAZO', retazoId, 
+					`Retazo ${retazoId} (${retazo.descripcionMaterial} ${retazo.medida}${retazo.unidad}): Ubicación ${oldUbi} → ${retazo.ubicacion || 'Sin especificar'}`
+				);
+				await saveToCloud();
+				renderStock();
+				updateDashboard();
+			}
+		}
+		
     </script>
 </body>
 </html>
