@@ -457,10 +457,33 @@
 
                 <!-- PLANIFICADOR -->
                 <section id="planificador" class="hidden fade-in space-y-6">
-                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                        <h2 class="text-2xl md:text-3xl font-bold text-gray-800">Planificador</h2>
-                        <button onclick="openTaskModal()" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700">+ Nueva Tarea</button>
-                    </div>
+					<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+						<h2 class="text-2xl md:text-3xl font-bold text-gray-800">Planificador</h2>
+						<button onclick="openTaskModal()" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700">+ Nueva Tarea</button>
+					</div>
+
+					<!-- Buscador de tareas -->
+					<div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+						<div class="flex flex-col md:flex-row gap-3">
+							<div class="flex-1 relative">
+								<svg class="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+								</svg>
+								<input type="text" id="search-tareas" placeholder="Buscar tareas por título, notas..." 
+									class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm"
+									onkeyup="renderPlanner()">
+							</div>
+							<select id="filter-tareas-estado" onchange="renderPlanner()" class="px-4 py-3 border border-gray-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-500">
+								<option value="todas">📋 Todas las tareas</option>
+								<option value="pendiente">⏳ Pendientes</option>
+								<option value="realizada">✅ Realizadas</option>
+							</select>
+							<button onclick="limpiarBusquedaTareas()" class="px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-xl text-sm font-medium transition-colors">
+								Limpiar
+							</button>
+						</div>
+						<div id="tareas-resultado-info" class="mt-3 text-xs text-gray-500 hidden"></div>
+					</div>
 
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                         <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
@@ -3786,43 +3809,58 @@ async function confirmarRecepcion() {
 
         // PLANIFICADOR - CORREGIDO
         function renderPlanner() {
-            const year = state.currentDate.getFullYear();
-            const month = state.currentDate.getMonth();
+			const year = state.currentDate.getFullYear();
+			const month = state.currentDate.getMonth();
+			const search = document.getElementById('search-tareas')?.value.toLowerCase().trim() || '';
+			const filtroEstado = document.getElementById('filter-tareas-estado')?.value || 'todas';
 
-            document.getElementById('calendar-month-year').textContent = 
-                new Date(year, month).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+			document.getElementById('calendar-month-year').textContent = 
+				new Date(year, month).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
 
-            let html = `
-                <div class="bg-gray-100 p-2 text-center text-xs font-semibold">Dom</div>
-                <div class="bg-gray-100 p-2 text-center text-xs font-semibold">Lun</div>
-                <div class="bg-gray-100 p-2 text-center text-xs font-semibold">Mar</div>
-                <div class="bg-gray-100 p-2 text-center text-xs font-semibold">Mié</div>
-                <div class="bg-gray-100 p-2 text-center text-xs font-semibold">Jue</div>
-                <div class="bg-gray-100 p-2 text-center text-xs font-semibold">Vie</div>
-                <div class="bg-gray-100 p-2 text-center text-xs font-semibold">Sáb</div>
-            `;
+			let html = `
+				<div class="bg-gray-100 p-2 text-center text-xs font-semibold">Dom</div>
+				<div class="bg-gray-100 p-2 text-center text-xs font-semibold">Lun</div>
+				<div class="bg-gray-100 p-2 text-center text-xs font-semibold">Mar</div>
+				<div class="bg-gray-100 p-2 text-center text-xs font-semibold">Mié</div>
+				<div class="bg-gray-100 p-2 text-center text-xs font-semibold">Jue</div>
+				<div class="bg-gray-100 p-2 text-center text-xs font-semibold">Vie</div>
+				<div class="bg-gray-100 p-2 text-center text-xs font-semibold">Sáb</div>
+			`;
 
-            const firstDay = new Date(year, month, 1).getDay();
-            for (let i = 0; i < firstDay; i++) {
-                html += '<div class="bg-white p-2 min-h-[60px]"></div>';
-            }
+			const firstDay = new Date(year, month, 1).getDay();
+			for (let i = 0; i < firstDay; i++) {
+				html += '<div class="bg-white p-2 min-h-[60px]"></div>';
+			}
 
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-            const today = new Date().toISOString().split('T')[0];
+			const daysInMonth = new Date(year, month + 1, 0).getDate();
+			const today = new Date().toISOString().split('T')[0];
 
-            for (let day = 1; day <= daysInMonth; day++) {
-                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                const dayTasks = state.tareas.filter(t => t.fecha === dateStr);
+			for (let day = 1; day <= daysInMonth; day++) {
+				const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        
+			// Filtrar tareas del día según búsqueda y estado
+				let dayTasks = state.tareas.filter(t => t.fecha === dateStr);
+        
+				if (search) {
+					dayTasks = dayTasks.filter(t => 
+						t.titulo.toLowerCase().includes(search) || 
+						(t.notas || '').toLowerCase().includes(search)
+					);
+				}
+        
+				if (filtroEstado !== 'todas') {
+					dayTasks = dayTasks.filter(t => t.estado === filtroEstado);
+				}
 
-                let classes = `bg-white p-2 min-h-[60px] border border-gray-100 cursor-pointer ${state.selectedDate === dateStr ? 'ring-2 ring-blue-500' : ''} ${dateStr === today ? 'bg-blue-50' : ''}`;
-                let indicators = dayTasks.length > 0 ? `<div class="flex gap-0.5 mt-1 flex-wrap justify-center">${dayTasks.slice(0, 3).map(t => `<div class="w-1.5 h-1.5 rounded-full ${t.estado === 'realizada' ? 'bg-green-500' : 'bg-orange-500'}"></div>`).join('')}</div>` : '';
+				let classes = `bg-white p-2 min-h-[60px] border border-gray-100 cursor-pointer ${state.selectedDate === dateStr ? 'ring-2 ring-blue-500' : ''} ${dateStr === today ? 'bg-blue-50' : ''}`;
+				let indicators = dayTasks.length > 0 ? `<div class="flex gap-0.5 mt-1 flex-wrap justify-center">${dayTasks.slice(0, 3).map(t => `<div class="w-1.5 h-1.5 rounded-full ${t.estado === 'realizada' ? 'bg-green-500' : 'bg-orange-500'}"></div>`).join('')}</div>` : '';
 
-                html += `<div class="${classes}" onclick="selectDate('${dateStr}')"><div class="font-semibold text-sm ${dateStr === today ? 'text-blue-600' : 'text-gray-700'}">${day}</div>${indicators}</div>`;
-            }
+				html += `<div class="${classes}" onclick="selectDate('${dateStr}')"><div class="font-semibold text-sm ${dateStr === today ? 'text-blue-600' : 'text-gray-700'}">${day}</div>${indicators}</div>`;
+			}
 
-            document.getElementById('calendar-grid').innerHTML = html;
-            showDayTasks(state.selectedDate);
-        }
+			document.getElementById('calendar-grid').innerHTML = html;
+			showDayTasks(state.selectedDate);
+		}
 
         function selectDate(date) {
             state.selectedDate = date;
@@ -3834,34 +3872,81 @@ async function confirmarRecepcion() {
             renderPlanner();
         }
 
-        function showDayTasks(dateStr) {
-            document.getElementById('selected-date-title').textContent = new Date(dateStr).toLocaleDateString('es-ES', { weekday: 'long', month: 'short', day: 'numeric' });
-            const dayTasks = state.tareas.filter(t => t.fecha === dateStr).sort((a, b) => (a.estado === b.estado ? 0 : a.estado === 'pendiente' ? -1 : 1));
+		function showDayTasks(dateStr) {
+			const search = document.getElementById('search-tareas')?.value.toLowerCase().trim() || '';
+			const filtroEstado = document.getElementById('filter-tareas-estado')?.value || 'todas';
+			const infoDiv = document.getElementById('tareas-resultado-info');
+		
+			document.getElementById('selected-date-title').textContent = new Date(dateStr).toLocaleDateString('es-ES', { weekday: 'long', month: 'short', day: 'numeric' });
+    
+			// Filtrar tareas del día
+			let dayTasks = state.tareas.filter(t => t.fecha === dateStr);
+    
+			// Aplicar filtro de búsqueda
+			if (search) {
+				dayTasks = dayTasks.filter(t => 
+					t.titulo.toLowerCase().includes(search) || 
+					(t.notas || '').toLowerCase().includes(search)
+				);
+			}
+    
+			// Aplicar filtro de estado
+			if (filtroEstado !== 'todas') {
+				dayTasks = dayTasks.filter(t => t.estado === filtroEstado);
+			}
+    
+			// Ordenar: pendientes primero
+			dayTasks.sort((a, b) => (a.estado === b.estado ? 0 : a.estado === 'pendiente' ? -1 : 1));
 
-            document.getElementById('day-tasks-list').innerHTML = dayTasks.length === 0 ? 
-                `<div class="text-center py-8 text-gray-400"><button onclick="openTaskModal('${dateStr}')" class="text-blue-600 hover:underline">+ Agregar tarea</button></div>` :
-                dayTasks.map(task => `
-                    <div class="task-card p-4 rounded-xl ${task.estado === 'realizada' ? 'task-done' : 'task-pending'} cursor-pointer group" onclick="editTask(${task.id})">
-                        <div class="flex justify-between items-start">
-                            <div class="flex-1">
-                                <h4 class="font-semibold ${task.estado === 'realizada' ? 'text-green-800 line-through' : 'text-orange-800'}">${task.titulo}</h4>
-                                ${task.notas ? `<p class="text-sm mt-1 opacity-80 line-clamp-2">${task.notas}</p>` : ''}
-                                <p class="text-xs text-gray-500 mt-1">Por: ${task.usuario || 'N/A'}</p>
-                            </div>
-                            <div class="flex items-center gap-2 task-actions">
-                                <button onclick="event.stopPropagation(); toggleTask(${task.id})" class="p-1.5 rounded-full hover:bg-white/50 transition-colors" title="${task.estado === 'realizada' ? 'Marcar pendiente' : 'Marcar realizada'}">
-                                    <svg class="w-5 h-5 ${task.estado === 'realizada' ? 'text-green-600' : 'text-orange-600'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        ${task.estado === 'realizada' ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>' : '<circle cx="12" cy="12" r="10" stroke-width="2"/>'}
-                                    </svg>
-                                </button>
-                                <button onclick="event.stopPropagation(); deleteTaskDirect(${task.id})" class="p-1.5 rounded-full hover:bg-red-100 text-red-500 transition-colors" title="Eliminar">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
-        }
+			// Mostrar info de resultados si hay búsqueda activa
+			if (search || filtroEstado !== 'todas') {
+				infoDiv.classList.remove('hidden');
+				const totalGlobal = state.tareas.filter(t => {
+					let match = true;
+					if (search) match = match && (t.titulo.toLowerCase().includes(search) || (t.notas || '').toLowerCase().includes(search));
+					if (filtroEstado !== 'todas') match = match && t.estado === filtroEstado;
+					return match;
+				}).length;
+				infoDiv.innerHTML = `🔍 Mostrando <strong>${dayTasks.length}</strong> tareas de este día | <strong>${totalGlobal}</strong> coincidencias en total`;
+			} else {
+				infoDiv.classList.add('hidden');
+			}
+
+			document.getElementById('day-tasks-list').innerHTML = dayTasks.length === 0 ? 
+				`<div class="text-center py-8 text-gray-400">
+					<svg class="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+					</svg>
+					<p>No hay tareas${search ? ' que coincidan con la búsqueda' : ''} para este día</p>
+					<button onclick="openTaskModal('${dateStr}')" class="text-blue-600 hover:underline mt-2 text-sm">+ Agregar tarea</button>
+				</div>` :
+				dayTasks.map(task => `
+					<div class="task-card p-4 rounded-xl ${task.estado === 'realizada' ? 'task-done' : 'task-pending'} cursor-pointer group" onclick="editTask(${task.id})">
+						<div class="flex justify-between items-start">
+							<div class="flex-1">
+								<div class="flex items-center gap-2 mb-1">
+									<h4 class="font-semibold ${task.estado === 'realizada' ? 'text-green-800 line-through' : 'text-orange-800'}">${task.titulo}</h4>
+									<span class="text-xs px-2 py-0.5 rounded-full ${task.estado === 'realizada' ? 'bg-green-200 text-green-800' : 'bg-orange-200 text-orange-800'}">
+										${task.estado === 'realizada' ? '✅' : '⏳'} ${task.estado}
+									</span>
+								</div>
+								${task.notas ? `<p class="text-sm mt-1 opacity-80 line-clamp-2 text-gray-600">${task.notas}</p>` : ''}
+								<p class="text-xs text-gray-500 mt-1">Por: ${task.usuario || 'N/A'} | ${new Date(task.fecha).toLocaleDateString('es-ES')}</p>
+							</div>
+							<div class="flex items-center gap-2 task-actions">
+								<button onclick="event.stopPropagation(); toggleTask(${task.id})" class="p-1.5 rounded-full hover:bg-white/50 transition-colors" title="${task.estado === 'realizada' ? 'Marcar pendiente' : 'Marcar realizada'}">
+									<svg class="w-5 h-5 ${task.estado === 'realizada' ? 'text-green-600' : 'text-orange-600'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										${task.estado === 'realizada' ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>' : '<circle cx="12" cy="12" r="10" stroke-width="2"/>'}
+									</svg>
+								</button>
+								<button onclick="event.stopPropagation(); deleteTaskDirect(${task.id})" class="p-1.5 rounded-full hover:bg-red-100 text-red-500 transition-colors" title="Eliminar">
+									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+								</button>
+							</div>
+						</div>
+					</div>
+				`).join('');
+		}
 
         function openTaskModal(date = null, editId = null) {
             document.getElementById('modal-tarea').classList.remove('hidden');
@@ -4164,6 +4249,12 @@ async function confirmarRecepcion() {
 				renderStock();
 				updateDashboard();
 			}
+		}
+		
+		function limpiarBusquedaTareas() {
+			document.getElementById('search-tareas').value = '';
+			document.getElementById('filter-tareas-estado').value = 'todas';
+			renderPlanner();
 		}
 		
     </script>
