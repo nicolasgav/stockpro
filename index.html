@@ -329,10 +329,11 @@
 
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                         <div class="p-4 border-b border-gray-100 flex gap-2 overflow-x-auto">
-                            <button onclick="filterOrders('all')" class="filter-btn active px-4 py-2 rounded-lg text-sm bg-blue-100 text-blue-700 whitespace-nowrap" data-filter="all">Todas</button>
-                            <button onclick="filterOrders('abierto')" class="filter-btn px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 whitespace-nowrap" data-filter="abierto">Abiertas</button>
-                            <button onclick="filterOrders('cerrado')" class="filter-btn px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 whitespace-nowrap" data-filter="cerrado">Cerradas</button>
-                        </div>
+							<button onclick="filterOrders('all')" class="filter-btn active px-4 py-2 rounded-lg text-sm bg-blue-100 text-blue-700 whitespace-nowrap" data-filter="all">Todas</button>
+							<button onclick="filterOrders('abierto')" class="filter-btn px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 whitespace-nowrap" data-filter="abierto">Abiertas</button>
+							<button onclick="filterOrders('parcial')" class="filter-btn px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 whitespace-nowrap" data-filter="parcial">Pendientes</button>
+							<button onclick="filterOrders('cerrado')" class="filter-btn px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 whitespace-nowrap" data-filter="cerrado">Cerradas</button>
+						</div>
                         <div class="overflow-x-auto">
                             <table class="w-full">
                                 <thead class="bg-gray-50">
@@ -3349,8 +3350,13 @@ async function procesarRetiroObra() {
 
         function renderOrdenes() {
             const filtered = state.currentFilter === 'all' 
-                ? state.ordenes 
-                : state.ordenes.filter(o => o.estado === state.currentFilter);
+			? state.ordenes 
+			: state.ordenes.filter(o => {
+				if (state.currentFilter === 'parcial') {
+					return o.estado === 'parcial';
+				}
+				return o.estado === state.currentFilter;
+			});
 
             const sorted = filtered.sort((a, b) => new Date(b.fechaCreacion || b.id) - new Date(a.fechaCreacion || a.id));
 
@@ -3373,7 +3379,8 @@ async function procesarRetiroObra() {
                                 ${o.estado}
                                </span>`
                         }
-                    </td>                    <td class="px-4 py-3 text-sm">
+                    </td>
+                    <td class="px-4 py-3 text-sm">
                         <div class="flex gap-2">
                             <button onclick="verOrden(${o.id})" class="text-blue-600 hover:text-blue-800" title="Ver">👁️</button>
                             <button onclick="editarOrden(${o.id})" class="text-yellow-600 hover:text-yellow-800" title="Editar">✏️</button>
@@ -3389,13 +3396,13 @@ async function procesarRetiroObra() {
         }
 
         function filterOrders(filter) {
-            state.currentFilter = filter;
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                const isActive = btn.dataset.filter === filter;
-                btn.className = `filter-btn px-4 py-2 rounded-lg text-sm ${isActive ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'} whitespace-nowrap`;
-            });
-            renderOrdenes();
-        }
+			state.currentFilter = filter;
+			document.querySelectorAll('.filter-btn').forEach(btn => {
+				const isActive = btn.dataset.filter === filter;
+				btn.className = `filter-btn px-4 py-2 rounded-lg text-sm ${isActive ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-gray-600 hover:bg-gray-100'} whitespace-nowrap`;
+			});
+			renderOrdenes();
+		}
 
         function verOrden(id) {
     const orden = state.ordenes.find(o => o.id === id);
@@ -4011,6 +4018,7 @@ async function confirmarRecepcion() {
         // DASHBOARD
         function updateDashboard() {
             const abiertas = state.ordenes.filter(o => o.estado === 'abierto').length;
+			const pendientes = state.ordenes.filter(o => o.estado === 'parcial').length;
             const critico = state.catalogo.filter(c => {
                 if (c.activo === false) return false;
                 if (c.tipoControl === 'retazos') {
@@ -4033,7 +4041,7 @@ async function confirmarRecepcion() {
 
             document.getElementById('summary-stock').textContent = state.stock.length + state.retazos.filter(r => r.estado === 'disponible').length;
             document.getElementById('summary-catalogo').textContent = state.catalogo.length;
-            document.getElementById('summary-ordenes').textContent = abiertas;
+            document.getElementById('summary-ordenes').textContent = abiertas + pendientes;
             document.getElementById('summary-tareas').textContent = state.tareas.filter(t => t.fecha === today).length;
 
             const setBadge = (id, count) => {
