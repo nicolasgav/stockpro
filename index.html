@@ -219,7 +219,18 @@
                         <svg class="w-5 h-5" id="sync-idle" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                         Sincronizar
                     </button>
-                    <button onclick="changeUser()" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-gray-600 hover:bg-gray-50">
+                    
+					<button onclick="backupData()" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-gray-700 hover:text-blue-600 hover:bg-blue-50">
+						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+						💾 Backup JSON
+					</button>
+
+					<button onclick="restaurarBackup()" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-gray-700 hover:text-green-600 hover:bg-green-50">
+						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+						🔄 Restaurar Backup
+					</button>
+					
+					<button onclick="changeUser()" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-gray-600 hover:bg-gray-50">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
                         Cambiar Usuario
                     </button>
@@ -1286,16 +1297,14 @@
             setTimeout(() => filterOrders('abierto'), 100);
         }
 
-        async function forceSync() {
-            await saveToCloud();
-        }
-
+        
         // CATÁLOGO
         function renderCatalogo() {
             const search = document.getElementById('search-catalogo')?.value.toLowerCase() || '';
             const filtered = state.catalogo.filter(c => 
                 c.codigo.toLowerCase().includes(search) || 
-                c.descripcion.toLowerCase().includes(search)
+                c.descripcion.toLowerCase().includes(search) ||
+				(c.detalles || '').toLowerCase().includes(search)
             ).sort((a, b) => a.codigo.localeCompare(b.codigo));
 
             const tbody = document.getElementById('catalogo-table');
@@ -2369,7 +2378,7 @@ async function procesarRetiroObra() {
         if (retazo) {
             retazo.estado = 'usado';
             retazo.fechaRetiro = new Date().toISOString();
-            retazo.usuarioRetiro = CONFIG.currentUser;
+            retazo.usuarioRetiro = CONFIG.currentUserName;
             retazo.destinoObra = orden.destino;
             
             materialesRetiro.push({
@@ -2702,7 +2711,7 @@ async function procesarRetiroObra() {
                 if (retazo) {
                     retazo.estado = 'usado';
                     retazo.fechaRetiro = new Date().toISOString();
-                    retazo.usuarioRetiro = CONFIG.currentUser;
+                    retazo.usuarioRetiro = CONFIG.currentUserName;
                     retazo.destinoObra = destino;
                     materiales.push({
                         descripcion: material.descripcion,
@@ -2800,12 +2809,14 @@ async function procesarRetiroObra() {
 
         // ÓRDENES
         function openOrdenModal() {
-            document.getElementById('modal-orden').classList.remove('hidden');
-            document.getElementById('orden-fecha').valueAsDate = new Date();
-            document.getElementById('orden-destino').value = '';
-            document.getElementById('materiales-container').innerHTML = '';
-            addMaterialRow();
-        }
+			document.getElementById('modal-orden').classList.remove('hidden');
+			document.getElementById('orden-fecha').valueAsDate = new Date();
+			document.getElementById('orden-destino').value = '';
+			document.getElementById('orden-proveedor').value = '';
+			document.getElementById('orden-presupuesto').value = '';
+			document.getElementById('materiales-container').innerHTML = '';
+			addMaterialRow();
+		}
 
 	    function createAutocompleteInput(container, initialData = null, isNewMaterial = false) {
     const div = document.createElement('div');
@@ -2842,9 +2853,7 @@ async function procesarRetiroObra() {
     const unitSelect = div.querySelector('.material-unit');
     const codigoInput = div.querySelector('.material-codigo');
     const esNuevoInput = div.querySelector('.material-es-nuevo');
-    const detallesInput = div.querySelector('.material-detalles');
-    const detallesDisplay = div.querySelector('.material-detalles-display');
-
+    
     input.addEventListener('input', (e) => {
         const value = e.target.value.toLowerCase();
         if (value.length < 1) {
@@ -2950,7 +2959,7 @@ async function procesarRetiroObra() {
     const indicador = document.createElement('div');
     indicador.className = 'text-xs text-yellow-700 mt-1 flex items-center gap-1';
     indicador.innerHTML = `<span class="font-bold">[NUEVO]</span> Código: ${codigo}`;
-    row.querySelector('.flex-1').appendChild(indicador);
+    input.parentElement.appendChild(indicador);
 }
 
         function addMaterialRow() {
@@ -2962,93 +2971,93 @@ async function procesarRetiroObra() {
         }
 
 		async function saveOrden() {
-    const fecha = document.getElementById('orden-fecha').value;
-    const destino = document.getElementById('orden-destino').value;
+			const fecha = document.getElementById('orden-fecha').value;
+			const destino = document.getElementById('orden-destino').value;
 
-    if (!fecha || !destino) return alert('Complete fecha y destino');
+			if (!fecha || !destino) return alert('Complete fecha y destino');
 
-    const materiales = [];
-    const nuevosMateriales = [];
+			const materiales = [];
+			const nuevosMateriales = [];
     
-    // Primero procesar todos los materiales de la orden
-	    document.querySelectorAll('#materiales-container .material-row').forEach(row => {
-        const input = row.querySelector('.material-autocomplete');
-        const codigo = row.querySelector('.material-codigo').value;
-        const desc = input.value.trim();
-        const cant = row.querySelector('.material-cant').value;
-        const unit = row.querySelector('.material-unit').value;
-        const esNuevo = row.querySelector('.material-es-nuevo').value === "true";
-        const detalles = row.querySelector('.material-detalles-input').value.trim();
+			// Primero procesar todos los materiales de la orden
+			document.querySelectorAll('#materiales-container .material-row').forEach(row => {
+				const input = row.querySelector('.material-autocomplete');
+				const codigo = row.querySelector('.material-codigo').value;
+				const desc = input.value.trim();
+				const cant = row.querySelector('.material-cant').value;
+				const unit = row.querySelector('.material-unit').value;
+				const esNuevo = row.querySelector('.material-es-nuevo').value === "true";
+				const detalles = row.querySelector('.material-detalles-input').value.trim();
 
-        if (desc && cant) {
-            materiales.push({ 
-                codigo: codigo || 'SIN-COD', 
-                descripcion: desc, 
-                cantidad: parseFloat(cant), 
-                unidad: unit,
-                detalles: detalles
-            });
+				if (desc && cant) {
+					materiales.push({ 
+						codigo: codigo || 'SIN-COD', 
+						descripcion: desc, 
+						cantidad: parseFloat(cant), 
+						unidad: unit,
+						detalles: detalles
+					});
             
-            // Si es nuevo material, prepararlo para agregar al catálogo
-            if (esNuevo) {
-                nuevosMateriales.push({
-                    codigo: codigo || 'MAT' + Date.now(),
-                    descripcion: desc,
-                    unidad: unit,
-                    tipoControl: 'normal', // Por defecto normal
-                    stockMinimo: 3,
-                    activo: true,
-                    fechaCreacion: new Date().toISOString()
-                });
-            }
-        }
-    });
+				// Si es nuevo material, prepararlo para agregar al catálogo
+					if (esNuevo) {
+						nuevosMateriales.push({
+							codigo: codigo || 'MAT' + Date.now(),
+							descripcion: desc,
+							unidad: unit,
+							tipoControl: 'normal', // Por defecto normal
+							stockMinimo: 3,
+							activo: true,
+							fechaCreacion: new Date().toISOString()
+						});
+					}
+				}
+			});
 
-    if (materiales.length === 0) return alert('Agregue al menos un material');
+			if (materiales.length === 0) return alert('Agregue al menos un material');
 
-    // Crear los nuevos materiales en el catálogo primero
-    if (nuevosMateriales.length > 0) {
-        for (const mat of nuevosMateriales) {
-            // Verificar que no exista ya
-            const existe = state.catalogo.find(c => 
-                c.codigo === mat.codigo || 
-                c.descripcion.toLowerCase() === mat.descripcion.toLowerCase()
-            );
+			// Crear los nuevos materiales en el catálogo primero
+			if (nuevosMateriales.length > 0) {
+				for (const mat of nuevosMateriales) {
+					// Verificar que no exista ya
+					const existe = state.catalogo.find(c => 
+						c.codigo === mat.codigo || 
+						c.descripcion.toLowerCase() === mat.descripcion.toLowerCase()
+					);
             
-            if (!existe) {
-                mat.id = Date.now().toString() + Math.random().toString(36).substr(2, 5);
-                state.catalogo.push(mat);
-                addAuditLog('CREACION', 'CATALOGO', mat.id, `Material creado desde orden: ${mat.codigo} - ${mat.descripcion}`);
-            }
-        }
-    }
+					if (!existe) {
+						mat.id = Date.now().toString() + Math.random().toString(36).substr(2, 5);
+						state.catalogo.push(mat);
+						addAuditLog('CREACION', 'CATALOGO', mat.id, `Material creado desde orden: ${mat.codigo} - ${mat.descripcion}`);
+					}
+				}
+			}
 
-    const orden = {
-        id: Date.now(),
-        fecha,
-        destino,
-        proveedor: document.getElementById('orden-proveedor').value.trim(),
-        presupuesto: document.getElementById('orden-presupuesto').value.trim(),
-        estado: 'abierto',
-        materiales,
-        creadoPor: CONFIG.currentUser,
-        fechaCreacion: new Date().toISOString()
-    };
+			const orden = {
+				id: Date.now(),
+				fecha,
+				destino,
+				proveedor: document.getElementById('orden-proveedor').value.trim(),
+				presupuesto: document.getElementById('orden-presupuesto').value.trim(),
+				estado: 'abierto',
+				materiales,
+				creadoPor: CONFIG.currentUserName,
+				fechaCreacion: new Date().toISOString()
+			};
 
-    state.ordenes.push(orden);
-    addAuditLog('CREACION', 'ORDEN', orden.id, `Orden creada para ${destino} por ${CONFIG.currentUser}`);
+			state.ordenes.push(orden);
+			addAuditLog('CREACION', 'ORDEN', orden.id, `Orden creada para ${destino} por ${CONFIG.currentUserName}`);
     
-    // Si creamos materiales nuevos, sincronizar todo incluyendo el catálogo
-    await saveToCloud();
-    closeModal('orden');
-    renderOrdenes();
-    updateDashboard();
-    
-    // Mensaje confirmación si hubo materiales nuevos
-    if (nuevosMateriales.length > 0) {
-        alert(`✅ Orden guardada\n📦 ${nuevosMateriales.length} material(es) nuevo(s) agregado(s) al catálogo`);
-    }
-}
+			// Si creamos materiales nuevos, sincronizar todo incluyendo el catálogo
+			await saveToCloud();
+			closeModal('orden');
+			renderOrdenes();
+			updateDashboard();
+		
+			// Mensaje confirmación si hubo materiales nuevos
+			if (nuevosMateriales.length > 0) {
+				alert(`✅ Orden guardada\n📦 ${nuevosMateriales.length} material(es) nuevo(s) agregado(s) al catálogo`);
+			}
+		}
 
         function editarOrden(id) {
             const orden = state.ordenes.find(o => o.id === id);
@@ -3171,10 +3180,10 @@ async function procesarRetiroObra() {
 			orden.proveedor = document.getElementById('edit-orden-proveedor').value.trim();
             orden.presupuesto = document.getElementById('edit-orden-presupuesto').value.trim();
             orden.materiales = materiales;
-            orden.modificadoPor = CONFIG.currentUser;
+            orden.modificadoPor = CONFIG.currentUserName;
             orden.fechaModificacion = new Date().toISOString();
 
-            addAuditLog('EDICION', 'ORDEN', id, `Orden editada por ${CONFIG.currentUser}`);
+            addAuditLog('EDICION', 'ORDEN', id, `Orden editada por ${CONFIG.currentUserName}`);
             await saveToCloud();
             closeModal('editar-orden');
             renderOrdenes();
@@ -3287,7 +3296,7 @@ async function procesarRetiroObra() {
                         cantidad: m.cantidad,
                         unidad: m.unidad,
                         stockMinimo: material ? material.stockMinimo : 3,
-                        usuarioIngreso: CONFIG.currentUser,
+                        usuarioIngreso: CONFIG.currentUserName,
                         fechaIngreso: new Date().toISOString(),
                         origen: `Orden #${orden.id} - ${orden.destino}`
                     });
@@ -3314,7 +3323,7 @@ async function procesarRetiroObra() {
                         unidad: unidad,
                         estado: 'disponible',
                         ubicacion: 'Ingreso por orden',
-                        usuarioIngreso: CONFIG.currentUser,
+                        usuarioIngreso: CONFIG.currentUserName,
                         fechaIngreso: new Date().toISOString(),
                         origen: `Orden #${orden.id} - ${orden.destino}`,
                         observaciones: obs || 'Ingresado desde orden cerrada'
@@ -3326,9 +3335,9 @@ async function procesarRetiroObra() {
 
             orden.estado = 'cerrado';
             orden.fechaCierre = new Date().toISOString();
-            orden.cerradoPor = CONFIG.currentUser;
+            orden.cerradoPor = CONFIG.currentUserName;
             
-            addAuditLog('CIERRE', 'ORDEN', ordenId, `Orden #${ordenId} cerrada por ${CONFIG.currentUser}. ${materialesNormales.length} materiales normales, ${totalRetazos} retazos.`);
+            addAuditLog('CIERRE', 'ORDEN', ordenId, `Orden #${ordenId} cerrada por ${CONFIG.currentUserName}. ${materialesNormales.length} materiales normales, ${totalRetazos} retazos.`);
             
             await saveToCloud();
             closeModal('config-retazos');
@@ -3365,7 +3374,7 @@ async function procesarRetiroObra() {
                         cantidad: m.cantidad,
                         unidad: m.unidad,
                         stockMinimo: material ? material.stockMinimo : 3,
-                        usuarioIngreso: CONFIG.currentUser,
+                        usuarioIngreso: CONFIG.currentUserName,
                         fechaIngreso: new Date().toISOString(),
                         origen: `Orden #${orden.id} - ${orden.destino}`
                     });
@@ -3374,9 +3383,9 @@ async function procesarRetiroObra() {
 
             orden.estado = 'cerrado';
             orden.fechaCierre = new Date().toISOString();
-            orden.cerradoPor = CONFIG.currentUser;
+            orden.cerradoPor = CONFIG.currentUserName;
             
-            addAuditLog('CIERRE', 'ORDEN', ordenId, `Orden #${ordenId} cerrada por ${CONFIG.currentUser}`);
+            addAuditLog('CIERRE', 'ORDEN', ordenId, `Orden #${ordenId} cerrada por ${CONFIG.currentUserName}`);
             
             await saveToCloud();
             closeModal('editar-orden');
@@ -3401,14 +3410,15 @@ async function procesarRetiroObra() {
         function renderOrdenes() {
 			const search = document.getElementById('search-ordenes')?.value.toLowerCase().trim() || '';
 			const infoDiv = document.getElementById('ordenes-resultado-info');
-            const filtered = state.currentFilter === 'all' 
-			? state.ordenes 
-			: state.ordenes.filter(o => {
-				if (state.currentFilter === 'parcial') {
-					return o.estado === 'parcial';
-				}
-				return o.estado === state.currentFilter;
-			});
+    
+			let filtered = state.currentFilter === 'all'   // ← let en vez de const
+				? state.ordenes 
+				: state.ordenes.filter(o => {
+					if (state.currentFilter === 'parcial') {
+						return o.estado === 'parcial';
+					}
+					return o.estado === state.currentFilter;
+				});
 			
 			    // Aplicar búsqueda por texto si hay término
 			if (search) {
@@ -3555,93 +3565,94 @@ async function procesarRetiroObra() {
 
     document.getElementById('modal-ver-orden').classList.remove('hidden');
 }
-async function cerrarOrden(id) {
-    const orden = state.ordenes.find(o => o.id === id);
-    if (!orden || orden.estado === 'cerrado') return;
+		async function cerrarOrden(id) {
+			retazosRecepcionTemp = {}; // Limpiar retazos de recepciones anteriores
+			const orden = state.ordenes.find(o => o.id === id);
+			if (!orden || orden.estado === 'cerrado') return;
 
-    // Abrir modal de recepción en lugar de confirm simple
-    document.getElementById('recepcion-orden-id').value = id;
-    document.getElementById('recepcion-completa').checked = false;
-    document.getElementById('recepcion-observaciones').value = '';
+			// Abrir modal de recepción en lugar de confirm simple
+			document.getElementById('recepcion-orden-id').value = id;
+			document.getElementById('recepcion-completa').checked = false;
+			document.getElementById('recepcion-observaciones').value = '';
     
-    const container = document.getElementById('recepcion-materiales-list');
-    container.innerHTML = '';
+			const container = document.getElementById('recepcion-materiales-list');
+			container.innerHTML = '';
 
-    // Generar filas para cada material
-    orden.materiales.forEach((m, idx) => {
-        const material = state.catalogo.find(c => 
-            (m.codigo && c.codigo === m.codigo) || 
-            c.descripcion.toLowerCase().trim() === m.descripcion.toLowerCase().trim()
-        );
+			// Generar filas para cada material
+			orden.materiales.forEach((m, idx) => {
+				const material = state.catalogo.find(c => 
+					(m.codigo && c.codigo === m.codigo) || 
+					c.descripcion.toLowerCase().trim() === m.descripcion.toLowerCase().trim()
+				);
         
-        const esRetazo = material && material.tipoControl === 'retazos';
+				const esRetazo = material && material.tipoControl === 'retazos';
         
-        const div = document.createElement('div');
-        div.className = 'border rounded-xl p-4 bg-gray-50';
-        div.innerHTML = `
-            <div class="flex items-start gap-3">
-                <input type="checkbox" id="recv-check-${idx}" checked 
-                       class="w-5 h-5 text-blue-600 rounded mt-1" 
-                       onchange="toggleRecepcionItem(${idx})">
-                <div class="flex-1">
-                    <div class="flex justify-between items-start mb-2">
-                        <div>
-                            <label for="recv-check-${idx}" class="font-medium text-gray-900 cursor-pointer">${m.descripcion}</label>
-                            ${m.codigo ? `<span class="text-xs text-blue-600 ml-2">(${m.codigo})</span>` : ''}
-                            ${m.detalles ? `<span class="text-xs text-blue-700 bg-blue-50 px-2 py-0.5 rounded ml-1">📋 ${m.detalles}</span>` : ''}
-                            <span class="text-xs ${esRetazo ? 'text-purple-600' : 'text-gray-500'} ml-2">
-                                ${esRetazo ? '📏 Por retazos' : '∑ Normal'}
-                            </span>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-sm text-gray-500">Solicitado: <span class="font-bold">${m.cantidad} ${m.unidad}</span></p>
-                        </div>
-                    </div>
+				const div = document.createElement('div');
+				div.className = 'border rounded-xl p-4 bg-gray-50';
+				div.innerHTML = `
+					<div class="flex items-start gap-3">
+						<input type="checkbox" id="recv-check-${idx}" checked 
+							class="w-5 h-5 text-blue-600 rounded mt-1" 
+							onchange="toggleRecepcionItem(${idx})">
+						<div class="flex-1">
+							<div class="flex justify-between items-start mb-2">
+								<div>
+									<label for="recv-check-${idx}" class="font-medium text-gray-900 cursor-pointer">${m.descripcion}</label>
+									${m.codigo ? `<span class="text-xs text-blue-600 ml-2">(${m.codigo})</span>` : ''}
+									${m.detalles ? `<span class="text-xs text-blue-700 bg-blue-50 px-2 py-0.5 rounded ml-1">📋 ${m.detalles}</span>` : ''}
+									<span class="text-xs ${esRetazo ? 'text-purple-600' : 'text-gray-500'} ml-2">
+										${esRetazo ? '📏 Por retazos' : '∑ Normal'}
+									</span>
+								</div>
+								<div class="text-right">
+									<p class="text-sm text-gray-500">Solicitado: <span class="font-bold">${m.cantidad} ${m.unidad}</span></p>
+								</div>
+							</div>
                     
-                    <div class="grid grid-cols-2 gap-3 mt-2">
-                        <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Recibido (cantidad)</label>
-                            <input type="number" id="recv-cant-${idx}" 
-                                   value="${m.cantidad}" min="0" max="${m.cantidad * 2}" step="${esRetazo ? '0.01' : '1'}"
-                                   class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                                   onchange="validarCantidadRecepcion(${idx}, ${m.cantidad})">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Pendiente</label>
-                            <input type="text" id="recv-pendiente-${idx}" readonly 
-                                   value="0 ${m.unidad}"
-                                   class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-100 text-gray-600">
-                        </div>
-                    </div>
+							<div class="grid grid-cols-2 gap-3 mt-2">
+								<div>
+									<label class="block text-xs font-medium text-gray-600 mb-1">Recibido (cantidad)</label>
+									<input type="number" id="recv-cant-${idx}" 
+										value="${m.cantidad}" min="0" max="${m.cantidad * 2}" step="${esRetazo ? '0.01' : '1'}"
+										class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+										onchange="validarCantidadRecepcion(${idx}, ${m.cantidad})">
+								</div>
+								<div>
+									<label class="block text-xs font-medium text-gray-600 mb-1">Pendiente</label>
+									<input type="text" id="recv-pendiente-${idx}" readonly 
+										value="0 ${m.unidad}"
+										class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-100 text-gray-600">
+								</div>
+							</div>
                     
-                    ${esRetazo ? `
-                    <div class="mt-2 p-2 bg-purple-50 rounded-lg">
-                        <p class="text-xs text-purple-700 mb-1">Configurar retazos recibidos (opcional):</p>
-                        <button type="button" onclick="configurarRetazosRecepcion(${idx}, '${material.id}', ${m.cantidad})" 
-                                class="text-xs bg-purple-100 text-purple-700 px-3 py-1 rounded hover:bg-purple-200">
-                            Configurar medidas de retazos
-                        </button>
-                        <div id="retazos-recepcion-${idx}" class="mt-2 hidden">
-                            <div class="space-y-1" id="retazos-list-${idx}"></div>
-                            <button type="button" onclick="agregarRetazoRecepcion(${idx})" class="text-xs text-purple-600 mt-1">+ Agregar retazo</button>
-                        </div>
-                    </div>
-                    ` : ''}
-                </div>
-            </div>
-            <input type="hidden" id="recv-material-id-${idx}" value="${material ? material.id : ''}">
-            <input type="hidden" id="recv-codigo-${idx}" value="${m.codigo || ''}">
-            <input type="hidden" id="recv-desc-${idx}" value="${m.descripcion}">
-            <input type="hidden" id="recv-unidad-${idx}" value="${m.unidad}">
-            <input type="hidden" id="recv-solicitado-${idx}" value="${m.cantidad}">
-        `;
-        container.appendChild(div);
-    });
+							${esRetazo ? `
+							<div class="mt-2 p-2 bg-purple-50 rounded-lg">
+								<p class="text-xs text-purple-700 mb-1">Configurar retazos recibidos (opcional):</p>
+								<button type="button" onclick="configurarRetazosRecepcion(${idx}, '${material.id}', ${m.cantidad})" 
+									class="text-xs bg-purple-100 text-purple-700 px-3 py-1 rounded hover:bg-purple-200">
+									Configurar medidas de retazos
+								</button>
+								<div id="retazos-recepcion-${idx}" class="mt-2 hidden">
+									<div class="space-y-1" id="retazos-list-${idx}"></div>
+									<button type="button" onclick="agregarRetazoRecepcion(${idx})" class="text-xs text-purple-600 mt-1">+ Agregar retazo</button>
+								</div>
+							</div>
+							` : ''}
+						</div>
+					</div>
+					<input type="hidden" id="recv-material-id-${idx}" value="${material ? material.id : ''}">
+					<input type="hidden" id="recv-codigo-${idx}" value="${m.codigo || ''}">
+					<input type="hidden" id="recv-desc-${idx}" value="${m.descripcion}">
+					<input type="hidden" id="recv-unidad-${idx}" value="${m.unidad}">
+					<input type="hidden" id="recv-solicitado-${idx}" value="${m.cantidad}">
+				`;
+				container.appendChild(div);
+			});
 
-    document.getElementById('modal-recepcion').classList.remove('hidden');
-}
+			document.getElementById('modal-recepcion').classList.remove('hidden');
+		}
 
-// Funciones auxiliares para recepción
+		// Funciones auxiliares para recepción
 function toggleRecepcionItem(idx) {
     const check = document.getElementById(`recv-check-${idx}`);
     const cantInput = document.getElementById(`recv-cant-${idx}`);
@@ -3704,162 +3715,163 @@ function renderRetazosRecepcion(idx) {
     `).join('');
 }
 
-function agregarRetazoRecepcion(idx) {
-    retazosRecepcionTemp[idx].push({ medida: 0, obs: '' });
-    renderRetazosRecepcion(idx);
-}
-async function confirmarRecepcion() {
-    const ordenId = parseInt(document.getElementById('recepcion-orden-id').value);
-    const orden = state.ordenes.find(o => o.id === ordenId);
-    const esCompleta = document.getElementById('recepcion-completa').checked;
-    const observaciones = document.getElementById('recepcion-observaciones').value;
+		function agregarRetazoRecepcion(idx) {
+			retazosRecepcionTemp[idx].push({ medida: 0, obs: '' });
+			renderRetazosRecepcion(idx);
+		}
+		
+		async function confirmarRecepcion() {
+			const ordenId = parseInt(document.getElementById('recepcion-orden-id').value);
+			const orden = state.ordenes.find(o => o.id === ordenId);
+			const esCompleta = document.getElementById('recepcion-completa').checked;
+			const observaciones = document.getElementById('recepcion-observaciones').value;
     
-    const materialesRecibidos = [];
-    const materialesPendientes = [];
-    let tieneRetazos = false;
+			const materialesRecibidos = [];
+			const materialesPendientes = [];
+			let tieneRetazos = false;
     
-    // Procesar cada material
-    const container = document.getElementById('recepcion-materiales-list');
-    const filas = container.children;
+			// Procesar cada material
+			const container = document.getElementById('recepcion-materiales-list');
+			const filas = container.children;
     
-    for (let idx = 0; idx < filas.length; idx++) {
-        const check = document.getElementById(`recv-check-${idx}`);
-        const materialId = document.getElementById(`recv-material-id-${idx}`).value;
-        const codigo = document.getElementById(`recv-codigo-${idx}`).value;
-        const descripcion = document.getElementById(`recv-desc-${idx}`).value;
-        const unidad = document.getElementById(`recv-unidad-${idx}`).value;
-        const solicitado = parseFloat(document.getElementById(`recv-solicitado-${idx}`).value);
-        const recibido = parseFloat(document.getElementById(`recv-cant-${idx}`).value) || 0;
+			for (let idx = 0; idx < filas.length; idx++) {
+				const check = document.getElementById(`recv-check-${idx}`);
+				const materialId = document.getElementById(`recv-material-id-${idx}`).value;
+				const codigo = document.getElementById(`recv-codigo-${idx}`).value;
+				const descripcion = document.getElementById(`recv-desc-${idx}`).value;
+				const unidad = document.getElementById(`recv-unidad-${idx}`).value;
+				const solicitado = parseFloat(document.getElementById(`recv-solicitado-${idx}`).value);
+				const recibido = parseFloat(document.getElementById(`recv-cant-${idx}`).value) || 0;
         
-        if (!check.checked || recibido <= 0) {
-            // No se recibió nada, todo pendiente
-            materialesPendientes.push({
-                codigo, descripcion, cantidad: solicitado, unidad,
-                cantidadPendiente: solicitado
-            });
-            continue;
-        }
+				if (!check.checked || recibido <= 0) {
+					// No se recibió nada, todo pendiente
+					materialesPendientes.push({
+						codigo, descripcion, cantidad: solicitado, unidad,
+						cantidadPendiente: solicitado
+					});
+					continue;
+				}
         
-        const material = state.catalogo.find(c => c.id === materialId);
+				const material = state.catalogo.find(c => c.id === materialId);
         
-        if (material && material.tipoControl === 'retazos') {
-            tieneRetazos = true;
-            // Procesar retazos configurados o crear uno genérico
-            const retazosConfig = retazosRecepcionTemp[idx] || [{ medida: recibido, obs: '' }];
-            const totalRetazos = retazosConfig.reduce((sum, r) => sum + (r.medida || 0), 0);
+				if (material && material.tipoControl === 'retazos') {
+					tieneRetazos = true;
+					// Procesar retazos configurados o crear uno genérico
+					const retazosConfig = retazosRecepcionTemp[idx] || [{ medida: recibido, obs: '' }];
+					const totalRetazos = retazosConfig.reduce((sum, r) => sum + (r.medida || 0), 0);
             
-            // Validar que la suma de retazos coincida aproximadamente con lo recibido
-            if (Math.abs(totalRetazos - recibido) > 0.1) {
-                if (!confirm(`La suma de retazos (${totalRetazos}m) no coincide con la cantidad recibida (${recibido}m). ¿Continuar de todas formas?`)) {
-                    return;
-                }
-            }
+					// Validar que la suma de retazos coincida aproximadamente con lo recibido
+					if (Math.abs(totalRetazos - recibido) > 0.1) {
+						if (!confirm(`La suma de retazos (${totalRetazos}m) no coincide con la cantidad recibida (${recibido}m). ¿Continuar de todas formas?`)) {
+							return;
+						}
+					}
+				
+					// Crear retazos
+					retazosConfig.forEach(r => {
+						if (r.medida > 0) {
+							const retazo = {
+								id: 'RET-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 5).toUpperCase(),
+								materialId: material.id,
+								codigoMaterial: material.codigo,
+								descripcionMaterial: material.descripcion,
+								medida: r.medida,
+								unidad: unidad,
+								estado: 'disponible',
+								ubicacion: 'Recepción orden parcial',
+								usuarioIngreso: CONFIG.currentUserName,
+								fechaIngreso: new Date().toISOString(),
+								origen: `Orden #${orden.id} - ${orden.destino} (Recepción)`,
+								observaciones: r.obs || observaciones || 'Ingresado desde recepción parcial'
+							};
+							state.retazos.push(retazo);
+						}
+					});
             
-            // Crear retazos
-            retazosConfig.forEach(r => {
-                if (r.medida > 0) {
-                    const retazo = {
-                        id: 'RET-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 5).toUpperCase(),
-                        materialId: material.id,
-                        codigoMaterial: material.codigo,
-                        descripcionMaterial: material.descripcion,
-                        medida: r.medida,
-                        unidad: unidad,
-                        estado: 'disponible',
-                        ubicacion: 'Recepción orden parcial',
-                        usuarioIngreso: CONFIG.currentUser,
-                        fechaIngreso: new Date().toISOString(),
-                        origen: `Orden #${orden.id} - ${orden.destino} (Recepción)`,
-                        observaciones: r.obs || observaciones || 'Ingresado desde recepción parcial'
-                    };
-                    state.retazos.push(retazo);
-                }
-            });
+					materialesRecibidos.push({
+						codigo, descripcion, cantidad: recibido, unidad, tipo: 'retazos',
+						retazos: retazosConfig.length
+					});
             
-            materialesRecibidos.push({
-                codigo, descripcion, cantidad: recibido, unidad, tipo: 'retazos',
-                retazos: retazosConfig.length
-            });
+				} else {
+					// Stock normal - buscar por descripcion + detalle
+					const detalleMaterial = orden.materiales[idx]?.detalles || '';
+					const existente = state.stock.find(s => 
+						s.descripcion.toLowerCase().trim() === descripcion.toLowerCase().trim() && 
+						(s.detalles || '').toLowerCase().trim() === detalleMaterial.toLowerCase().trim() &&
+						s.unidad === unidad
+					);
+					if (existente) {
+						existente.cantidad += recibido;
+						existente.ultimoIngreso = new Date().toISOString();
+					} else {
+						state.stock.push({
+							id: Date.now().toString() + Math.random(),
+							materialId: materialId || null,
+							codigo: codigo || 'SIN-COD',
+							descripcion: descripcion,
+							detalles: detalleMaterial,
+							cantidad: recibido,
+							unidad: unidad,
+							stockMinimo: material ? material.stockMinimo : 3,
+							usuarioIngreso: CONFIG.currentUserName,
+							fechaIngreso: new Date().toISOString(),
+							origen: `Orden #${orden.id} - ${orden.destino}`
+						});
+					}
             
-        } else {
-            // Stock normal - buscar por descripcion + detalle
-            const detalleMaterial = orden.materiales[idx]?.detalles || '';
-            const existente = state.stock.find(s => 
-                s.descripcion.toLowerCase().trim() === descripcion.toLowerCase().trim() && 
-                (s.detalles || '').toLowerCase().trim() === detalleMaterial.toLowerCase().trim() &&
-                s.unidad === unidad
-            );
-            if (existente) {
-                existente.cantidad += recibido;
-                existente.ultimoIngreso = new Date().toISOString();
-            } else {
-                state.stock.push({
-                    id: Date.now().toString() + Math.random(),
-                    materialId: materialId || null,
-                    codigo: codigo || 'SIN-COD',
-                    descripcion: descripcion,
-                    detalles: detalleMaterial,
-                    cantidad: recibido,
-                    unidad: unidad,
-                    stockMinimo: material ? material.stockMinimo : 3,
-                    usuarioIngreso: CONFIG.currentUser,
-                    fechaIngreso: new Date().toISOString(),
-                    origen: `Orden #${orden.id} - ${orden.destino}`
-                });
-            }
-            
-            materialesRecibidos.push({
-                codigo, descripcion, cantidad: recibido, unidad, tipo: 'normal'
-            });
-        }
+					materialesRecibidos.push({
+						codigo, descripcion, cantidad: recibido, unidad, tipo: 'normal'
+					});
+				}
         
-        // Calcular si queda pendiente
-        if (recibido < solicitado && !esCompleta) {
-            materialesPendientes.push({
-                codigo, descripcion, cantidad: solicitado - recibido, unidad,
-                cantidadPendiente: solicitado - recibido,
-                cantidadRecibida: recibido
-            });
-        }
-    }
+				// Calcular si queda pendiente
+				if (recibido < solicitado && !esCompleta) {
+					materialesPendientes.push({
+						codigo, descripcion, cantidad: solicitado - recibido, unidad,
+						cantidadPendiente: solicitado - recibido,
+						cantidadRecibida: recibido
+					});
+				}
+			}
     
-    if (materialesRecibidos.length === 0) {
-        return alert('Debes recibir al menos un material');
-    }
+			if (materialesRecibidos.length === 0) {
+				return alert('Debes recibir al menos un material');
+			}
     
-    // Registrar la recepción en el historial de la orden
-    if (!orden.recepciones) orden.recepciones = [];
-    orden.recepciones.push({
-        fecha: new Date().toISOString(),
-        usuario: CONFIG.currentUserName,
-        materiales: materialesRecibidos,
-        observaciones: observaciones,
-        esParcial: !esCompleta
-    });
+			// Registrar la recepción en el historial de la orden
+			if (!orden.recepciones) orden.recepciones = [];
+			orden.recepciones.push({
+				fecha: new Date().toISOString(),
+				usuario: CONFIG.currentUserName,
+				materiales: materialesRecibidos,
+				observaciones: observaciones,
+				esParcial: !esCompleta
+			});
     
-    // Determinar estado final
-    if (esCompleta || materialesPendientes.length === 0) {
-        orden.estado = 'cerrado';
-        orden.fechaCierre = new Date().toISOString();
-        addAuditLog('CIERRE', 'ORDEN', ordenId, `Orden #${ordenId} cerrada${esCompleta ? ' (forzada)' : ''}. Recibidos ${materialesRecibidos.length} items`);
-    } else {
-        orden.estado = 'parcial';
-        orden.materialesPendientes = materialesPendientes;
-        addAuditLog('RECEPCION_PARCIAL', 'ORDEN', ordenId, `Recepción parcial orden #${ordenId}. Recibidos ${materialesRecibidos.length}, pendientes ${materialesPendientes.length}`);
-    }
+			// Determinar estado final
+			if (esCompleta || materialesPendientes.length === 0) {
+				orden.estado = 'cerrado';
+				orden.fechaCierre = new Date().toISOString();
+				addAuditLog('CIERRE', 'ORDEN', ordenId, `Orden #${ordenId} cerrada${esCompleta ? ' (forzada)' : ''} por ${CONFIG.currentUserName}. Recibidos ${materialesRecibidos.length} items`);
+			} else {
+				orden.estado = 'parcial';
+				orden.materialesPendientes = materialesPendientes;
+				addAuditLog('RECEPCION_PARCIAL', 'ORDEN', ordenId, `Recepción parcial orden #${ordenId} por ${CONFIG.currentUserName}. Recibidos ${materialesRecibidos.length}, pendientes ${materialesPendientes.length}`);
+			}
+		
+			await saveToCloud();
+			closeModal('recepcion');
+			closeModal('ver-orden');
+			renderOrdenes();
+			updateDashboard();
     
-    await saveToCloud();
-    closeModal('recepcion');
-    closeModal('ver-orden');
-    renderOrdenes();
-    updateDashboard();
+			const mensaje = esCompleta || materialesPendientes.length === 0 
+				? `✅ Orden cerrada completamente\n📦 ${materialesRecibidos.length} materiales ingresados`
+				: `✅ Recepción parcial registrada\n📦 ${materialesRecibidos.length} recibidos\n⏳ ${materialesPendientes.length} pendientes\n\nLa orden quedó abierta para completar después.`;
     
-    const mensaje = esCompleta || materialesPendientes.length === 0 
-        ? `✅ Orden cerrada completamente\n📦 ${materialesRecibidos.length} materiales ingresados`
-        : `✅ Recepción parcial registrada\n📦 ${materialesRecibidos.length} recibidos\n⏳ ${materialesPendientes.length} pendientes\n\nLa orden quedó abierta para completar después.`;
-    
-    alert(mensaje);
-}
+			alert(mensaje);
+		}
 
         // PLANIFICADOR - CORREGIDO
         function renderPlanner() {
@@ -4240,14 +4252,15 @@ async function confirmarRecepcion() {
             const filterAction = document.getElementById('audit-filter-action').value;
 
             const userSelect = document.getElementById('audit-filter-user');
-            if (userSelect.options.length <= 1) {
-                state.usuarios.forEach(u => {
-                    const option = document.createElement('option');
-                    option.value = u;
-                    option.textContent = u;
-                    userSelect.appendChild(option);
-                });
-            }
+			if (userSelect.options.length <= 1) {
+				const usuariosUnicos = [...new Set(state.audit_log.map(l => l.usuario).filter(Boolean))].sort();
+				usuariosUnicos.forEach(u => {
+					const option = document.createElement('option');
+					option.value = u;
+					option.textContent = u;
+					userSelect.appendChild(option);
+				});
+			}
 
             let filtered = state.audit_log;
             if (filterUser) filtered = filtered.filter(l => l.usuario === filterUser);
@@ -4451,6 +4464,84 @@ async function confirmarRecepcion() {
 			document.getElementById('search-ordenes').value = '';
 			document.getElementById('ordenes-resultado-info').classList.add('hidden');
 			renderOrdenes();
+		}
+		
+		// ===== BACKUP Y RESTAURACIÓN =====
+
+		function backupData() {
+			const data = {
+				ordenes: state.ordenes,
+				stock: state.stock,
+				retiros: state.retiros,
+				tareas: state.tareas,
+				catalogo: state.catalogo,
+				retazos: state.retazos,
+				usuarios: state.usuarios,
+				audit_log: state.audit_log,
+				fechaBackup: new Date().toISOString(),
+				version: 'StockPro-Firebase-v1'
+			};
+    
+			const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = `stockpro_backup_${new Date().toISOString().split('T')[0]}_${new Date().getHours()}${new Date().getMinutes()}.json`;
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+			URL.revokeObjectURL(url);
+    
+			alert('✅ Backup descargado.\n\nGuardá el archivo .json en tu PC.\nSi algo sale mal, usá "Restaurar Backup".');
+		}
+
+		function restaurarBackup() {
+			const input = document.createElement('input');
+			input.type = 'file';
+			input.accept = '.json';
+    
+			input.onchange = function(e) {
+				const file = e.target.files[0];
+				if (!file) return;
+        
+				const reader = new FileReader();
+				reader.onload = function(event) {
+					try {
+						const data = JSON.parse(event.target.result);
+                
+						// Validar que sea un backup de StockPro
+						if (!data.catalogo || !data.stock) {
+							throw new Error('El archivo no parece ser un backup de StockPro');
+						}
+                
+						if (!confirm(`¿Restaurar backup?\n\nFecha del backup: ${new Date(data.fechaBackup).toLocaleString()}\nMateriales: ${data.catalogo.length}\nStock: ${data.stock.length + data.retazos.length}\nÓrdenes: ${data.ordenes.length}\n\n⚠️ ESTO SOBREESCRIBIRÁ TODOS LOS DATOS ACTUALES.`)) {
+							return;
+						}
+                
+						// Restaurar estado
+						state.ordenes = data.ordenes || [];
+						state.stock = data.stock || [];
+						state.retiros = data.retiros || [];
+						state.tareas = data.tareas || [];
+						state.catalogo = data.catalogo || [];
+						state.retazos = data.retazos || [];
+						state.usuarios = data.usuarios || [];
+						state.audit_log = data.audit_log || [];
+                
+						// Guardar en Firebase
+						saveToCloud().then(() => {
+							updateAll();
+							alert('✅ Backup restaurado y sincronizado con Firebase.\n\nRecargá la página en todos los dispositivos para ver los cambios.');
+						});
+                
+					} catch (err) {
+						alert('❌ Error al leer el backup: ' + err.message);
+					}
+				};
+				reader.readAsText(file);
+			};
+		
+			input.click();
 		}
 		
     </script>
