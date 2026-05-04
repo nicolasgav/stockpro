@@ -484,8 +484,17 @@
 						</div>
 						<div id="tareas-resultado-info" class="mt-3 text-xs text-gray-500 hidden"></div>
 					</div>
-
-                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+					
+					<!-- Resultados de búsqueda de tareas - LISTA DE COINCIDENCIAS -->
+					<div id="tareas-busqueda-resultados" class="hidden bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4">
+						<div class="flex justify-between items-center mb-3">
+							<h3 class="text-sm font-semibold text-gray-700">🔍 Coincidencias encontradas</h3>
+							<span id="tareas-contador-resultados" class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">0</span>
+						</div>
+						<div id="tareas-lista-resultados" class="space-y-2 max-h-64 overflow-y-auto"></div>
+					</div>	
+						
+					<div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                         <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                             <button onclick="changeMonth(-1)" class="p-2 hover:bg-white rounded-lg">←</button>
                             <h3 class="text-lg font-bold capitalize" id="calendar-month-year"></h3>
@@ -3860,6 +3869,9 @@ async function confirmarRecepcion() {
 
 			document.getElementById('calendar-grid').innerHTML = html;
 			showDayTasks(state.selectedDate);
+
+			// Mostrar lista de todas las coincidencias si hay búsqueda activa
+			renderResultadosBusquedaTareas(search, filtroEstado);
 		}
 
         function selectDate(date) {
@@ -3871,7 +3883,139 @@ async function confirmarRecepcion() {
             state.currentDate.setMonth(state.currentDate.getMonth() + delta);
             renderPlanner();
         }
-
+		
+		function renderResultadosBusquedaTareas(search, filtroEstado) {
+    		const container = document.getElementById('tareas-busqueda-resultados');
+    		const lista = document.getElementById('tareas-lista-resultados');
+    		const contador = document.getElementById('tareas-contador-resultados');
+    
+    		// Solo mostrar si hay texto de búsqueda
+    		if (!search) {
+        		container.classList.add('hidden');
+        		return;
+    		}
+    
+    		// Buscar TODAS las coincidencias en TODO el sistema
+    		let coincidencias = state.tareas.filter(t => {
+        		const matchTexto = t.titulo.toLowerCase().includes(search) || 
+                		          (t.notas || '').toLowerCase().includes(search);
+        		const matchEstado = filtroEstado === 'todas' || t.estado === filtroEstado;
+        		return matchTexto && matchEstado;
+    		});
+    
+    		// Ordenar por fecha (más reciente primero)
+    		coincidencias.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+		    
+    		// Actualizar contador
+    		if (contador) {
+        		contador.textContent = coincidencias.length;
+    		}
+    
+		    if (coincidencias.length === 0) {
+		        container.classList.remove('hidden');
+		        lista.innerHTML = `
+            		<div class="text-center py-6 text-gray-400">
+                		<svg class="w-10 h-10 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    		<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                		</svg>
+                		<p class="text-sm">No se encontraron coincidencias</p>
+            		</div>
+        		`;
+        		return;
+    		}
+    
+		    container.classList.remove('hidden');
+    
+		    // ===== map() genera array de strings HTML =====
+    		lista.innerHTML = coincidencias.map(tarea => {
+        
+		        const fechaObj = new Date(tarea.fecha + 'T12:00:00');
+		        const fechaStr = fechaObj.toLocaleDateString('es-ES', { 
+            		weekday: 'short', 
+            		day: 'numeric', 
+            		month: 'short',
+            		year: fechaObj.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+        		});
+        		const esHoy = tarea.fecha === new Date().toISOString().split('T')[0];
+        		const badgeHoy = esHoy ? '<span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full ml-2 font-medium">Hoy</span>' : '';
+        
+		        const diffTime = new Date() - fechaObj;
+		        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+		        let badgeFecha = '';
+		        if (diffDays > 0 && tarea.estado === 'pendiente') {
+            		badgeFecha = `<span class="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full ml-1">Hace ${diffDays} días</span>`;
+        		} else if (diffDays < 0) {
+            		badgeFecha = `<span class="text-xs bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full ml-1">En ${Math.abs(diffDays)} días</span>`;
+        		}
+        		// ===== if/else if COMPLETAMENTE CERRADO =====
+        
+		        // ===== ÚNICO return del callback del map() =====
+        		return `
+            		<div onclick="irATarea('${tarea.fecha}', ${tarea.id})" 
+                 		class="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all hover:bg-blue-50 hover:shadow-sm border border-gray-100 ${tarea.estado === 'realizada' ? 'opacity-60 bg-gray-50' : 'bg-white'}">
+                		<div class="flex-shrink-0">
+                    		<div class="w-11 h-11 rounded-full flex flex-col items-center justify-center text-xs font-bold ${tarea.estado === 'realizada' ? 'bg-green-100 text-green-600' : 'bg-orange-100 text-orange-600'}">
+                        		<span>${fechaObj.getDate()}</span>
+                        		<span class="text-[9px] uppercase">${fechaObj.toLocaleDateString('es-ES', {month:'short'})}</span>
+                    		</div>
+                		</div>
+                		<div class="flex-1 min-w-0">
+                    		<div class="flex items-center gap-1 flex-wrap">
+                        		<h4 class="font-medium text-gray-900 truncate ${tarea.estado === 'realizada' ? 'line-through text-gray-500' : ''}">${tarea.titulo}</h4>
+                        		${badgeHoy}
+                        		${badgeFecha}
+                    		</div>
+                    		<div class="flex items-center gap-2 mt-1">
+                        		<span class="text-xs text-gray-500">${fechaStr}</span>
+                        		<span class="text-xs px-1.5 py-0.5 rounded-full ${tarea.estado === 'realizada' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}">
+                            		${tarea.estado === 'realizada' ? '✅' : '⏳'} ${tarea.estado}
+                        		</span>
+                    		</div>
+                    		${tarea.notas ? `<p class="text-xs text-gray-400 truncate mt-1 leading-relaxed">${tarea.notas}</p>` : ''}
+                		</div>
+                		<div class="flex-shrink-0 text-gray-400 hover:text-blue-600 transition-colors">
+                    		<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        		<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    		</svg>
+                		</div>
+            		</div>
+        		`;
+        
+		    }).join('');
+    
+		}	
+	
+		function irATarea(fechaStr, tareaId) {
+			// 1. Parsear la fecha de la tarea
+			const fechaTarea = new Date(fechaStr + 'T12:00:00');
+    
+			// 2. Cambiar el mes/año del calendario al de la tarea
+			state.currentDate = new Date(fechaTarea.getFullYear(), fechaTarea.getMonth(), 1);
+    
+			// 3. Seleccionar el día específico
+			state.selectedDate = fechaStr;
+    
+			// 4. Limpiar la búsqueda (opcional - si querés que se mantenga, comentá estas 2 líneas)
+			document.getElementById('search-tareas').value = '';
+			document.getElementById('tareas-busqueda-resultados').classList.add('hidden');
+    
+			// 5. Re-renderizar el planificador completo (calendario + tareas del día)
+			renderPlanner();
+    
+			// 6. Scroll suave hacia las tareas del día
+			setTimeout(() => {
+				const dayTasksList = document.getElementById('day-tasks-list');
+				if (dayTasksList) {
+					dayTasksList.scrollIntoView({ behavior: 'smooth', block: 'center' });
+				}
+			}, 100);
+    
+			// 7. Abrir modal de edición de la tarea después de un breve delay
+			setTimeout(() => {
+				editTask(tareaId);
+			}, 400);
+		}
+		
 		function showDayTasks(dateStr) {
 			const search = document.getElementById('search-tareas')?.value.toLowerCase().trim() || '';
 			const filtroEstado = document.getElementById('filter-tareas-estado')?.value || 'todas';
@@ -4254,6 +4398,7 @@ async function confirmarRecepcion() {
 		function limpiarBusquedaTareas() {
 			document.getElementById('search-tareas').value = '';
 			document.getElementById('filter-tareas-estado').value = 'todas';
+			document.getElementById('tareas-busqueda-resultados').classList.add('hidden');
 			renderPlanner();
 		}
 		
