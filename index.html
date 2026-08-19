@@ -215,6 +215,13 @@
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         Auditoría
                     </button>
+					
+					<button onclick="showSection('reservas')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-gray-700 hover:text-blue-600" id="nav-reservas">
+						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+						Reservas
+						<span id="badge-reservas" class="ml-auto bg-purple-100 text-purple-600 text-xs font-bold px-2 py-1 rounded-full hidden">0</span>
+					</button>
+					
                     <button onclick="forceSync()" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-gray-700 hover:text-blue-600">
                         <svg class="w-5 h-5 syncing hidden" id="sync-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                         <svg class="w-5 h-5" id="sync-idle" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
@@ -583,6 +590,55 @@
                                 </thead>
                                 <tbody id="auditoria-table" class="divide-y divide-gray-100"></tbody>
                             </table>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- RESERVAS -->
+                <section id="reservas" class="hidden fade-in space-y-6">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                        <h2 class="text-2xl md:text-3xl font-bold text-gray-800">Reservas para Obras</h2>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Nueva Reserva -->
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                            <h3 class="text-lg font-bold text-gray-800 mb-4">Nueva Reserva</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Obra / Destino *</label>
+                                    <input type="text" id="reserva-destino" placeholder="Ej: Obra Centro" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Material del Stock *</label>
+                                    <div class="relative">
+                                        <input type="text" id="reserva-material-search" placeholder="Buscar material..." class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500" autocomplete="off">
+                                        <div id="reserva-autocomplete-results" class="autocomplete-results hidden"></div>
+                                        <input type="hidden" id="reserva-material-id">
+                                        <input type="hidden" id="reserva-material-codigo">
+                                    </div>
+                                    <div id="reserva-material-info" class="mt-2 text-sm hidden"></div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Cantidad a reservar *</label>
+                                        <input type="number" id="reserva-cantidad" min="1" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Disponible real</label>
+                                        <input type="text" id="reserva-disponible" readonly class="w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-100 text-gray-600">
+                                    </div>
+                                </div>
+                                <button onclick="agregarReserva()" class="w-full bg-purple-600 text-white py-3 rounded-xl hover:bg-purple-700 font-medium">Reservar Material</button>
+                            </div>
+                        </div>
+
+                    <!-- Reservas Activas -->
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                            <h3 class="text-lg font-bold text-gray-800 mb-4">Reservas Activas por Obra</h3>
+                            <div id="reservas-activas-container" class="space-y-4">
+                                <p class="text-gray-400 text-center py-8">No hay reservas activas</p>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -1021,6 +1077,7 @@
             retazos: [],
             usuarios: [],
             audit_log: [],
+			reservas: [],
             currentDate: new Date(),
             selectedDate: new Date().toISOString().split('T')[0],
             currentFilter: 'all',
@@ -1306,6 +1363,7 @@
             if (id === 'retiros') renderRetiros();
             if (id === 'planificador') renderPlanner();
             if (id === 'auditoria') renderAuditoria();
+			if (id === 'reservas') renderReservas();
             if (id === 'ingreso') initIngresoForm();
         }
 
@@ -4454,6 +4512,16 @@ function renderRetazosRecepcion(idx) {
             }).join('');
         }
 
+        function renderReservas() {
+            // Se completa en pasos siguientes
+            const container = document.getElementById('reservas-activas-container');
+            if (!state.reservas || state.reservas.length === 0) {
+                container.innerHTML = '<p class="text-gray-400 text-center py-8">No hay reservas activas</p>';
+                return;
+            }
+            // TODO: agrupar por obra y mostrar
+        }
+
         // DASHBOARD
         function updateDashboard() {
             const abiertas = state.ordenes.filter(o => o.estado === 'abierto').length;
@@ -4527,6 +4595,7 @@ function renderRetazosRecepcion(idx) {
             if (!document.getElementById('retiros').classList.contains('hidden')) renderRetiros();
             if (!document.getElementById('planificador').classList.contains('hidden')) renderPlanner();
             if (!document.getElementById('auditoria').classList.contains('hidden')) renderAuditoria();
+			if (!document.getElementById('reservas').classList.contains('hidden')) renderReservas();
         }
 
         function closeModal(id) {
