@@ -4963,6 +4963,7 @@ function renderRetazosRecepcion(idx) {
             setBadge('badge-ordenes', abiertas);
             setBadge('badge-critical', critico);
             setBadge('badge-tareas', state.tareas.filter(t => t.estado === 'pendiente').length);
+			setBadge('badge-reservas', state.reservas.filter(r => r.estado === 'activa').length);
 
             // Calendario dashboard
             const calendar = document.getElementById('dashboard-calendar');
