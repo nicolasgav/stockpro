@@ -3921,26 +3921,20 @@ function renderRetazosRecepcion(idx) {
 			for (let day = 1; day <= daysInMonth; day++) {
 				const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         
-			// Tareas del día para el CALENDARIO (siempre todas, solo filtradas por búsqueda de texto)
-			let calendarTasks = state.tareas.filter(t => t.fecha === dateStr);
-			if (search) {
-				calendarTasks = calendarTasks.filter(t => 
-					t.titulo.toLowerCase().includes(search) || 
-					(t.notas || '').toLowerCase().includes(search)
-				);
-			}
-
-			// Tareas del día para la LISTA del día seleccionado (filtradas por estado también)
-			let dayTasks = [...calendarTasks];
-			if (filtroEstado !== 'todas') {
-				dayTasks = dayTasks.filter(t => t.estado === filtroEstado);
-			}
+				// CALENDARIO: siempre muestra TODAS las tareas del día (solo filtra por búsqueda de texto)
+				let calendarTasks = state.tareas.filter(t => t.fecha === dateStr);
+				if (search) {
+					calendarTasks = calendarTasks.filter(t => 
+						t.titulo.toLowerCase().includes(search) || 
+						(t.notas || '').toLowerCase().includes(search)
+					);
+				}
 
 				let classes = `bg-white p-2 min-h-[60px] border border-gray-100 cursor-pointer ${state.selectedDate === dateStr ? 'ring-2 ring-blue-500' : ''} ${dateStr === today ? 'bg-blue-50' : ''}`;
 				let indicators = calendarTasks.length > 0 ? `<div class="flex gap-0.5 mt-1 flex-wrap justify-center">${calendarTasks.slice(0, 3).map(t => `<div class="w-1.5 h-1.5 rounded-full ${t.estado === 'realizada' ? 'bg-green-500' : t.estado === 'cancelado' ? 'bg-red-500' : 'bg-orange-500'}"></div>`).join('')}${calendarTasks.length > 3 ? '<div class="w-1.5 h-1.5 rounded-full bg-gray-400"></div>' : ''}</div>` : '';
 
 				html += `<div class="${classes}" onclick="selectDate('${dateStr}')"><div class="font-semibold text-sm ${dateStr === today ? 'text-blue-600' : 'text-gray-700'}">${day}</div>${indicators}</div>`;
-		}
+			}
 
 			document.getElementById('calendar-grid').innerHTML = html;
 			showDayTasks(state.selectedDate);
@@ -4218,40 +4212,32 @@ function renderRetazosRecepcion(idx) {
 		
 		function showDayTasks(dateStr) {
 			const search = document.getElementById('search-tareas')?.value.toLowerCase().trim() || '';
-			const filtroEstado = document.getElementById('filter-tareas-estado')?.value || 'todas';
 			const infoDiv = document.getElementById('tareas-resultado-info');
-		
+
 			document.getElementById('selected-date-title').textContent = new Date(dateStr).toLocaleDateString('es-ES', { weekday: 'long', month: 'short', day: 'numeric' });
-    
-			// Filtrar tareas del día
+
+			// IMPORTANTE: El día seleccionado SIEMPRE muestra TODAS las tareas de ese día
+			// El filtro de estado SOLO afecta a la lista global ordenada (renderListaPorEstado)
 			let dayTasks = state.tareas.filter(t => t.fecha === dateStr);
-    
-			// Aplicar filtro de búsqueda
+
+			// Solo aplicar búsqueda de texto, NUNCA filtro de estado
 			if (search) {
 				dayTasks = dayTasks.filter(t => 
 					t.titulo.toLowerCase().includes(search) || 
 					(t.notas || '').toLowerCase().includes(search)
 				);
 			}
-    
-			// Aplicar filtro de estado
-			if (filtroEstado !== 'todas') {
-				dayTasks = dayTasks.filter(t => t.estado === filtroEstado);
-			}
-    
-			// Ordenar: pendientes primero
-			dayTasks.sort((a, b) => (a.estado === b.estado ? 0 : a.estado === 'pendiente' ? -1 : 1));
 
-			// Mostrar info de resultados si hay búsqueda activa
-			if (search || filtroEstado !== 'todas') {
+			// Ordenar: pendientes primero, luego realizadas, luego canceladas
+			dayTasks.sort((a, b) => {
+				const orden = { 'pendiente': 0, 'realizada': 1, 'cancelado': 2 };
+				return (orden[a.estado] || 0) - (orden[b.estado] || 0);
+			});
+
+			// Mostrar info solo si hay búsqueda de texto activa
+			if (search) {
 				infoDiv.classList.remove('hidden');
-				const totalGlobal = state.tareas.filter(t => {
-					let match = true;
-					if (search) match = match && (t.titulo.toLowerCase().includes(search) || (t.notas || '').toLowerCase().includes(search));
-					if (filtroEstado !== 'todas') match = match && t.estado === filtroEstado;
-					return match;
-				}).length;
-				infoDiv.innerHTML = `🔍 Mostrando <strong>${dayTasks.length}</strong> tareas de este día | <strong>${totalGlobal}</strong> coincidencias en total`;
+				infoDiv.innerHTML = `🔍 Mostrando <strong>${dayTasks.length}</strong> tareas de este día que coinciden con "<em>${search}</em>"`;
 			} else {
 				infoDiv.classList.add('hidden');
 			}
@@ -4264,24 +4250,30 @@ function renderRetazosRecepcion(idx) {
 					<p>No hay tareas${search ? ' que coincidan con la búsqueda' : ''} para este día</p>
 					<button onclick="openTaskModal('${dateStr}')" class="text-blue-600 hover:underline mt-2 text-sm">+ Agregar tarea</button>
 				</div>` :
-				dayTasks.map(task => `
+				dayTasks.map(task => {
 					const taskClass = task.estado === 'realizada' ? 'task-done' : task.estado === 'cancelado' ? 'task-cancelada' : 'task-pending';
-					...
-				<div class="task-card p-4 rounded-xl ${taskClass} cursor-pointer group" onclick="editTask(${task.id})">
+					const textoClase = task.estado === 'realizada' ? 'text-green-800 line-through' : task.estado === 'cancelado' ? 'text-red-800 line-through' : 'text-orange-800';
+					const badgeClass = task.estado === 'realizada' ? 'bg-green-200 text-green-800' : task.estado === 'cancelado' ? 'bg-red-200 text-red-800' : 'bg-orange-200 text-orange-800';
+					const badgeText = task.estado === 'realizada' ? '✅ Realizada' : task.estado === 'cancelado' ? '🚫 Cancelada' : '⏳ Pendiente';
+            
+					return `
+					<div class="task-card p-4 rounded-xl ${taskClass} cursor-pointer group" onclick="editTask(${task.id})">
 						<div class="flex justify-between items-start">
 							<div class="flex-1">
 								<div class="flex items-center gap-2 mb-1">
-									<h4 class="font-semibold ${task.estado === 'realizada' ? 'text-green-800 line-through' : 'text-orange-800'}">${task.titulo}</h4>
-									${task.estado === 'realizada' ? '<span class="text-xs px-2 py-0.5 rounded-full bg-green-200 text-green-800">✅ Realizada</span>' : task.estado === 'cancelado' ? '<span class="text-xs px-2 py-0.5 rounded-full bg-red-200 text-red-800">🚫 Cancelada</span>' : '<span class="text-xs px-2 py-0.5 rounded-full bg-orange-200 text-orange-800">⏳ Pendiente</span>'}
+									<h4 class="font-semibold ${textoClase}">${task.titulo}</h4>
+									<span class="text-xs px-2 py-0.5 rounded-full ${badgeClass}">
+										${badgeText}
+									</span>
 								</div>
 								${task.notas ? `<p class="text-sm mt-1 opacity-80 line-clamp-2 text-gray-600">${task.notas}</p>` : ''}
 								${task.motivoCancelacion ? `<p class="text-xs text-red-600 mt-1 font-medium">🚫 Motivo: ${task.motivoCancelacion}</p>` : ''}
 								<p class="text-xs text-gray-500 mt-1">Por: ${task.usuario || 'N/A'} | ${new Date(task.fecha).toLocaleDateString('es-ES')}</p>
 							</div>
 							<div class="flex items-center gap-2 task-actions">
-								<button onclick="event.stopPropagation(); toggleTask(${task.id})" class="p-1.5 rounded-full hover:bg-white/50 transition-colors" title="${task.estado === 'realizada' ? 'Marcar pendiente' : 'Marcar realizada'}">
-									<svg class="w-5 h-5 ${task.estado === 'realizada' ? 'text-green-600' : 'text-orange-600'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										${task.estado === 'realizada' ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>' : '<circle cx="12" cy="12" r="10" stroke-width="2"/>'}
+								<button onclick="event.stopPropagation(); toggleTask(${task.id})" class="p-1.5 rounded-full hover:bg-white/50 transition-colors" title="${task.estado === 'realizada' ? 'Marcar pendiente' : task.estado === 'cancelado' ? 'Reactivar' : 'Marcar realizada'}">
+									<svg class="w-5 h-5 ${task.estado === 'realizada' ? 'text-green-600' : task.estado === 'cancelado' ? 'text-red-600' : 'text-orange-600'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										${task.estado === 'realizada' ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>' : task.estado === 'cancelado' ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>' : '<circle cx="12" cy="12" r="10" stroke-width="2"/>'}
 									</svg>
 								</button>
 								<button onclick="event.stopPropagation(); deleteTaskDirect(${task.id})" class="p-1.5 rounded-full hover:bg-red-100 text-red-500 transition-colors" title="Eliminar">
@@ -4290,7 +4282,7 @@ function renderRetazosRecepcion(idx) {
 							</div>
 						</div>
 					</div>
-				`).join('');
+				`}).join('');
 		}
 
         function openTaskModal(date = null, editId = null) {
