@@ -1215,6 +1215,7 @@
                     state.retazos = data.retazos || [];
                     state.usuarios = data.usuarios || [];
                     state.audit_log = data.audit_log || [];
+                    state.reservas = data.reservas || [];
                 } else {
                     // Primer uso: crear documento vacío
                     await window.firebaseFns.setDoc(docRef, {
@@ -1252,6 +1253,7 @@
                     state.retazos = data.retazos || state.retazos;
                     state.usuarios = data.usuarios || state.usuarios;
                     state.audit_log = data.audit_log || state.audit_log;
+                    state.reservas = data.reservas || state.reservas;
                     
                     updateAll();
                     updateLastSync();
@@ -1312,6 +1314,7 @@
 					retazos: state.retazos,
 					usuarios: state.usuarios,
 					audit_log: state.audit_log,
+					reservas: state.reservas,                    
 					lastUpdate: new Date().toISOString(),
 					updatedBy: CONFIG.currentUserName
 				});
@@ -5107,6 +5110,7 @@ function renderRetazosRecepcion(idx) {
 				retazos: state.retazos,
 				usuarios: state.usuarios,
 				audit_log: state.audit_log,
+                reservas: state.reservas,                
 				fechaBackup: new Date().toISOString(),
 				version: 'Infraestructura-Firebase-v1'
 			};
@@ -5156,6 +5160,7 @@ function renderRetazosRecepcion(idx) {
 						state.retazos = data.retazos || [];
 						state.usuarios = data.usuarios || [];
 						state.audit_log = data.audit_log || [];
+						state.reservas = data.reservas || [];                        
                 
 						// Guardar en Firebase
 						saveToCloud().then(() => {
