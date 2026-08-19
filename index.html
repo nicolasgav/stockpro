@@ -2421,22 +2421,27 @@ function filtrarPorUbicacion(ubicacion) {
 					const stockItems = state.stock.filter(s => 
 					s.descripcion.toLowerCase() === m.descripcion.toLowerCase()
 					);
-					const dispTotal = stockItems.reduce((sum, s) => sum + s.cantidad, 0);
-            
-					// Buscar stock con mismo detalle si existe
-					const stockItem = stockItems.find(s => 
-					(s.detalles || '').toLowerCase().trim() === (m.detalles || '').toLowerCase().trim()
-					);
-					const dispEspecifico = stockItem ? stockItem.cantidad : 0;
+                    // Buscar stock con mismo detalle si existe
+                    const stockItem = stockItems.find(s => 
+                        (s.detalles || '').toLowerCase().trim() === (m.detalles || '').toLowerCase().trim()
+                    );
+                    const dispEspecifico = stockItem ? stockItem.cantidad : 0;
+                    const reservadoEsp = stockItem ? calcularReservado(stockItem.id) : 0;
+                    const dispRealEsp = Math.max(0, dispEspecifico - reservadoEsp);
+                    
+                    const dispTotal = stockItems.reduce((sum, s) => sum + s.cantidad, 0);
+                    const reservadoTotal = stockItems.reduce((sum, s) => sum + calcularReservado(s.id), 0);
+                    const dispRealTotal = dispTotal - reservadoTotal;
             
 					html += `
 					<div class="flex items-center justify-between">
 						<div>
-							<p class="text-xs text-gray-500">Disponible: ${dispEspecifico} ${m.unidad} (Total: ${dispTotal})</p>
+                            <p class="text-xs text-gray-500">Disponible: ${dispRealEsp} ${m.unidad} (Total: ${dispEspecifico} | Reservado: ${reservadoEsp})</p>
 							${m.detalles ? `<p class="text-xs text-blue-600">📋 ${m.detalles}</p>` : ''}
 						</div>
 						<input type="number" min="0" max="${m.cantidad}" value="0" 
                            class="retiro-cant-obra w-20 px-2 py-1 border rounded text-center" 
+                           max="${dispRealEsp}"
                            data-desc="${m.descripcion}" 
                            data-unit="${m.unidad}" 
                            data-codigo="${m.codigo || ''}" 
@@ -2505,7 +2510,22 @@ async function procesarRetiroObra() {
                 (s.detalles || '').toLowerCase().trim() === detalles.toLowerCase().trim()
             );
             
-            if (stockItem && stockItem.cantidad >= cantidad) {
+            if (!stockItem) {
+                alert(`Material no encontrado en stock: ${desc}`);
+                hayError = true;
+                return;
+            }
+            
+            const reservado = calcularReservado(stockItem.id);
+            const disponible = stockItem.cantidad - reservado;
+            
+            if (disponible < cantidad) {
+                alert(`Stock insuficiente para ${desc}\n\nSolicitado: ${cantidad}\nDisponible: ${disponible} ${m.unidad}\nReservado: ${reservado}\nTotal: ${stockItem.cantidad}`);
+                hayError = true;
+                return;
+            }
+            
+            if (stockItem.cantidad >= cantidad) {
                 stockItem.cantidad -= cantidad;
                 materialesRetiro.push({ 
                     descripcion: desc, 
@@ -2670,9 +2690,23 @@ async function procesarRetiroObra() {
                         unidadSpan.textContent = unidad;
                         
                         const stockItem = state.stock.find(s => s.materialId === materialId);
-                        const disponible = stockItem ? stockItem.cantidad : 0;
-                        disponibleSpan.textContent = `${disponible} ${unidad}`;
+                        const totalStock = stockItem ? stockItem.cantidad : 0;
+                        const reservado = calcularReservado(stockItem ? stockItem.id : null);
+                        const disponible = Math.max(0, totalStock - reservado);
+                        disponibleSpan.textContent = `${disponible} ${unidad} (de ${totalStock} total)`;
                         cantidadInput.max = disponible;
+                        
+                        // Si hay reservado, mostrar advertencia
+                        if (reservado > 0) {
+                            const warn = row.querySelector('.retiro-disponible').parentElement;
+                            let badge = warn.querySelector('.reserva-badge');
+                            if (!badge) {
+                                badge = document.createElement('span');
+                                badge.className = 'reserva-badge text-xs text-purple-600 font-medium ml-2';
+                                warn.appendChild(badge);
+                            }
+                            badge.textContent = `🔒 ${reservado} reservado`;
+                        }
                     }
                 });
             });
@@ -2834,8 +2868,11 @@ async function procesarRetiroObra() {
                 stockItem = stockItems.sort((a, b) => b.cantidad - a.cantidad)[0];
             }
             
-            if (stockItem.cantidad < cantidad) {
-                alert(`Stock insuficiente para ${material.descripcion}`);
+            const reservado = calcularReservado(stockItem.id);
+            const disponible = stockItem.cantidad - reservado;
+            
+            if (disponible < cantidad) {
+                alert(`Stock insuficiente para ${material.descripcion}\n\nDisponible: ${disponible} ${material.unidad}\nReservado: ${reservado}\nTotal en depósito: ${stockItem.cantidad}`);
                 hayError = true;
                 return;
             }
