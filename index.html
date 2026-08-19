@@ -1363,7 +1363,10 @@
             if (id === 'retiros') renderRetiros();
             if (id === 'planificador') renderPlanner();
             if (id === 'auditoria') renderAuditoria();
-			if (id === 'reservas') renderReservas();
+			if (id === 'reservas') {
+                renderReservas();
+                setTimeout(initReservaAutocomplete, 100);
+            }
             if (id === 'ingreso') initIngresoForm();
         }
 
@@ -4513,13 +4516,349 @@ function renderRetazosRecepcion(idx) {
         }
 
         function renderReservas() {
-            // Se completa en pasos siguientes
             const container = document.getElementById('reservas-activas-container');
-            if (!state.reservas || state.reservas.length === 0) {
+    
+            // Calcular disponible real en el input si hay material seleccionado
+            const matId = document.getElementById('reserva-material-id')?.value;
+            if (matId) {
+                actualizarDisponibleReserva(matId);
+            }
+    
+            if (!state.reservas || state.reservas.filter(r => r.estado === 'activa').length === 0) {
                 container.innerHTML = '<p class="text-gray-400 text-center py-8">No hay reservas activas</p>';
+                document.getElementById('badge-reservas')?.classList.add('hidden');
                 return;
             }
-            // TODO: agrupar por obra y mostrar
+    
+            const activas = state.reservas.filter(r => r.estado === 'activa');
+            document.getElementById('badge-reservas').textContent = activas.length;
+            document.getElementById('badge-reservas')?.classList.remove('hidden');
+    
+            // Agrupar por obra
+            const porObra = {};
+            activas.forEach(r => {
+                if (!porObra[r.destino]) porObra[r.destino] = [];
+                    porObra[r.destino].push(r);
+                });
+    
+            container.innerHTML = Object.entries(porObra).map(([obra, reservas]) => `
+                <div class="border border-gray-200 rounded-xl overflow-hidden">
+                    <div class="bg-purple-50 px-4 py-3 flex justify-between items-center">
+                        <h4 class="font-bold text-purple-900">🏗️ ${obra}</h4>
+                        <span class="text-xs bg-purple-200 text-purple-800 px-2 py-1 rounded-full">${reservas.length} reserva(s)</span>
+                    </div>
+                    <div class="divide-y divide-gray-100">
+                        ${reservas.map(r => {
+                            const material = state.catalogo.find(c => c.id === r.materialId);
+                            const stockItem = state.stock.find(s => s.id === r.stockItemId);
+                            return `
+                            <div class="p-4 flex justify-between items-center hover:bg-gray-50">
+                                <div class="flex-1 min-w-0">
+                                    <p class="font-medium text-gray-900">${r.descripcionMaterial}</p>
+                                    <p class="text-xs text-gray-500">${r.codigoMaterial} • ${r.cantidad} ${r.unidad}</p>
+                                    <p class="text-xs text-gray-400 mt-1">Reservado: ${new Date(r.fechaReserva).toLocaleDateString()} por ${r.usuario}</p>
+                                </div>
+                                <div class="flex gap-2 ml-3">
+                                    <button onclick="procesarSalidaReserva('${r.id}')" class="px-3 py-1.5 bg-green-600 text-white text-xs rounded-lg hover:bg-green-700 font-medium" title="Retirar del stock">
+                                        📤 Salida
+                                    </button>
+                                    <button onclick="cancelarReserva('${r.id}')" class="px-3 py-1.5 bg-red-100 text-red-600 text-xs rounded-lg hover:bg-red-200 font-medium" title="Cancelar reserva">
+                                        ✕
+                                    </button>
+                                </div>
+                            </div>
+                            `;
+                        }).join('')}
+                    </div>
+                    <div class="bg-gray-50 px-4 py-2 text-right">
+                        <button onclick="procesarSalidaObraCompleta('${obra}')" class="text-xs text-green-700 hover:underline font-medium">
+                            📤 Retirar TODA la reserva de esta obra
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function initReservaAutocomplete() {
+            const input = document.getElementById('reserva-material-search');
+            const resultsDiv = document.getElementById('reserva-autocomplete-results');
+            const materialIdInput = document.getElementById('reserva-material-id');
+            const materialCodigoInput = document.getElementById('reserva-material-codigo');
+            const infoDiv = document.getElementById('reserva-material-info');
+    
+            if (!input) return;
+    
+            input.addEventListener('input', (e) => {
+                const value = e.target.value.toLowerCase();
+                
+                if (value.length < 1) {
+                    resultsDiv.classList.add('hidden');
+                    return;
+                }
+        
+                // Buscar en stock (no en catálogo, porque necesitamos el item de stock específico)
+                const matches = state.stock.filter(s => {
+                    const mat = state.catalogo.find(c => c.id === s.materialId);
+                    if (!mat || mat.activo === false) return false;
+                    return mat.codigo.toLowerCase().includes(value) || 
+                           mat.descripcion.toLowerCase().includes(value) ||
+                           (mat.detalles || '').toLowerCase().includes(value);
+                }).slice(0, 5);
+        
+                if (matches.length > 0) {
+                    resultsDiv.innerHTML = matches.map(s => {
+                        const mat = state.catalogo.find(c => c.id === s.materialId);
+                        const disp = calcularDisponible(s.materialId, s.id);
+                        return `
+                            <div class="autocomplete-item" 
+                                 data-stock-id="${s.id}"
+                                 data-material-id="${s.materialId}"
+                                 data-codigo="${mat.codigo}"
+                                 data-desc="${mat.descripcion}"
+                                 data-unidad="${s.unidad}"
+                                 data-cantidad="${s.cantidad}"
+                                 data-disp="${disp}">
+                                <div class="font-medium">${mat.descripcion}</div>
+                                <div class="text-xs text-gray-500">
+                                    ${mat.codigo} • Stock: ${s.cantidad} ${s.unidad} • Disponible: ${disp} ${s.unidad}
+                                    ${mat.detalles ? '• ' + mat.detalles : ''}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                    resultsDiv.classList.remove('hidden');
+                    
+                    resultsDiv.querySelectorAll('.autocomplete-item').forEach(item => {
+                        item.addEventListener('click', () => {
+                            input.value = item.dataset.desc;
+                            materialIdInput.value = item.dataset.materialId;
+                            materialCodigoInput.value = item.dataset.codigo;
+                            document.getElementById('reserva-cantidad').max = item.dataset.disp;
+                            document.getElementById('reserva-cantidad').value = '';
+                            document.getElementById('reserva-disponible').value = `${item.dataset.disp} ${item.dataset.unidad} (de ${item.dataset.cantidad} total)`;
+                            
+                            infoDiv.classList.remove('hidden');
+                            infoDiv.innerHTML = `
+                                <div class="bg-blue-50 p-2 rounded-lg text-sm text-blue-800">
+                                    <strong>${item.dataset.desc}</strong><br>
+                                    <span class="text-xs">Stock total: ${item.dataset.cantidad} | Disponible: ${item.dataset.disp} ${item.dataset.unidad}</span>
+                                </div>
+                            `;
+                            
+                            resultsDiv.classList.add('hidden');
+                        });
+                    });
+                } else {
+                    resultsDiv.innerHTML = '<div class="autocomplete-item text-gray-400 italic">No hay stock disponible</div>';
+                    resultsDiv.classList.remove('hidden');
+                }
+            });
+    
+            document.addEventListener('click', (e) => {
+                if (!input.contains(e.target) && !resultsDiv.contains(e.target)) {
+                    resultsDiv.classList.add('hidden');
+                }
+            });
+        }
+
+        function calcularDisponible(materialId, stockItemId) {
+            const stockItem = state.stock.find(s => s.id === stockItemId);
+            if (!stockItem) return 0;
+            
+            const reservado = state.reservas
+                .filter(r => r.estado === 'activa' && r.stockItemId === stockItemId)
+                .reduce((sum, r) => sum + r.cantidad, 0);
+            
+            return Math.max(0, stockItem.cantidad - reservado);
+        }
+
+        function actualizarDisponibleReserva(materialId) {
+            // Esta se llama al renderizar para actualizar el campo disponible
+            const stockItem = state.stock.find(s => s.materialId === materialId);
+            if (stockItem) {
+                const disp = calcularDisponible(materialId, stockItem.id);
+                const inputDisp = document.getElementById('reserva-disponible');
+                if (inputDisp) inputDisp.value = `${disp} ${stockItem.unidad}`;
+            }
+        }
+        
+        async function agregarReserva() {
+            const destino = document.getElementById('reserva-destino').value.trim();
+            const materialId = document.getElementById('reserva-material-id').value;
+            const cantidad = parseFloat(document.getElementById('reserva-cantidad').value);
+            
+            if (!destino) return alert('Indicá la obra/destino');
+            if (!materialId) return alert('Seleccioná un material del stock');
+            if (!cantidad || cantidad <= 0) return alert('Indicá una cantidad válida');
+            
+            const stockItem = state.stock.find(s => s.materialId === materialId);
+            if (!stockItem) return alert('Material no encontrado en stock');
+            
+            const disponible = calcularDisponible(materialId, stockItem.id);
+            if (cantidad > disponible) {
+                alert(`No hay suficiente stock disponible.\nSolicitado: ${cantidad}\nDisponible: ${disponible} ${stockItem.unidad}`);
+                return;
+            }
+            
+            const material = state.catalogo.find(c => c.id === materialId);
+            
+            const reserva = {
+                id: 'RES-' + Date.now().toString(36).toUpperCase(),
+                stockItemId: stockItem.id,
+                materialId: materialId,
+                codigoMaterial: material.codigo,
+                descripcionMaterial: material.descripcion,
+                detallesMaterial: stockItem.detalles || material.detalles || '',
+                cantidad: cantidad,
+                unidad: stockItem.unidad,
+                destino: destino,
+                estado: 'activa',
+                fechaReserva: new Date().toISOString(),
+                usuario: CONFIG.currentUserName
+            };
+            
+            state.reservas.push(reserva);
+            addAuditLog('RESERVA', 'STOCK', stockItem.id, `Reservados ${cantidad} ${stockItem.unidad} de ${material.descripcion} para ${destino}`);
+            
+            await saveToCloud();
+            
+            // Limpiar formulario
+            document.getElementById('reserva-destino').value = '';
+            document.getElementById('reserva-material-search').value = '';
+            document.getElementById('reserva-material-id').value = '';
+            document.getElementById('reserva-material-codigo').value = '';
+            document.getElementById('reserva-cantidad').value = '';
+            document.getElementById('reserva-disponible').value = '';
+            document.getElementById('reserva-material-info').classList.add('hidden');
+            
+            renderReservas();
+            renderStock(); // Actualizar para mostrar "reservado"
+            updateDashboard();
+            
+            alert(`✅ Reservados ${cantidad} ${stockItem.unidad} de ${material.descripcion} para ${destino}`);
+        }
+
+        async function procesarSalidaReserva(reservaId) {
+            const reserva = state.reservas.find(r => r.id === reservaId && r.estado === 'activa');
+            if (!reserva) return alert('Reserva no encontrada');
+            
+            if (!confirm(`¿Confirmar salida de ${reserva.cantidad} ${reserva.unidad} de ${reserva.descripcionMaterial} para ${reserva.destino}?\n\nSe restará del stock.`)) return;
+            
+            const stockItem = state.stock.find(s => s.id === reserva.stockItemId);
+            if (!stockItem) return alert('Error: material no encontrado en stock');
+            
+            if (stockItem.cantidad < reserva.cantidad) {
+                alert(`⚠️ Stock insuficiente. Disponible: ${stockItem.cantidad}, Reservado: ${reserva.cantidad}`);
+                return;
+            }
+            
+            // Restar del stock
+            stockItem.cantidad -= reserva.cantidad;
+            
+            // Marcar reserva como entregada
+            reserva.estado = 'entregada';
+            reserva.fechaSalida = new Date().toISOString();
+            reserva.usuarioSalida = CONFIG.currentUserName;
+            
+            // Registrar retiro
+            state.retiros.push({
+                id: Date.now(),
+                fecha: new Date().toISOString(),
+                tipo: 'reserva',
+                destino: reserva.destino,
+                reservaId: reserva.id,
+                usuario: CONFIG.currentUserName,
+                materiales: [{
+                    descripcion: reserva.descripcionMaterial,
+                    detalles: reserva.detallesMaterial,
+                    cantidad: reserva.cantidad,
+                    unidad: reserva.unidad,
+                    tipo: 'normal'
+                }]
+            });
+            
+            addAuditLog('SALIDA', 'RESERVA', reserva.id, `Salida de reserva: ${reserva.cantidad} ${reserva.unidad} de ${reserva.descripcionMaterial} para ${reserva.destino}`);
+            
+            await saveToCloud();
+            renderReservas();
+            renderStock();
+            renderRetiros();
+            updateDashboard();
+            
+            alert(`✅ Salida procesada.\n${reserva.cantidad} ${reserva.unidad} de ${reserva.descripcionMaterial} retirados para ${reserva.destino}`);
+        }
+
+        async function procesarSalidaObraCompleta(obra) {
+            const reservasObra = state.reservas.filter(r => r.destino === obra && r.estado === 'activa');
+            if (reservasObra.length === 0) return alert('No hay reservas activas para esta obra');
+            
+            if (!confirm(`¿Retirar TODAS las reservas de ${obra}?\n${reservasObra.length} materiales serán descontados del stock.`)) return;
+            
+            let procesados = 0;
+            let errores = [];
+            
+            for (const reserva of reservasObra) {
+                const stockItem = state.stock.find(s => s.id === reserva.stockItemId);
+                if (!stockItem || stockItem.cantidad < reserva.cantidad) {
+                    errores.push(`${reserva.descripcionMaterial}: stock insuficiente`);
+                    continue;
+                }
+                
+                stockItem.cantidad -= reserva.cantidad;
+                reserva.estado = 'entregada';
+                reserva.fechaSalida = new Date().toISOString();
+                reserva.usuarioSalida = CONFIG.currentUserName;
+                
+                state.retiros.push({
+                    id: Date.now() + Math.random(),
+                    fecha: new Date().toISOString(),
+                    tipo: 'reserva',
+                    destino: reserva.destino,
+                    reservaId: reserva.id,
+                    usuario: CONFIG.currentUserName,
+                    materiales: [{
+                        descripcion: reserva.descripcionMaterial,
+                        detalles: reserva.detallesMaterial,
+                        cantidad: reserva.cantidad,
+                        unidad: reserva.unidad,
+                        tipo: 'normal'
+                    }]
+                });
+                
+                procesados++;
+            }
+            
+            addAuditLog('SALIDA', 'RESERVA', obra, `Salida completa de obra ${obra}: ${procesados} materiales procesados`);
+            
+            await saveToCloud();
+            renderReservas();
+            renderStock();
+            renderRetiros();
+            updateDashboard();
+            
+            let msg = `✅ ${procesados} materiales retirados para ${obra}`;
+            if (errores.length > 0) msg += `\n\n⚠️ Errores:\n${errores.join('\n')}`;
+            alert(msg);
+        }
+
+        async function cancelarReserva(reservaId) {
+            const reserva = state.reservas.find(r => r.id === reservaId && r.estado === 'activa');
+            if (!reserva) return;
+            
+            if (!confirm(`¿Cancelar reserva de ${reserva.cantidad} ${reserva.unidad} de ${reserva.descripcionMaterial} para ${reserva.destino}?`)) return;
+            
+            reserva.estado = 'cancelada';
+            reserva.fechaCancelacion = new Date().toISOString();
+            reserva.usuarioCancelacion = CONFIG.currentUserName;
+            
+            addAuditLog('CANCELACION', 'RESERVA', reserva.id, `Reserva cancelada: ${reserva.descripcionMaterial} para ${reserva.destino}`);
+            
+            await saveToCloud();
+            renderReservas();
+            renderStock();
+            updateDashboard();
+            
+            alert('Reserva cancelada');
         }
 
         // DASHBOARD
