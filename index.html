@@ -2229,7 +2229,9 @@ function renderStock() {
         } else {
             variantes.forEach(stockItem => {
                 const cantidad = stockItem.cantidad;
-                const isCritical = cantidad <= (m.stockMinimo || 3);
+                const reservado = calcularReservado(stockItem.id);
+                const disponible = cantidad - reservado;
+                const isCritical = disponible <= (m.stockMinimo || 3);
                 const detalleMostrar = stockItem.detalles || m.detalles || '';
                 
                 const origenLabel = stockItem.origen ? `<span class="text-xs text-green-600 bg-green-50 px-2 py-1 rounded cursor-pointer hover:bg-green-100" onclick="document.getElementById('search-stock').value='${stockItem.origen}'; renderStock();">🏭 ${stockItem.origen}</span>` : '';
@@ -2247,16 +2249,27 @@ function renderStock() {
                         </div>
                     </div>
                     
-                    <div class="flex justify-between items-center my-3 bg-gray-50 rounded-xl p-3">
-                        <div>
-                            <span class="text-3xl font-bold ${isCritical ? 'text-red-600' : 'text-blue-600'}">${cantidad}</span>
-                            <span class="text-sm ${isCritical ? 'text-red-500' : 'text-gray-500'} ml-1">${m.unidad}</span>
-                        </div>
-                        <div class="text-right">
-                            <span class="text-xs text-gray-400 block">Mín: ${m.stockMinimo || 3}</span>
-                            ${isCritical ? '<span class="text-xs text-red-600 font-bold">⚠️ Crítico</span>' : ''}
-                        </div>
+                ${(() => {
+                    const reservado = calcularReservado(stockItem.id);
+                    const disponible = Math.max(0, cantidad - reservado);
+                    const isCriticalDisp = disponible <= (m.stockMinimo || 3);
+                    return `
+                <div class="flex justify-between items-center my-3 bg-gray-50 rounded-xl p-3">
+                    <div>
+                        <span class="text-3xl font-bold ${isCriticalDisp ? 'text-red-600' : 'text-blue-600'}">${disponible}</span>
+                        <span class="text-sm ${isCriticalDisp ? 'text-red-500' : 'text-gray-500'} ml-1">${m.unidad} disp.</span>
                     </div>
+                    <div class="text-right">
+                        <span class="text-xs text-gray-400 block">Total: ${cantidad} | Mín: ${m.stockMinimo || 3}</span>
+                        ${reservado > 0 ? `<span class="text-xs text-purple-600 font-medium block">🔒 Reservado: ${reservado}</span>` : ''}
+                        ${isCriticalDisp ? '<span class="text-xs text-red-600 font-bold block">⚠️ Crítico</span>' : ''}
+                    </div>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2 mb-3 overflow-hidden">
+                    <div class="bg-blue-500 h-2 rounded-full" style="width: ${cantidad > 0 ? (disponible / cantidad * 100) : 0}%"></div>
+                </div>
+                    `;
+                })()}
                     
                     <div class="flex flex-wrap gap-1 mb-3">
                         ${origenLabel}
@@ -4671,6 +4684,12 @@ function renderRetazosRecepcion(idx) {
             
             return Math.max(0, stockItem.cantidad - reservado);
         }
+        
+        function calcularReservado(stockItemId) {
+            return state.reservas
+                .filter(r => r.estado === 'activa' && r.stockItemId === stockItemId)
+                .reduce((sum, r) => sum + r.cantidad, 0);
+        }
 
         function actualizarDisponibleReserva(materialId) {
             // Esta se llama al renderizar para actualizar el campo disponible
@@ -4873,7 +4892,11 @@ function renderRetazosRecepcion(idx) {
                 } else {
                     const variantes = state.stock.filter(s => s.materialId === c.id);
                     if (variantes.length === 0) return true;
-                    return variantes.some(v => v.cantidad <= (c.stockMinimo || 3));
+                    return variantes.some(v => {
+                        const reservado = calcularReservado(v.id);
+                        const disponible = v.cantidad - reservado;
+                        return disponible <= (c.stockMinimo || 3);
+                    });
                 }
             }).length;
             const totalMateriales = state.catalogo.filter(c => c.activo !== false).length;
