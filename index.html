@@ -39,8 +39,7 @@
             setDoc,
             getDoc,
             onSnapshot,
-            enableIndexedDbPersistence
-             
+            enableIndexedDbPersistence    
         };
     </script>
     <style>
@@ -2032,12 +2031,11 @@ function renderStock() {
     const ubicacionFilter = document.getElementById('filter-ubicacion')?.value || '';
     const container = document.getElementById('stock-grid');
     const chipsContainer = document.getElementById('ubicacion-chips');
-    
-    
-    // 🔴 DETECTAR COINCIDENCIA EXACTA DE CÓDIGO
+
+    // ✅ DETECTAR COINCIDENCIA EXACTA DE CÓDIGO
     const codigoExacto = search ? state.catalogo.find(c => 
         c.activo !== false && c.codigo.toLowerCase() === search
-    ) : null;    
+    ) : null;
 
     // Obtener todas las ubicaciones únicas disponibles
     const ubicacionesStock = [...new Set(state.stock.map(s => s.ubicacion).filter(Boolean))].sort();
@@ -2079,7 +2077,7 @@ function renderStock() {
         ` : '');
     }
 
-    // Obtener stock filtrado por ubicación Y búsqueda
+    // ========== MATERIALES NORMALES ==========
     const stockFiltrado = state.stock.filter(s => {
         const material = state.catalogo.find(c => c.id === s.materialId);
         if (!material || material.activo === false) return false;
@@ -2139,9 +2137,7 @@ function renderStock() {
         
         if (search) {
             // ✅ Si hay coincidencia EXACTA de código, NO filtrar retazos (mostrar todos de ese material)
-            if (codigoExacto && m.codigo.toLowerCase() === search) {
-                // No filtrar nada, mostrar todos los retazos de este material
-            } else {
+            if (!(codigoExacto && m.codigo.toLowerCase() === search)) {
                 retazosMaterial = retazosMaterial.filter(r => 
                     (m.detalles || '').toLowerCase().includes(search) ||
                     (r.origen || '').toLowerCase().includes(search) ||
@@ -2331,7 +2327,6 @@ function renderStock() {
     document.getElementById('dash-critico').textContent = critico;
     document.getElementById('summary-stock').textContent = state.stock.length + state.retazos.filter(r => r.estado === 'disponible').length;
 }
-
 // ============================================================
 // AGREGAR esta nueva función (puede ir donde quieras en el <script>)
 // ============================================================
