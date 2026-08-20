@@ -39,7 +39,14 @@
             setDoc,
             getDoc,
             onSnapshot,
-            enableIndexedDbPersistence
+            enableIndexedDbPersistence,
+            
+            collection,
+            getDocs,
+            updateDoc,
+            deleteDoc,
+            writeBatch,
+            serverTimestamp            
         };
     </script>
     <style>
@@ -2031,6 +2038,12 @@ function renderStock() {
     const ubicacionFilter = document.getElementById('filter-ubicacion')?.value || '';
     const container = document.getElementById('stock-grid');
     const chipsContainer = document.getElementById('ubicacion-chips');
+    
+    
+    // 🔴 DETECTAR COINCIDENCIA EXACTA DE CÓDIGO
+    const codigoExacto = search ? state.catalogo.find(c => 
+        c.activo !== false && c.codigo.toLowerCase() === search
+    ) : null;    
 
     // Obtener todas las ubicaciones únicas disponibles
     const ubicacionesStock = [...new Set(state.stock.map(s => s.ubicacion).filter(Boolean))].sort();
@@ -2080,16 +2093,20 @@ function renderStock() {
         
         if (ubicacionFilter && s.ubicacion !== ubicacionFilter) return false;
         
-        const matchSearch = !search || 
-               material.codigo.toLowerCase().includes(search) || 
-               material.descripcion.toLowerCase().includes(search) ||
+        if (!search) return true;
+        
+        // ✅ Si hay coincidencia EXACTA de código, mostrar SOLO ese material
+        if (codigoExacto && material.codigo.toLowerCase() === search) {
+            return true;
+        }
+        
+        // Si no hay coincidencia exacta, buscar por descripción, detalles, ubicación, etc.
+        return material.descripcion.toLowerCase().includes(search) ||
                (material.detalles || '').toLowerCase().includes(search) ||
                (s.detalles || '').toLowerCase().includes(search) ||
                (s.ubicacion || '').toLowerCase().includes(search) ||
                (s.origen || '').toLowerCase().includes(search) ||
                (s.observaciones || '').toLowerCase().includes(search);
-        
-        return matchSearch;
     });
     
     const stockPorMaterial = {};
@@ -2107,8 +2124,15 @@ function renderStock() {
             const tieneRetazosAhi = state.retazos.some(r => r.materialId === c.id && r.estado === 'disponible' && r.ubicacion === ubicacionFilter);
             if (!tieneRetazosAhi && c.tipoControl === 'retazos') return false;
         }
-        return c.codigo.toLowerCase().includes(search) || 
-               c.descripcion.toLowerCase().includes(search) ||
+        
+        if (!search) return true;
+        
+        // ✅ Coincidencia EXACTA de código
+        if (codigoExacto && c.codigo.toLowerCase() === search) {
+            return true;
+        }
+        
+        return c.descripcion.toLowerCase().includes(search) ||
                (c.detalles || '').toLowerCase().includes(search);
     });
     
@@ -2120,13 +2144,16 @@ function renderStock() {
         }
         
         if (search) {
-            retazosMaterial = retazosMaterial.filter(r => 
-                m.codigo.toLowerCase().includes(search) ||
-                m.descripcion.toLowerCase().includes(search) ||
-                (m.detalles || '').toLowerCase().includes(search) ||
-                (r.origen || '').toLowerCase().includes(search) ||
-                (r.observaciones || '').toLowerCase().includes(search)
-            );
+            // ✅ Si hay coincidencia EXACTA de código, NO filtrar retazos (mostrar todos de ese material)
+            if (codigoExacto && m.codigo.toLowerCase() === search) {
+                // No filtrar nada, mostrar todos los retazos de este material
+            } else {
+                retazosMaterial = retazosMaterial.filter(r => 
+                    (m.detalles || '').toLowerCase().includes(search) ||
+                    (r.origen || '').toLowerCase().includes(search) ||
+                    (r.observaciones || '').toLowerCase().includes(search)
+                );
+            }
         }
         
         const totalMedida = retazosMaterial.reduce((sum, r) => sum + r.medida, 0);
@@ -4963,7 +4990,7 @@ function renderRetazosRecepcion(idx) {
             setBadge('badge-ordenes', abiertas);
             setBadge('badge-critical', critico);
             setBadge('badge-tareas', state.tareas.filter(t => t.estado === 'pendiente').length);
-			setBadge('badge-reservas', state.reservas.filter(r => r.estado === 'activa').length);
+            setBadge('badge-reservas', state.reservas.filter(r => r.estado === 'activa').length);            
 
             // Calendario dashboard
             const calendar = document.getElementById('dashboard-calendar');
