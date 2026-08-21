@@ -609,31 +609,19 @@
                                     <label class="block text-sm font-medium text-gray-700 mb-2">Obra / Destino *</label>
                                     <input type="text" id="reserva-destino" placeholder="Ej: Obra Centro" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
                                 </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Material del Stock *</label>
-                                    <div class="relative">
-                                        <input type="text" id="reserva-material-search" placeholder="Buscar material..." class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500" autocomplete="off">
-                                        <div id="reserva-autocomplete-results" class="autocomplete-results hidden"></div>
-                                        <input type="hidden" id="reserva-material-id">
-                                        <input type="hidden" id="reserva-material-codigo">
-                                    </div>
-                                    <div id="reserva-material-info" class="mt-2 text-sm hidden"></div>
+                                
+                                <div class="flex justify-between items-center mb-2">
+                                    <label class="block text-sm font-medium text-gray-700">Materiales a reservar</label>
+                                    <button type="button" onclick="addReservaMaterialRow()" class="text-sm text-blue-600 hover:underline font-medium">+ Agregar material</button>
                                 </div>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-2">Cantidad a reservar *</label>
-                                        <input type="number" id="reserva-cantidad" min="1" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-2">Disponible real</label>
-                                        <input type="text" id="reserva-disponible" readonly class="w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-100 text-gray-600">
-                                    </div>
-                                </div>
-                                <button onclick="agregarReserva()" class="w-full bg-purple-600 text-white py-3 rounded-xl hover:bg-purple-700 font-medium">Reservar Material</button>
+                                
+                                <div id="reserva-materiales-container" class="space-y-3"></div>
+                                
+                                <button onclick="agregarReserva()" class="w-full bg-purple-600 text-white py-3 rounded-xl hover:bg-purple-700 font-medium">Reservar Materiales</button>
                             </div>
                         </div>
 
-                    <!-- Reservas Activas -->
+                        <!-- Reservas Activas -->
                         <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                             <h3 class="text-lg font-bold text-gray-800 mb-4">Reservas Activas por Obra</h3>
                             <div id="reservas-activas-container" class="space-y-4">
@@ -1366,9 +1354,9 @@
             if (id === 'retiros') renderRetiros();
             if (id === 'planificador') renderPlanner();
             if (id === 'auditoria') renderAuditoria();
-			if (id === 'reservas') {
+            if (id === 'reservas') {
                 renderReservas();
-                setTimeout(initReservaAutocomplete, 100);
+                setTimeout(initReservaForm, 100);
             }
             if (id === 'ingreso') initIngresoForm();
         }
@@ -4718,30 +4706,23 @@ async function confirmarRecepcion() {
 
         function renderReservas() {
             const container = document.getElementById('reservas-activas-container');
-    
-            // Calcular disponible real en el input si hay material seleccionado
-            const matId = document.getElementById('reserva-material-id')?.value;
-            if (matId) {
-                actualizarDisponibleReserva(matId);
-            }
-    
+            
             if (!state.reservas || state.reservas.filter(r => r.estado === 'activa').length === 0) {
                 container.innerHTML = '<p class="text-gray-400 text-center py-8">No hay reservas activas</p>';
                 document.getElementById('badge-reservas')?.classList.add('hidden');
                 return;
             }
-    
+            
             const activas = state.reservas.filter(r => r.estado === 'activa');
             document.getElementById('badge-reservas').textContent = activas.length;
             document.getElementById('badge-reservas')?.classList.remove('hidden');
-    
-            // Agrupar por obra
+            
             const porObra = {};
             activas.forEach(r => {
                 if (!porObra[r.destino]) porObra[r.destino] = [];
-                    porObra[r.destino].push(r);
-                });
-    
+                porObra[r.destino].push(r);
+            });
+            
             container.innerHTML = Object.entries(porObra).map(([obra, reservas]) => `
                 <div class="border border-gray-200 rounded-xl overflow-hidden">
                     <div class="bg-purple-50 px-4 py-3 flex justify-between items-center">
@@ -4750,25 +4731,51 @@ async function confirmarRecepcion() {
                     </div>
                     <div class="divide-y divide-gray-100">
                         ${reservas.map(r => {
-                            const material = state.catalogo.find(c => c.id === r.materialId);
-                            const stockItem = state.stock.find(s => s.id === r.stockItemId);
-                            return `
-                            <div class="p-4 flex justify-between items-center hover:bg-gray-50">
-                                <div class="flex-1 min-w-0">
-                                    <p class="font-medium text-gray-900">${r.descripcionMaterial}</p>
-                                    <p class="text-xs text-gray-500">${r.codigoMaterial} • ${r.cantidad} ${r.unidad}</p>
-                                    <p class="text-xs text-gray-400 mt-1">Reservado: ${new Date(r.fechaReserva).toLocaleDateString()} por ${r.usuario}</p>
+                            if (r.tipo === 'retazo') {
+                                return `
+                                <div class="p-4 flex justify-between items-center hover:bg-gray-50">
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">📏 Retazo</span>
+                                            <p class="font-medium text-gray-900">${r.descripcionMaterial}</p>
+                                        </div>
+                                        <p class="text-xs text-gray-500 font-mono">${r.retazoId} • ${r.medida} ${r.unidad}</p>
+                                        <p class="text-xs text-gray-400 mt-1">Reservado: ${new Date(r.fechaReserva).toLocaleDateString()} por ${r.usuario}</p>
+                                    </div>
+                                    <div class="flex gap-2 ml-3">
+                                        <button onclick="procesarSalidaReserva('${r.id}')" class="px-3 py-1.5 bg-green-600 text-white text-xs rounded-lg hover:bg-green-700 font-medium" title="Retirar">
+                                            📤 Salida
+                                        </button>
+                                        <button onclick="cancelarReserva('${r.id}')" class="px-3 py-1.5 bg-red-100 text-red-600 text-xs rounded-lg hover:bg-red-200 font-medium" title="Cancelar">
+                                            ✕
+                                        </button>
+                                    </div>
                                 </div>
-                                <div class="flex gap-2 ml-3">
-                                    <button onclick="procesarSalidaReserva('${r.id}')" class="px-3 py-1.5 bg-green-600 text-white text-xs rounded-lg hover:bg-green-700 font-medium" title="Retirar del stock">
-                                        📤 Salida
-                                    </button>
-                                    <button onclick="cancelarReserva('${r.id}')" class="px-3 py-1.5 bg-red-100 text-red-600 text-xs rounded-lg hover:bg-red-200 font-medium" title="Cancelar reserva">
-                                        ✕
-                                    </button>
+                                `;
+                            } else {
+                                const material = state.catalogo.find(c => c.id === r.materialId);
+                                const stockItem = state.stock.find(s => s.id === r.stockItemId);
+                                return `
+                                <div class="p-4 flex justify-between items-center hover:bg-gray-50">
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">📦 Normal</span>
+                                            <p class="font-medium text-gray-900">${r.descripcionMaterial}</p>
+                                        </div>
+                                        <p class="text-xs text-gray-500">${r.codigoMaterial} • ${r.cantidad} ${r.unidad}</p>
+                                        <p class="text-xs text-gray-400 mt-1">Reservado: ${new Date(r.fechaReserva).toLocaleDateString()} por ${r.usuario}</p>
+                                    </div>
+                                    <div class="flex gap-2 ml-3">
+                                        <button onclick="procesarSalidaReserva('${r.id}')" class="px-3 py-1.5 bg-green-600 text-white text-xs rounded-lg hover:bg-green-700 font-medium" title="Retirar del stock">
+                                            📤 Salida
+                                        </button>
+                                        <button onclick="cancelarReserva('${r.id}')" class="px-3 py-1.5 bg-red-100 text-red-600 text-xs rounded-lg hover:bg-red-200 font-medium" title="Cancelar reserva">
+                                            ✕
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
-                            `;
+                                `;
+                            }
                         }).join('')}
                     </div>
                     <div class="bg-gray-50 px-4 py-2 text-right">
@@ -4780,87 +4787,252 @@ async function confirmarRecepcion() {
             `).join('');
         }
         
-        function initReservaAutocomplete() {
-            const input = document.getElementById('reserva-material-search');
-            const resultsDiv = document.getElementById('reserva-autocomplete-results');
-            const materialIdInput = document.getElementById('reserva-material-id');
-            const materialCodigoInput = document.getElementById('reserva-material-codigo');
-            const infoDiv = document.getElementById('reserva-material-info');
-    
-            if (!input) return;
-    
+        function initReservaForm() {
+            document.getElementById('reserva-destino').value = '';
+            document.getElementById('reserva-materiales-container').innerHTML = '';
+            for (let i = 0; i < 5; i++) {
+                addReservaMaterialRow();
+            }
+        }
+
+        function addReservaMaterialRow() {
+            const container = document.getElementById('reserva-materiales-container');
+            const idx = container.children.length;
+            
+            const div = document.createElement('div');
+            div.className = 'reserva-material-row bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-3';
+            div.dataset.index = idx;
+            
+            div.innerHTML = `
+                <div class="flex justify-between items-start">
+                    <h4 class="text-sm font-semibold text-gray-600">Material #${idx + 1}</h4>
+                    <button type="button" onclick="this.closest('.reserva-material-row').remove()" class="text-red-500 hover:text-red-700 text-sm" title="Eliminar">✕</button>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">Tipo</label>
+                        <select class="reserva-tipo w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white" onchange="cambiarTipoReserva(this)">
+                            <option value="normal">📦 Material Normal</option>
+                            <option value="retazo">📏 Retazo</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="relative reserva-busqueda-container">
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Material *</label>
+                    <input type="text" placeholder="Buscar material..." 
+                           class="reserva-autocomplete w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                           autocomplete="off">
+                    <div class="autocomplete-results hidden"></div>
+                    <input type="hidden" class="reserva-material-id">
+                    <input type="hidden" class="reserva-material-codigo">
+                    <input type="hidden" class="reserva-stock-item-id">
+                    <input type="hidden" class="reserva-retazo-id">
+                </div>
+                
+                <div class="reserva-info text-xs hidden"></div>
+                
+                <div class="reserva-normal-section grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">Cantidad *</label>
+                        <input type="number" min="1" value="1" 
+                               class="reserva-cantidad w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">Disponible</label>
+                        <input type="text" readonly 
+                               class="reserva-disponible w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-600 text-sm">
+                    </div>
+                </div>
+                
+                <div class="reserva-retazo-section hidden space-y-2">
+                    <p class="text-xs text-gray-600">Seleccionar retazos disponibles:</p>
+                    <div class="reserva-retazos-list space-y-1 max-h-40 overflow-y-auto"></div>
+                </div>
+            `;
+            
+            container.appendChild(div);
+            setupReservaAutocomplete(div);
+        }
+        
+        function cambiarTipoReserva(select) {
+            const row = select.closest('.reserva-material-row');
+            const tipo = select.value;
+            const normalSection = row.querySelector('.reserva-normal-section');
+            const retazoSection = row.querySelector('.reserva-retazo-section');
+            const autocomplete = row.querySelector('.reserva-autocomplete');
+            
+            row.querySelector('.reserva-material-id').value = '';
+            row.querySelector('.reserva-material-codigo').value = '';
+            row.querySelector('.reserva-stock-item-id').value = '';
+            row.querySelector('.reserva-retazo-id').value = '';
+            autocomplete.value = '';
+            row.querySelector('.reserva-info').classList.add('hidden');
+            
+            if (tipo === 'retazo') {
+                normalSection.classList.add('hidden');
+                retazoSection.classList.remove('hidden');
+            } else {
+                retazoSection.classList.add('hidden');
+                normalSection.classList.remove('hidden');
+            }
+        } 
+
+        function setupReservaAutocomplete(row) {
+            const input = row.querySelector('.reserva-autocomplete');
+            const resultsDiv = row.querySelector('.autocomplete-results');
+            const materialIdInput = row.querySelector('.reserva-material-id');
+            const materialCodigoInput = row.querySelector('.reserva-material-codigo');
+            const stockItemIdInput = row.querySelector('.reserva-stock-item-id');
+            const retazoIdInput = row.querySelector('.reserva-retazo-id');
+            const tipoSelect = row.querySelector('.reserva-tipo');
+            const infoDiv = row.querySelector('.reserva-info');
+            const cantidadInput = row.querySelector('.reserva-cantidad');
+            const disponibleInput = row.querySelector('.reserva-disponible');
+            
             input.addEventListener('input', (e) => {
                 const value = e.target.value.toLowerCase();
+                const tipo = tipoSelect.value;
                 
                 if (value.length < 1) {
                     resultsDiv.classList.add('hidden');
                     return;
                 }
-        
-                // Buscar en stock (no en catálogo, porque necesitamos el item de stock específico)
-                const matches = state.stock.filter(s => {
-                    const mat = state.catalogo.find(c => c.id === s.materialId);
-                    if (!mat || mat.activo === false) return false;
-                    return mat.codigo.toLowerCase().includes(value) || 
-                           mat.descripcion.toLowerCase().includes(value) ||
-                           (mat.detalles || '').toLowerCase().includes(value);
-                }).slice(0, 5);
-        
-                if (matches.length > 0) {
-                    resultsDiv.innerHTML = matches.map(s => {
+                
+                if (tipo === 'normal') {
+                    const matches = state.stock.filter(s => {
                         const mat = state.catalogo.find(c => c.id === s.materialId);
-                        const disp = calcularDisponible(s.materialId, s.id);
-                        return `
-                            <div class="autocomplete-item" 
-                                 data-stock-id="${s.id}"
-                                 data-material-id="${s.materialId}"
-                                 data-codigo="${mat.codigo}"
-                                 data-desc="${mat.descripcion}"
-                                 data-unidad="${s.unidad}"
-                                 data-cantidad="${s.cantidad}"
-                                 data-disp="${disp}">
-                                <div class="font-medium">${mat.descripcion}</div>
-                                <div class="text-xs text-gray-500">
-                                    ${mat.codigo} • Stock: ${s.cantidad} ${s.unidad} • Disponible: ${disp} ${s.unidad}
-                                    ${mat.detalles ? '• ' + mat.detalles : ''}
-                                </div>
-                            </div>
-                        `;
-                    }).join('');
-                    resultsDiv.classList.remove('hidden');
+                        if (!mat || mat.activo === false) return false;
+                        if (mat.tipoControl === 'retazos') return false;
+                        return mat.codigo.toLowerCase().includes(value) || 
+                               mat.descripcion.toLowerCase().includes(value) ||
+                               (mat.detalles || '').toLowerCase().includes(value);
+                    }).slice(0, 5);
                     
-                    resultsDiv.querySelectorAll('.autocomplete-item').forEach(item => {
-                        item.addEventListener('click', () => {
-                            input.value = item.dataset.desc;
-                            materialIdInput.value = item.dataset.materialId;
-                            materialCodigoInput.value = item.dataset.codigo;
-                            document.getElementById('reserva-cantidad').max = item.dataset.disp;
-                            document.getElementById('reserva-cantidad').value = '';
-                            document.getElementById('reserva-disponible').value = `${item.dataset.disp} ${item.dataset.unidad} (de ${item.dataset.cantidad} total)`;
-                            
-                            infoDiv.classList.remove('hidden');
-                            infoDiv.innerHTML = `
-                                <div class="bg-blue-50 p-2 rounded-lg text-sm text-blue-800">
-                                    <strong>${item.dataset.desc}</strong><br>
-                                    <span class="text-xs">Stock total: ${item.dataset.cantidad} | Disponible: ${item.dataset.disp} ${item.dataset.unidad}</span>
+                    if (matches.length > 0) {
+                        resultsDiv.innerHTML = matches.map(s => {
+                            const mat = state.catalogo.find(c => c.id === s.materialId);
+                            const disp = calcularDisponible(s.materialId, s.id);
+                            return `
+                                <div class="autocomplete-item" 
+                                     data-stock-id="${s.id}"
+                                     data-material-id="${s.materialId}"
+                                     data-codigo="${mat.codigo}"
+                                     data-desc="${mat.descripcion}"
+                                     data-unidad="${s.unidad}"
+                                     data-cantidad="${s.cantidad}"
+                                     data-disp="${disp}"
+                                     data-detalles="${mat.detalles || ''}">
+                                    <div class="font-medium">${mat.descripcion}</div>
+                                    <div class="text-xs text-gray-500">
+                                        ${mat.codigo} • Stock: ${s.cantidad} ${s.unidad} • Disponible: ${disp} ${s.unidad}
+                                        ${mat.detalles ? '• ' + mat.detalles : ''}
+                                    </div>
                                 </div>
                             `;
-                            
-                            resultsDiv.classList.add('hidden');
+                        }).join('');
+                        resultsDiv.classList.remove('hidden');
+                        
+                        resultsDiv.querySelectorAll('.autocomplete-item').forEach(item => {
+                            item.addEventListener('click', () => {
+                                input.value = item.dataset.desc;
+                                materialIdInput.value = item.dataset.materialId;
+                                materialCodigoInput.value = item.dataset.codigo;
+                                stockItemIdInput.value = item.dataset.stockId;
+                                retazoIdInput.value = '';
+                                
+                                const disp = item.dataset.disp;
+                                const unidad = item.dataset.unidad;
+                                disponibleInput.value = `${disp} ${unidad} (de ${item.dataset.cantidad} total)`;
+                                cantidadInput.max = disp;
+                                cantidadInput.value = Math.min(parseInt(cantidadInput.value) || 1, parseInt(disp) || 1);
+                                
+                                infoDiv.classList.remove('hidden');
+                                infoDiv.innerHTML = `
+                                    <div class="bg-blue-50 p-2 rounded-lg text-blue-800">
+                                        <strong>${item.dataset.desc}</strong> • Disp: ${disp} ${unidad}
+                                        ${item.dataset.detalles ? `<br><span class="text-blue-600">📋 ${item.dataset.detalles}</span>` : ''}
+                                    </div>
+                                `;
+                                
+                                resultsDiv.classList.add('hidden');
+                            });
                         });
-                    });
+                    } else {
+                        resultsDiv.innerHTML = '<div class="autocomplete-item text-gray-400 italic p-2">No hay stock disponible</div>';
+                        resultsDiv.classList.remove('hidden');
+                    }
                 } else {
-                    resultsDiv.innerHTML = '<div class="autocomplete-item text-gray-400 italic">No hay stock disponible</div>';
-                    resultsDiv.classList.remove('hidden');
+                    const matches = state.retazos.filter(r => {
+                        if (r.estado !== 'disponible') return false;
+                        const yaReservado = state.reservas.some(res => res.estado === 'activa' && res.tipo === 'retazo' && res.retazoId === r.id);
+                        if (yaReservado) return false;
+                        const mat = state.catalogo.find(c => c.id === r.materialId);
+                        if (!mat || mat.activo === false) return false;
+                        return mat.codigo.toLowerCase().includes(value) || 
+                               mat.descripcion.toLowerCase().includes(value) ||
+                               (mat.detalles || '').toLowerCase().includes(value) ||
+                               r.id.toLowerCase().includes(value);
+                    }).slice(0, 8);
+                    
+                    if (matches.length > 0) {
+                        resultsDiv.innerHTML = matches.map(r => {
+                            const mat = state.catalogo.find(c => c.id === r.materialId);
+                            return `
+                                <div class="autocomplete-item" 
+                                     data-retazo-id="${r.id}"
+                                     data-material-id="${r.materialId}"
+                                     data-codigo="${r.codigoMaterial}"
+                                     data-desc="${mat.descripcion}"
+                                     data-medida="${r.medida}"
+                                     data-unidad="${r.unidad}"
+                                     data-ubicacion="${r.ubicacion || 'Sin ubicación'}"
+                                     data-detalles="${mat.detalles || ''}">
+                                    <div class="font-medium">${mat.descripcion}</div>
+                                    <div class="text-xs text-gray-500">
+                                        <span class="font-mono">${r.id}</span> • ${r.medida} ${r.unidad} • 📍 ${r.ubicacion || 'Sin ubicación'}
+                                        ${mat.detalles ? '• ' + mat.detalles : ''}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+                        resultsDiv.classList.remove('hidden');
+                        
+                        resultsDiv.querySelectorAll('.autocomplete-item').forEach(item => {
+                            item.addEventListener('click', () => {
+                                input.value = `${item.dataset.desc} - ${item.dataset.medida} ${item.dataset.unidad} (${item.dataset.retazoId})`;
+                                materialIdInput.value = item.dataset.materialId;
+                                materialCodigoInput.value = item.dataset.codigo;
+                                retazoIdInput.value = item.dataset.retazoId;
+                                stockItemIdInput.value = '';
+                                
+                                infoDiv.classList.remove('hidden');
+                                infoDiv.innerHTML = `
+                                    <div class="bg-purple-50 p-2 rounded-lg text-purple-800">
+                                        <strong>${item.dataset.desc}</strong><br>
+                                        <span class="font-mono text-xs">${item.dataset.retazoId}</span> • ${item.dataset.medida} ${item.dataset.unidad}<br>
+                                        📍 ${item.dataset.ubicacion}
+                                        ${item.dataset.detalles ? `<br><span class="text-purple-600">📋 ${item.dataset.detalles}</span>` : ''}
+                                    </div>
+                                `;
+                                
+                                resultsDiv.classList.add('hidden');
+                            });
+                        });
+                    } else {
+                        resultsDiv.innerHTML = '<div class="autocomplete-item text-gray-400 italic p-2">No hay retazos disponibles</div>';
+                        resultsDiv.classList.remove('hidden');
+                    }
                 }
             });
-    
+            
             document.addEventListener('click', (e) => {
-                if (!input.contains(e.target) && !resultsDiv.contains(e.target)) {
+                if (!row.contains(e.target)) {
                     resultsDiv.classList.add('hidden');
                 }
             });
-        }
+        }        
 
         function calcularDisponible(materialId, stockItemId) {
             const stockItem = state.stock.find(s => s.id === stockItemId);
@@ -4891,133 +5063,154 @@ async function confirmarRecepcion() {
         
         async function agregarReserva() {
             const destino = document.getElementById('reserva-destino').value.trim();
-            const materialId = document.getElementById('reserva-material-id').value;
-            const cantidad = parseFloat(document.getElementById('reserva-cantidad').value);
-            
             if (!destino) return alert('Indicá la obra/destino');
-            if (!materialId) return alert('Seleccioná un material del stock');
-            if (!cantidad || cantidad <= 0) return alert('Indicá una cantidad válida');
             
-            const stockItem = state.stock.find(s => s.materialId === materialId);
-            if (!stockItem) return alert('Material no encontrado en stock');
+            const reservasCreadas = [];
+            const reservasRetazo = [];
+            let hayError = false;
             
-            const disponible = calcularDisponible(materialId, stockItem.id);
-            if (cantidad > disponible) {
-                alert(`No hay suficiente stock disponible.\nSolicitado: ${cantidad}\nDisponible: ${disponible} ${stockItem.unidad}`);
-                return;
+            document.querySelectorAll('.reserva-material-row').forEach(row => {
+                const tipo = row.querySelector('.reserva-tipo').value;
+                const materialId = row.querySelector('.reserva-material-id').value;
+                
+                if (!materialId) return;
+                
+                if (tipo === 'normal') {
+                    const stockItemId = row.querySelector('.reserva-stock-item-id').value;
+                    const cantidad = parseFloat(row.querySelector('.reserva-cantidad').value);
+                    
+                    if (!stockItemId) {
+                        alert('Seleccioná un material del stock');
+                        hayError = true;
+                        return;
+                    }
+                    if (!cantidad || cantidad <= 0) {
+                        alert('Indicá una cantidad válida');
+                        hayError = true;
+                        return;
+                    }
+                    
+                    const stockItem = state.stock.find(s => s.id === stockItemId);
+                    if (!stockItem) {
+                        alert('Material no encontrado en stock');
+                        hayError = true;
+                        return;
+                    }
+                    
+                    const disponible = calcularDisponible(stockItem.materialId, stockItem.id);
+                    if (cantidad > disponible) {
+                        alert(`No hay suficiente stock para ${stockItem.descripcion}.\nSolicitado: ${cantidad}\nDisponible: ${disponible} ${stockItem.unidad}`);
+                        hayError = true;
+                        return;
+                    }
+                    
+                    const material = state.catalogo.find(c => c.id === stockItem.materialId);
+                    reservasCreadas.push({
+                        id: 'RES-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 5).toUpperCase(),
+                        tipo: 'normal',
+                        stockItemId: stockItem.id,
+                        materialId: stockItem.materialId,
+                        codigoMaterial: material.codigo,
+                        descripcionMaterial: material.descripcion,
+                        detallesMaterial: stockItem.detalles || material.detalles || '',
+                        cantidad: cantidad,
+                        unidad: stockItem.unidad,
+                        destino: destino,
+                        estado: 'activa',
+                        fechaReserva: new Date().toISOString(),
+                        usuario: CONFIG.currentUserName
+                    });
+                } else {
+                    const retazoId = row.querySelector('.reserva-retazo-id').value;
+                    if (!retazoId) {
+                        alert('Seleccioná un retazo');
+                        hayError = true;
+                        return;
+                    }
+                    
+                    const retazo = state.retazos.find(r => r.id === retazoId && r.estado === 'disponible');
+                    if (!retazo) {
+                        alert('Retazo no disponible');
+                        hayError = true;
+                        return;
+                    }
+                    
+                    const yaReservado = state.reservas.some(res => res.estado === 'activa' && res.tipo === 'retazo' && res.retazoId === retazoId);
+                    if (yaReservado) {
+                        alert(`El retazo ${retazoId} ya está reservado`);
+                        hayError = true;
+                        return;
+                    }
+                    
+                    reservasRetazo.push({
+                        id: 'RES-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 5).toUpperCase(),
+                        tipo: 'retazo',
+                        retazoId: retazo.id,
+                        materialId: retazo.materialId,
+                        codigoMaterial: retazo.codigoMaterial,
+                        descripcionMaterial: retazo.descripcionMaterial,
+                        detallesMaterial: retazo.observaciones || '',
+                        medida: retazo.medida,
+                        unidad: retazo.unidad,
+                        destino: destino,
+                        estado: 'activa',
+                        fechaReserva: new Date().toISOString(),
+                        usuario: CONFIG.currentUserName
+                    });
+                }
+            });
+            
+            if (hayError) return;
+            if (reservasCreadas.length === 0 && reservasRetazo.length === 0) {
+                return alert('Agregá al menos un material para reservar');
             }
             
-            const material = state.catalogo.find(c => c.id === materialId);
+            reservasCreadas.forEach(r => {
+                state.reservas.push(r);
+                addAuditLog('RESERVA', 'STOCK', r.stockItemId, `Reservados ${r.cantidad} ${r.unidad} de ${r.descripcionMaterial} para ${destino}`);
+            });
             
-            const reserva = {
-                id: 'RES-' + Date.now().toString(36).toUpperCase(),
-                stockItemId: stockItem.id,
-                materialId: materialId,
-                codigoMaterial: material.codigo,
-                descripcionMaterial: material.descripcion,
-                detallesMaterial: stockItem.detalles || material.detalles || '',
-                cantidad: cantidad,
-                unidad: stockItem.unidad,
-                destino: destino,
-                estado: 'activa',
-                fechaReserva: new Date().toISOString(),
-                usuario: CONFIG.currentUserName
-            };
+            reservasRetazo.forEach(r => {
+                state.reservas.push(r);
+                addAuditLog('RESERVA', 'RETAZO', r.retazoId, `Retazo ${r.retazoId} reservado para ${destino}`);
+            });
             
-            state.reservas.push(reserva);
-            addAuditLog('RESERVA', 'STOCK', stockItem.id, `Reservados ${cantidad} ${stockItem.unidad} de ${material.descripcion} para ${destino}`);
-            
-            await saveToCloud();
-            
-            // Limpiar formulario
-            document.getElementById('reserva-destino').value = '';
-            document.getElementById('reserva-material-search').value = '';
-            document.getElementById('reserva-material-id').value = '';
-            document.getElementById('reserva-material-codigo').value = '';
-            document.getElementById('reserva-cantidad').value = '';
-            document.getElementById('reserva-disponible').value = '';
-            document.getElementById('reserva-material-info').classList.add('hidden');
-            
-            renderReservas();
-            renderStock(); // Actualizar para mostrar "reservado"
-            updateDashboard();
-            
-            alert(`✅ Reservados ${cantidad} ${stockItem.unidad} de ${material.descripcion} para ${destino}`);
+            try {
+                await saveData();
+                renderReservas();
+                initReservaForm();
+                renderStock();
+                alert(`✅ Reserva creada para ${destino}\n📦 Materiales: ${reservasCreadas.length}\n📏 Retazos: ${reservasRetazo.length}`);
+            } catch (e) {
+                console.error('Error guardando reserva:', e);
+                alert('❌ Error al guardar la reserva');
+            }
         }
 
         async function procesarSalidaReserva(reservaId) {
             const reserva = state.reservas.find(r => r.id === reservaId && r.estado === 'activa');
             if (!reserva) return alert('Reserva no encontrada');
             
-            if (!confirm(`¿Confirmar salida de ${reserva.cantidad} ${reserva.unidad} de ${reserva.descripcionMaterial} para ${reserva.destino}?\n\nSe restará del stock.`)) return;
-            
-            const stockItem = state.stock.find(s => s.id === reserva.stockItemId);
-            if (!stockItem) return alert('Error: material no encontrado en stock');
-            
-            if (stockItem.cantidad < reserva.cantidad) {
-                alert(`⚠️ Stock insuficiente. Disponible: ${stockItem.cantidad}, Reservado: ${reserva.cantidad}`);
-                return;
-            }
-            
-            // Restar del stock
-            stockItem.cantidad -= reserva.cantidad;
-            
-            // Marcar reserva como entregada
-            reserva.estado = 'entregada';
-            reserva.fechaSalida = new Date().toISOString();
-            reserva.usuarioSalida = CONFIG.currentUserName;
-            
-            // Registrar retiro
-            state.retiros.push({
-                id: Date.now(),
-                fecha: new Date().toISOString(),
-                tipo: 'reserva',
-                destino: reserva.destino,
-                reservaId: reserva.id,
-                usuario: CONFIG.currentUserName,
-                materiales: [{
-                    descripcion: reserva.descripcionMaterial,
-                    detalles: reserva.detallesMaterial,
-                    cantidad: reserva.cantidad,
-                    unidad: reserva.unidad,
-                    tipo: 'normal'
-                }]
-            });
-            
-            addAuditLog('SALIDA', 'RESERVA', reserva.id, `Salida de reserva: ${reserva.cantidad} ${reserva.unidad} de ${reserva.descripcionMaterial} para ${reserva.destino}`);
-            
-            await saveToCloud();
-            renderReservas();
-            renderStock();
-            renderRetiros();
-            updateDashboard();
-            
-            alert(`✅ Salida procesada.\n${reserva.cantidad} ${reserva.unidad} de ${reserva.descripcionMaterial} retirados para ${reserva.destino}`);
-        }
-
-        async function procesarSalidaObraCompleta(obra) {
-            const reservasObra = state.reservas.filter(r => r.destino === obra && r.estado === 'activa');
-            if (reservasObra.length === 0) return alert('No hay reservas activas para esta obra');
-            
-            if (!confirm(`¿Retirar TODAS las reservas de ${obra}?\n${reservasObra.length} materiales serán descontados del stock.`)) return;
-            
-            let procesados = 0;
-            let errores = [];
-            
-            for (const reserva of reservasObra) {
-                const stockItem = state.stock.find(s => s.id === reserva.stockItemId);
-                if (!stockItem || stockItem.cantidad < reserva.cantidad) {
-                    errores.push(`${reserva.descripcionMaterial}: stock insuficiente`);
-                    continue;
+            if (reserva.tipo === 'retazo') {
+                if (!confirm(`¿Confirmar salida del retazo ${reserva.retazoId} (${reserva.descripcionMaterial}, ${reserva.medida} ${reserva.unidad}) para ${reserva.destino}?`)) return;
+                
+                const retazo = state.retazos.find(r => r.id === reserva.retazoId);
+                if (!retazo) return alert('Error: retazo no encontrado');
+                if (retazo.estado !== 'disponible' && retazo.estado !== 'reservado') {
+                    return alert('⚠️ El retazo no está disponible para salida');
                 }
                 
-                stockItem.cantidad -= reserva.cantidad;
+                retazo.estado = 'retirado';
+                retazo.fechaSalida = new Date().toISOString();
+                retazo.destino = reserva.destino;
+                retazo.usuarioSalida = CONFIG.currentUserName;
+                
                 reserva.estado = 'entregada';
                 reserva.fechaSalida = new Date().toISOString();
                 reserva.usuarioSalida = CONFIG.currentUserName;
                 
                 state.retiros.push({
-                    id: Date.now() + Math.random(),
+                    id: Date.now(),
                     fecha: new Date().toISOString(),
                     tipo: 'reserva',
                     destino: reserva.destino,
@@ -5025,17 +5218,51 @@ async function confirmarRecepcion() {
                     usuario: CONFIG.currentUserName,
                     materiales: [{
                         descripcion: reserva.descripcionMaterial,
-                        detalles: reserva.detallesMaterial,
+                        detalles: reserva.detallesMaterial || '',
+                        cantidad: 1,
+                        unidad: reserva.unidad,
+                        tipo: 'retazo',
+                        retazoId: reserva.retazoId,
+                        medida: reserva.medida
+                    }]
+                });
+                
+                addAuditLog('SALIDA', 'RETAZO', reserva.retazoId, `Salida de retazo ${reserva.retazoId} reservado para ${reserva.destino}`);
+            } else {
+                if (!confirm(`¿Confirmar salida de ${reserva.cantidad} ${reserva.unidad} de ${reserva.descripcionMaterial} para ${reserva.destino}?\n\nSe restará del stock.`)) return;
+                
+                const stockItem = state.stock.find(s => s.id === reserva.stockItemId);
+                if (!stockItem) return alert('Error: material no encontrado en stock');
+                
+                if (stockItem.cantidad < reserva.cantidad) {
+                    alert(`⚠️ Stock insuficiente. Disponible: ${stockItem.cantidad}, Reservado: ${reserva.cantidad}`);
+                    return;
+                }
+                
+                stockItem.cantidad -= reserva.cantidad;
+                
+                reserva.estado = 'entregada';
+                reserva.fechaSalida = new Date().toISOString();
+                reserva.usuarioSalida = CONFIG.currentUserName;
+                
+                state.retiros.push({
+                    id: Date.now(),
+                    fecha: new Date().toISOString(),
+                    tipo: 'reserva',
+                    destino: reserva.destino,
+                    reservaId: reserva.id,
+                    usuario: CONFIG.currentUserName,
+                    materiales: [{
+                        descripcion: reserva.descripcionMaterial,
+                        detalles: reserva.detallesMaterial || '',
                         cantidad: reserva.cantidad,
                         unidad: reserva.unidad,
                         tipo: 'normal'
                     }]
                 });
                 
-                procesados++;
+                addAuditLog('SALIDA', 'RESERVA', reserva.id, `Salida de reserva: ${reserva.cantidad} ${reserva.unidad} de ${reserva.descripcionMaterial} para ${reserva.destino}`);
             }
-            
-            addAuditLog('SALIDA', 'RESERVA', obra, `Salida completa de obra ${obra}: ${procesados} materiales procesados`);
             
             await saveToCloud();
             renderReservas();
@@ -5043,7 +5270,112 @@ async function confirmarRecepcion() {
             renderRetiros();
             updateDashboard();
             
-            let msg = `✅ ${procesados} materiales retirados para ${obra}`;
+            if (reserva.tipo === 'retazo') {
+                alert(`✅ Salida procesada.\nRetazo ${reserva.retazoId} retirado para ${reserva.destino}`);
+            } else {
+                alert(`✅ Salida procesada.\n${reserva.cantidad} ${reserva.unidad} de ${reserva.descripcionMaterial} retirados para ${reserva.destino}`);
+            }
+        }
+
+        async function procesarSalidaObraCompleta(obra) {
+            const reservasObra = state.reservas.filter(r => r.destino === obra && r.estado === 'activa');
+            if (reservasObra.length === 0) return alert('No hay reservas activas para esta obra');
+            
+            const normales = reservasObra.filter(r => r.tipo === 'normal');
+            const retazos = reservasObra.filter(r => r.tipo === 'retazo');
+            
+            let confirmMsg = `¿Retirar TODAS las reservas de ${obra}?\n`;
+            if (normales.length > 0) confirmMsg += `📦 ${normales.length} materiales normales\n`;
+            if (retazos.length > 0) confirmMsg += `📏 ${retazos.length} retazos\n`;
+            confirmMsg += `\nSerán descontados del stock.`;
+            
+            if (!confirm(confirmMsg)) return;
+            
+            let procesados = 0;
+            let errores = [];
+            
+            for (const reserva of reservasObra) {
+                if (reserva.tipo === 'retazo') {
+                    const retazo = state.retazos.find(r => r.id === reserva.retazoId);
+                    if (!retazo) {
+                        errores.push(`${reserva.retazoId}: retazo no encontrado`);
+                        continue;
+                    }
+                    if (retazo.estado !== 'disponible' && retazo.estado !== 'reservado') {
+                        errores.push(`${reserva.retazoId}: no disponible`);
+                        continue;
+                    }
+                    
+                    retazo.estado = 'retirado';
+                    retazo.fechaSalida = new Date().toISOString();
+                    retazo.destino = reserva.destino;
+                    retazo.usuarioSalida = CONFIG.currentUserName;
+                    
+                    reserva.estado = 'entregada';
+                    reserva.fechaSalida = new Date().toISOString();
+                    reserva.usuarioSalida = CONFIG.currentUserName;
+                    
+                    state.retiros.push({
+                        id: Date.now() + Math.random(),
+                        fecha: new Date().toISOString(),
+                        tipo: 'reserva',
+                        destino: reserva.destino,
+                        reservaId: reserva.id,
+                        usuario: CONFIG.currentUserName,
+                        materiales: [{
+                            descripcion: reserva.descripcionMaterial,
+                            detalles: reserva.detallesMaterial || '',
+                            cantidad: 1,
+                            unidad: reserva.unidad,
+                            tipo: 'retazo',
+                            retazoId: reserva.retazoId,
+                            medida: reserva.medida
+                        }]
+                    });
+                    
+                    addAuditLog('SALIDA', 'RETAZO', reserva.retazoId, `Salida masiva de retazo ${reserva.retazoId} para ${obra}`);
+                } else {
+                    const stockItem = state.stock.find(s => s.id === reserva.stockItemId);
+                    if (!stockItem || stockItem.cantidad < reserva.cantidad) {
+                        errores.push(`${reserva.descripcionMaterial}: stock insuficiente`);
+                        continue;
+                    }
+                    
+                    stockItem.cantidad -= reserva.cantidad;
+                    
+                    reserva.estado = 'entregada';
+                    reserva.fechaSalida = new Date().toISOString();
+                    reserva.usuarioSalida = CONFIG.currentUserName;
+                    
+                    state.retiros.push({
+                        id: Date.now() + Math.random(),
+                        fecha: new Date().toISOString(),
+                        tipo: 'reserva',
+                        destino: reserva.destino,
+                        reservaId: reserva.id,
+                        usuario: CONFIG.currentUserName,
+                        materiales: [{
+                            descripcion: reserva.descripcionMaterial,
+                            detalles: reserva.detallesMaterial || '',
+                            cantidad: reserva.cantidad,
+                            unidad: reserva.unidad,
+                            tipo: 'normal'
+                        }]
+                    });
+                    
+                    addAuditLog('SALIDA', 'RESERVA', reserva.id, `Salida masiva: ${reserva.cantidad} ${reserva.unidad} de ${reserva.descripcionMaterial} para ${obra}`);
+                }
+                
+                procesados++;
+            }
+            
+            await saveToCloud();
+            renderReservas();
+            renderStock();
+            renderRetiros();
+            updateDashboard();
+            
+            let msg = `✅ ${procesados} reservas retiradas para ${obra}`;
             if (errores.length > 0) msg += `\n\n⚠️ Errores:\n${errores.join('\n')}`;
             alert(msg);
         }
@@ -5052,13 +5384,29 @@ async function confirmarRecepcion() {
             const reserva = state.reservas.find(r => r.id === reservaId && r.estado === 'activa');
             if (!reserva) return;
             
-            if (!confirm(`¿Cancelar reserva de ${reserva.cantidad} ${reserva.unidad} de ${reserva.descripcionMaterial} para ${reserva.destino}?`)) return;
-            
-            reserva.estado = 'cancelada';
-            reserva.fechaCancelacion = new Date().toISOString();
-            reserva.usuarioCancelacion = CONFIG.currentUserName;
-            
-            addAuditLog('CANCELACION', 'RESERVA', reserva.id, `Reserva cancelada: ${reserva.descripcionMaterial} para ${reserva.destino}`);
+            if (reserva.tipo === 'retazo') {
+                if (!confirm(`¿Cancelar reserva del retazo ${reserva.retazoId} (${reserva.descripcionMaterial}, ${reserva.medida} ${reserva.unidad}) para ${reserva.destino}?`)) return;
+                
+                const retazo = state.retazos.find(r => r.id === reserva.retazoId);
+                if (retazo && retazo.estado === 'reservado') {
+                    retazo.estado = 'disponible';
+                    retazo.destino = null;
+                }
+                
+                reserva.estado = 'cancelada';
+                reserva.fechaCancelacion = new Date().toISOString();
+                reserva.usuarioCancelacion = CONFIG.currentUserName;
+                
+                addAuditLog('CANCELACION', 'RETAZO', reserva.retazoId, `Reserva de retazo ${reserva.retazoId} cancelada para ${reserva.destino}`);
+            } else {
+                if (!confirm(`¿Cancelar reserva de ${reserva.cantidad} ${reserva.unidad} de ${reserva.descripcionMaterial} para ${reserva.destino}?`)) return;
+                
+                reserva.estado = 'cancelada';
+                reserva.fechaCancelacion = new Date().toISOString();
+                reserva.usuarioCancelacion = CONFIG.currentUserName;
+                
+                addAuditLog('CANCELACION', 'RESERVA', reserva.id, `Reserva cancelada: ${reserva.descripcionMaterial} para ${reserva.destino}`);
+            }
             
             await saveToCloud();
             renderReservas();
