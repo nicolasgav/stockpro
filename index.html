@@ -3584,20 +3584,40 @@ function filtrarPorUbicacion(ubicacion) {
             
             addAuditLog('CIERRE', 'ORDEN', ordenId, `Orden #${ordenId} cerrada por ${CONFIG.currentUserName}`);
             
-            // ✅ RESERVA AUTOMÁTICA PARA LA OBRA
-            if (materialesAfectados.length > 0 && orden.destino) {
-                const reservar = confirm(
-                    `📦 ¿Reservar los materiales ingresados para la obra "${orden.destino}"?\n\n` +
-                    `Se reservarán ${materialesAfectados.length} material(es):\n` +
-                    materialesAfectados.map(m => `• ${m.descripcion}: ${m.cantidad} ${m.unidad}`).join('\n')
-                );
+            // ✅ RESERVA AUTOMÁTICA PARA LA OBRA (normales + retazos)
+            const materialesNormales = materialesRecibidos.filter(m => m.tipo === 'normal');
+            const materialesRetazos = materialesRecibidos.filter(m => m.tipo === 'retazos');
+            
+            const hayParaReservar = materialesNormales.length > 0 || materialesRetazos.length > 0;
+            
+            if (hayParaReservar && orden.destino) {
+                let mensaje = `📦 ¿Reservar los materiales ingresados para la obra "${orden.destino}"?\n\n`;
+                
+                if (materialesNormales.length > 0) {
+                    mensaje += `📦 Materiales normales (${materialesNormales.length}):\n`;
+                    mensaje += materialesNormales.map(m => `• ${m.descripcion}: ${m.cantidad} ${m.unidad}`).join('\n');
+                    mensaje += '\n\n';
+                }
+                
+                if (materialesRetazos.length > 0) {
+                    mensaje += `📏 Retazos (${materialesRetazos.length}):\n`;
+                    materialesRetazos.forEach(m => {
+                        mensaje += `• ${m.descripcion}: ${m.cantidad} ${m.unidad} (${m.retazos} pieza(s))\n`;
+                    });
+                    mensaje += '\n';
+                }
+                
+                const reservar = confirm(mensaje);
+                
                 if (reservar) {
-                    materialesAfectados.forEach(m => {
+                    // Reservar materiales normales
+                    materialesNormales.forEach(m => {
                         const stockItem = state.stock.find(s => s.id === m.stockItemId);
                         const mat = state.catalogo.find(c => c.id === m.materialId);
                         if (stockItem) {
                             const reserva = {
                                 id: 'RES-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 5).toUpperCase(),
+                                tipo: 'normal',
                                 stockItemId: stockItem.id,
                                 materialId: m.materialId,
                                 codigoMaterial: m.codigo,
@@ -3613,7 +3633,38 @@ function filtrarPorUbicacion(ubicacion) {
                             state.reservas.push(reserva);
                         }
                     });
-                    addAuditLog('RESERVA', 'ORDEN', ordenId, `Reserva automática para obra ${orden.destino}: ${materialesAfectados.length} materiales`);
+                    
+                    // Reservar retazos
+                    materialesRetazos.forEach(m => {
+                        const mat = state.catalogo.find(c => c.id === m.materialId);
+                        m.retazoIds.forEach(retazoId => {
+                            const retazo = state.retazos.find(r => r.id === retazoId);
+                            if (retazo && retazo.estado === 'disponible') {
+                                retazo.estado = 'reservado';
+                                retazo.destino = orden.destino;
+                                
+                                const reserva = {
+                                    id: 'RES-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 5).toUpperCase(),
+                                    tipo: 'retazo',
+                                    retazoId: retazo.id,
+                                    materialId: m.materialId,
+                                    codigoMaterial: m.codigo,
+                                    descripcionMaterial: m.descripcion,
+                                    detallesMaterial: mat?.detalles || '',
+                                    medida: retazo.medida,
+                                    unidad: m.unidad,
+                                    destino: orden.destino,
+                                    estado: 'activa',
+                                    fechaReserva: new Date().toISOString(),
+                                    usuario: CONFIG.currentUserName
+                                };
+                                state.reservas.push(reserva);
+                            }
+                        });
+                    });
+                    
+                    const totalReservados = materialesNormales.length + materialesRetazos.reduce((sum, m) => sum + m.retazoIds.length, 0);
+                    addAuditLog('RESERVA', 'ORDEN', ordenId, `Reserva automática para obra ${orden.destino}: ${materialesNormales.length} materiales normales + ${materialesRetazos.length} grupos de retazos`);
                 }
             }
             
@@ -3993,6 +4044,7 @@ async function confirmarRecepcion() {
                 }
             }
             
+            const retazosCreadosIds = [];
             retazosConfig.forEach(r => {
                 if (r.medida > 0) {
                     const retazo = {
@@ -4010,12 +4062,15 @@ async function confirmarRecepcion() {
                         observaciones: r.obs || observaciones || 'Ingresado desde recepción parcial'
                     };
                     state.retazos.push(retazo);
+                    retazosCreadosIds.push(retazo.id);
                 }
             });
             
             materialesRecibidos.push({
                 codigo, descripcion, cantidad: recibido, unidad, tipo: 'retazos',
-                retazos: retazosConfig.length
+                retazos: retazosConfig.length,
+                retazoIds: retazosCreadosIds,
+                materialId: material.id
             });
             
         } else {
@@ -5176,7 +5231,7 @@ async function confirmarRecepcion() {
             });
             
             try {
-            	await saveToCloud();
+                await saveToCloud();
                 renderReservas();
                 initReservaForm();
                 renderStock();
