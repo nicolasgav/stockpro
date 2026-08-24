@@ -4119,17 +4119,34 @@ function renderRetazosRecepcion(idx) {
         async function confirmarRecepcion() {
             const ordenId = parseInt(document.getElementById('recepcion-orden-id').value);
             const orden = state.ordenes.find(o => o.id === ordenId);
+            const esCompleta = document.getElementById('recepcion-completa').checked;
+            
             const materialesRecibidos = [];
-            const retazosCreadosGlobales = []; // Para tracking de todos los retazos
+            const retazosCreadosGlobales = [];
 
             document.querySelectorAll('.recepcion-row').forEach(row => {
                 const codigo = row.dataset.codigo;
                 const descripcion = row.dataset.descripcion;
-                const recibido = parseFloat(row.querySelector('.recepcion-cantidad').value);
+                const cantidadSolicitada = parseFloat(row.dataset.cantidad);
+                const yaRecibido = parseFloat(row.dataset.yaRecibido || 0);
+                const cantidadPendiente = cantidadSolicitada - yaRecibido;
+                
+                let recibido = parseFloat(row.querySelector('.recepcion-cantidad').value);
                 const unidad = row.querySelector('.recepcion-unidad').value;
                 const observaciones = row.querySelector('.recepcion-obs').value;
-                const retazosConfig = JSON.parse(row.dataset.retazos || '[]');
+                let retazosConfig = [];
+                try {
+                    retazosConfig = JSON.parse(row.dataset.retazos || '[]');
+                } catch(e) {
+                    retazosConfig = [];
+                }
 
+                // Si es recepción completa y no hay valor en el input, usar cantidad pendiente
+                if (esCompleta && (!recibido || recibido <= 0)) {
+                    recibido = cantidadPendiente;
+                }
+                
+                // Si sigue sin haber cantidad, skip esta fila
                 if (!recibido || recibido <= 0) return;
 
                 const material = state.catalogo.find(c => c.codigo === codigo);
@@ -4137,31 +4154,54 @@ function renderRetazosRecepcion(idx) {
                 if (material && material.tipoControl === 'retazos') {
                     // Material con control por retazos
                     const retazosCreadosIds = [];
-                    retazosConfig.forEach(r => {
-                        if (r.medida > 0) {
-                            const retazo = {
-                                id: 'RET-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 5).toUpperCase(),
-                                materialId: material.id,
-                                codigoMaterial: material.codigo,
-                                descripcionMaterial: material.descripcion,
-                                medida: r.medida,
-                                unidad: unidad,
-                                estado: 'disponible',
-                                ubicacion: 'Recepción orden parcial',
-                                usuarioIngreso: CONFIG.currentUserName,
-                                fechaIngreso: new Date().toISOString(),
-                                origen: `Orden #${orden.id} - ${orden.destino} (Recepción)`,
-                                observaciones: r.obs || observaciones || 'Ingresado desde recepción parcial'
-                            };
-                            state.retazos.push(retazo);
-                            retazosCreadosIds.push(retazo.id);
-                            retazosCreadosGlobales.push(retazo);
-                        }
-                    });
+                    
+                    // Si hay retazos configurados en el modal, usarlos
+                    if (retazosConfig.length > 0) {
+                        retazosConfig.forEach(r => {
+                            if (r.medida > 0) {
+                                const retazo = {
+                                    id: 'RET-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 5).toUpperCase(),
+                                    materialId: material.id,
+                                    codigoMaterial: material.codigo,
+                                    descripcionMaterial: material.descripcion,
+                                    medida: r.medida,
+                                    unidad: unidad,
+                                    estado: 'disponible',
+                                    ubicacion: 'Recepción orden parcial',
+                                    usuarioIngreso: CONFIG.currentUserName,
+                                    fechaIngreso: new Date().toISOString(),
+                                    origen: `Orden #${orden.id} - ${orden.destino} (Recepción)`,
+                                    observaciones: r.obs || observaciones || 'Ingresado desde recepción parcial'
+                                };
+                                state.retazos.push(retazo);
+                                retazosCreadosIds.push(retazo.id);
+                                retazosCreadosGlobales.push(retazo);
+                            }
+                        });
+                    } else {
+                        // Si NO hay retazos configurados, crear UN retazo automático con la medida total recibida
+                        const retazo = {
+                            id: 'RET-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 5).toUpperCase(),
+                            materialId: material.id,
+                            codigoMaterial: material.codigo,
+                            descripcionMaterial: material.descripcion,
+                            medida: recibido,
+                            unidad: unidad,
+                            estado: 'disponible',
+                            ubicacion: 'Recepción completa automática',
+                            usuarioIngreso: CONFIG.currentUserName,
+                            fechaIngreso: new Date().toISOString(),
+                            origen: `Orden #${orden.id} - ${orden.destino} (Recepción)`,
+                            observaciones: observaciones || 'Retazo creado automáticamente por recepción completa'
+                        };
+                        state.retazos.push(retazo);
+                        retazosCreadosIds.push(retazo.id);
+                        retazosCreadosGlobales.push(retazo);
+                    }
                     
                     materialesRecibidos.push({
                         codigo, descripcion, cantidad: recibido, unidad, tipo: 'retazos',
-                        retazos: retazosConfig.length,
+                        retazos: retazosCreadosIds.length,
                         retazoIds: retazosCreadosIds,
                         materialId: material.id
                     });
@@ -4200,8 +4240,9 @@ function renderRetazosRecepcion(idx) {
                 }
             });
 
+            // Si no hay nada que procesar, salir sin mostrar error
             if (materialesRecibidos.length === 0) {
-                alert('No se ingresó ninguna cantidad');
+                closeModal('recepcion-orden');
                 return;
             }
 
