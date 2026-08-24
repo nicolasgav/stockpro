@@ -2407,6 +2407,67 @@ function filtrarPorUbicacion(ubicacion) {
             const orden = state.ordenes.find(o => o.id == ordenId);
             container.innerHTML = '<h4 class="font-medium text-gray-700 mb-2">Materiales a retirar:</h4>';
 
+            // ========== RESERVAS ACTIVAS PARA ESTA OBRA ==========
+            const reservasObra = state.reservas.filter(r => 
+                r.estado === 'activa' && 
+                r.destino === orden.destino
+            );
+
+            if (reservasObra.length > 0) {
+                container.innerHTML += `
+                    <div class="bg-purple-50 p-3 rounded-lg mb-4 border border-purple-200">
+                        <h5 class="font-semibold text-purple-800 mb-2">🔒 Reservas para ${orden.destino}</h5>
+                        <p class="text-xs text-purple-600 mb-2">Seleccioná las reservas que querés retirar:</p>
+                        <div class="space-y-1">
+                `;
+                
+                reservasObra.forEach(r => {
+                    if (r.tipo === 'retazo') {
+                        container.innerHTML += `
+                            <label class="flex items-center gap-2 p-2 bg-white rounded border border-purple-200 cursor-pointer hover:bg-purple-50 transition-colors">
+                                <input type="checkbox" class="reserva-check-obra" 
+                                    value="${r.id}" 
+                                    data-tipo="retazo"
+                                    data-material-desc="${r.descripcionMaterial}"
+                                    data-retazo-id="${r.retazoId}"
+                                    data-medida="${r.medida}"
+                                    data-unidad="${r.unidad}">
+                                <div class="flex-1">
+                                    <span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">📏 Retazo</span>
+                                    <span class="font-bold text-sm ml-2">${r.descripcionMaterial}</span>
+                                    <span class="font-mono text-xs text-gray-500 ml-2">${r.retazoId}</span>
+                                </div>
+                                <span class="font-bold text-sm">${r.medida} ${r.unidad}</span>
+                            </label>
+                        `;
+                    } else {
+                        container.innerHTML += `
+                            <label class="flex items-center gap-2 p-2 bg-white rounded border border-purple-200 cursor-pointer hover:bg-purple-50 transition-colors">
+                                <input type="checkbox" class="reserva-check-obra" 
+                                    value="${r.id}" 
+                                    data-tipo="normal"
+                                    data-material-desc="${r.descripcionMaterial}"
+                                    data-cantidad="${r.cantidad}"
+                                    data-unidad="${r.unidad}">
+                                <div class="flex-1">
+                                    <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">📦 Normal</span>
+                                    <span class="font-bold text-sm ml-2">${r.descripcionMaterial}</span>
+                                </div>
+                                <span class="font-bold text-sm">${r.cantidad} ${r.unidad}</span>
+                            </label>
+                        `;
+                    }
+                });
+                
+                container.innerHTML += `
+                        </div>
+                    </div>
+                `;
+            }
+
+            // ========== STOCK DISPONIBLE GENERAL ==========
+            container.innerHTML += `<h5 class="font-medium text-gray-600 mb-2">📦 Stock disponible general:</h5>`;
+
             orden.materiales.forEach((m, idx) => {
                 const material = state.catalogo.find(c => c.codigo === m.codigo || c.descripcion === m.descripcion);
                 const esRetazo = material && material.tipoControl === 'retazos';
@@ -2424,8 +2485,10 @@ function filtrarPorUbicacion(ubicacion) {
                 `;
 
                 if (esRetazo) {
-                    const retazosDisp = state.retazos.filter(r => r.materialId === material.id && r.estado === 'disponible')
-                        .sort((a, b) => new Date(a.fechaIngreso) - new Date(b.fechaIngreso));
+                    const retazosDisp = state.retazos.filter(r => 
+                        r.materialId === material.id && 
+                        r.estado === 'disponible'
+                    ).sort((a, b) => new Date(a.fechaIngreso) - new Date(b.fechaIngreso));
                     
                     const totalDisp = retazosDisp.reduce((sum, r) => sum + r.medida, 0);
                     
@@ -2455,7 +2518,7 @@ function filtrarPorUbicacion(ubicacion) {
                         html += `</div>`;
                     }
                 } else {
-                    // ✅ NUEVO: Selector de ubicación para materiales normales
+                    // Selector de ubicación para materiales normales
                     const stockItems = state.stock.filter(s => s.materialId === material?.id);
                     
                     const dispTotal = stockItems.reduce((sum, s) => sum + s.cantidad, 0);
@@ -2527,7 +2590,63 @@ function filtrarPorUbicacion(ubicacion) {
             const materialesRetiro = [];
             let hayError = false;
 
-            // Procesar retazos seleccionados
+            // ========== PROCESAR RESERVAS SELECCIONADAS ==========
+            document.querySelectorAll('.reserva-check-obra:checked').forEach(cb => {
+                const reservaId = cb.value;
+                const tipo = cb.dataset.tipo;
+                const reserva = state.reservas.find(r => r.id === reservaId && r.estado === 'activa');
+                
+                if (!reserva) return;
+
+                if (tipo === 'retazo') {
+                    const retazo = state.retazos.find(r => r.id === reserva.retazoId);
+                    if (!retazo) return;
+                    
+                    retazo.estado = 'retirado';
+                    retazo.fechaRetiro = new Date().toISOString();
+                    retazo.usuarioRetiro = CONFIG.currentUserName;
+                    retazo.destinoObra = orden.destino;
+                    
+                    reserva.estado = 'entregada';
+                    reserva.fechaSalida = new Date().toISOString();
+                    reserva.usuarioSalida = CONFIG.currentUserName;
+                    
+                    materialesRetiro.push({
+                        descripcion: reserva.descripcionMaterial,
+                        detalles: reserva.detallesMaterial || '',
+                        tipo: 'retazo',
+                        retazoId: retazo.id,
+                        medida: retazo.medida,
+                        unidad: reserva.unidad,
+                        origen: 'Reserva'
+                    });
+                } else {
+                    // Reserva normal — descontar del stock
+                    const stockItem = state.stock.find(s => s.id === reserva.stockItemId);
+                    if (!stockItem || stockItem.cantidad < reserva.cantidad) {
+                        alert(`Stock insuficiente para la reserva de ${reserva.descripcionMaterial}`);
+                        hayError = true;
+                        return;
+                    }
+                    
+                    stockItem.cantidad -= reserva.cantidad;
+                    
+                    reserva.estado = 'entregada';
+                    reserva.fechaSalida = new Date().toISOString();
+                    reserva.usuarioSalida = CONFIG.currentUserName;
+                    
+                    materialesRetiro.push({
+                        descripcion: reserva.descripcionMaterial,
+                        detalles: reserva.detallesMaterial || '',
+                        cantidad: reserva.cantidad,
+                        unidad: reserva.unidad,
+                        tipo: 'normal',
+                        origen: 'Reserva'
+                    });
+                }
+            });
+
+            // ========== PROCESAR RETAZOS DEL STOCK GENERAL ==========
             document.querySelectorAll('.retazo-check-obra:checked').forEach(cb => {
                 const retazoId = cb.value;
                 const retazo = state.retazos.find(r => r.id === retazoId && r.estado === 'disponible');
@@ -2543,12 +2662,13 @@ function filtrarPorUbicacion(ubicacion) {
                         tipo: 'retazo',
                         retazoId: retazo.id,
                         medida: retazo.medida,
-                        unidad: cb.dataset.unidad
+                        unidad: cb.dataset.unidad,
+                        origen: 'Stock general'
                     });
                 }
             });
 
-            // Procesar materiales normales
+            // ========== PROCESAR MATERIALES NORMALES DEL STOCK ==========
             document.querySelectorAll('.retiro-cant-obra').forEach(input => {
                 const cantidad = parseFloat(input.value);
                 if (cantidad > 0) {
@@ -2603,7 +2723,7 @@ function filtrarPorUbicacion(ubicacion) {
             });
 
             if (hayError) return;
-            if (materialesRetiro.length === 0) return alert('Seleccione al menos un material o retazo para retirar');
+            if (materialesRetiro.length === 0) return alert('Seleccione al menos un material, retazo o reserva para retirar');
 
             state.retiros.push({
                 id: Date.now(),
@@ -2619,6 +2739,8 @@ function filtrarPorUbicacion(ubicacion) {
             await saveToCloud();
             closeModal('retiro-obra');
             renderRetiros();
+            renderReservas();
+            renderStock();
             updateDashboard();
             alert('Retiro procesado correctamente');
         }
