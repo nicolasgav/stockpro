@@ -2124,6 +2124,7 @@ async function handleIngresoDirecto(e) {
                                             <span class="text-xs text-gray-500 block">📍 ${r.ubicacion || 'Sin ubicación'}</span>
                                             ${r.origen ? `<span class="text-xs text-blue-500 block">🏭 ${r.origen}</span>` : ''}
                                         </div>
+                                        <button onclick="imprimirEtiquetaRetazo('${r.id}')" class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200" title="Imprimir etiqueta">🖨️</button>
                                         <button onclick="editarUbicacionRetazo('${r.id}')" class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200" title="Editar ubicación">✏️</button>
                                     </div>
                                 </div>
@@ -5934,6 +5935,156 @@ function filtrarPorUbicacion(ubicacion) {
 				updateDashboard();
 			}
 		}
+        
+        function imprimirEtiquetaRetazo(retazoId) {
+            const retazo = state.retazos.find(r => r.id === retazoId);
+            if (!retazo) return alert('Retazo no encontrado');
+            
+            const material = state.catalogo.find(c => c.id === retazo.materialId);
+            const esReservado = retazo.estado === 'reservado';
+            
+            const ventana = window.open('', '_blank', 'width=400,height=300');
+            
+            ventana.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Etiqueta ${retazo.id}</title>
+                    <style>
+                        @page { size: 60mm 40mm; margin: 0; }
+                        * { margin: 0; padding: 0; box-sizing: border-box; }
+                        body { 
+                            width: 60mm; 
+                            height: 40mm; 
+                            font-family: 'Segoe UI', Arial, sans-serif;
+                            padding: 3mm;
+                            display: flex;
+                            flex-direction: column;
+                            justify-content: space-between;
+                        }
+                        .etiqueta-header {
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            border-bottom: 1px solid #e5e7eb;
+                            padding-bottom: 2mm;
+                        }
+                        .etiqueta-tipo {
+                            font-size: 8pt;
+                            font-weight: bold;
+                            color: ${esReservado ? '#ea580c' : '#2563eb'};
+                            background: ${esReservado ? '#fff7ed' : '#eff6ff'};
+                            padding: 1mm 2mm;
+                            border-radius: 2mm;
+                        }
+                        .etiqueta-id {
+                            font-size: 7pt;
+                            font-family: monospace;
+                            color: #6b7280;
+                        }
+                        .etiqueta-body {
+                            flex: 1;
+                            display: flex;
+                            flex-direction: column;
+                            justify-content: center;
+                            gap: 1.5mm;
+                        }
+                        .etiqueta-desc {
+                            font-size: 10pt;
+                            font-weight: bold;
+                            color: #111827;
+                            line-height: 1.2;
+                        }
+                        .etiqueta-codigo {
+                            font-size: 7pt;
+                            color: #6b7280;
+                        }
+                        .etiqueta-medida {
+                            font-size: 12pt;
+                            font-weight: bold;
+                            color: #2563eb;
+                        }
+                        .etiqueta-qr {
+                            width: 18mm;
+                            height: 18mm;
+                            border: 1px solid #d1d5db;
+                            border-radius: 1mm;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-size: 6pt;
+                            color: #9ca3af;
+                            text-align: center;
+                            word-break: break-all;
+                            padding: 1mm;
+                        }
+                        .etiqueta-footer {
+                            border-top: 1px solid #e5e7eb;
+                            padding-top: 2mm;
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                        }
+                        .etiqueta-obra {
+                            font-size: 6pt;
+                            color: #6b7280;
+                            max-width: 35mm;
+                            overflow: hidden;
+                            text-overflow: ellipsis;
+                            white-space: nowrap;
+                        }
+                        .etiqueta-fecha {
+                            font-size: 6pt;
+                            color: #9ca3af;
+                        }
+                        .etiqueta-flex {
+                            display: flex;
+                            gap: 2mm;
+                            align-items: center;
+                        }
+                        @media print {
+                            body { width: 60mm; height: 40mm; }
+                            .no-print { display: none; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="etiqueta-header">
+                        <span class="etiqueta-tipo">📏 Infraestructura</span>
+                        <span class="etiqueta-id">${retazo.id}</span>
+                    </div>
+                    
+                    <div class="etiqueta-body">
+                        <div>
+                            <div class="etiqueta-desc">${retazo.descripcionMaterial}</div>
+                            <div class="etiqueta-codigo">${retazo.codigoMaterial}</div>
+                        </div>
+                        
+                        <div class="etiqueta-flex">
+                            <div class="etiqueta-medida">${retazo.medida} ${retazo.unidad}</div>
+                            <div class="etiqueta-qr">
+                                ${retazo.id}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="etiqueta-footer">
+                        <span class="etiqueta-obra">🏗️ ${retazo.destino || retazo.origen || 'Sin obra'}</span>
+                        <span class="etiqueta-fecha">${new Date(retazo.fechaIngreso).toLocaleDateString()}</span>
+                    </div>
+                    
+                    <div class="no-print" style="margin-top: 10px; text-align: center;">
+                        <button onclick="window.print(); setTimeout(() => window.close(), 500)" 
+                            style="padding: 8px 20px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px;">
+                            🖨️ Imprimir Etiqueta
+                        </button>
+                    </div>
+                </body>
+                </html>
+            `);
+            
+            ventana.document.close();
+        }        
 		
 		function limpiarBusquedaTareas() {
 			document.getElementById('search-tareas').value = '';
