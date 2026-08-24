@@ -4111,7 +4111,7 @@ function renderRetazosRecepcion(idx) {
             const materialesRecibidos = [];
             const retazosCreadosGlobales = [];
 
-            document.querySelectorAll('.recepcion-row').forEach(row => {
+            document.querySelectorAll('#recepcion-materiales-list > div').forEach(row => {
                 const codigo = row.dataset.codigo;
                 const descripcion = row.dataset.descripcion;
                 
