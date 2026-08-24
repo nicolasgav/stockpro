@@ -4021,19 +4021,6 @@ function filtrarPorUbicacion(ubicacion) {
 								</div>
 							</div>
                     
-							${esRetazo ? `
-							<div class="mt-2 p-2 bg-purple-50 rounded-lg">
-								<p class="text-xs text-purple-700 mb-1">Configurar retazos recibidos (opcional):</p>
-								<button type="button" onclick="configurarRetazosRecepcion(${idx}, '${material.id}', ${m.cantidad})" 
-									class="text-xs bg-purple-100 text-purple-700 px-3 py-1 rounded hover:bg-purple-200">
-									Configurar medidas de retazos
-								</button>
-								<div id="retazos-recepcion-${idx}" class="mt-2 hidden">
-									<div class="space-y-1" id="retazos-list-${idx}"></div>
-									<button type="button" onclick="agregarRetazoRecepcion(${idx})" class="text-xs text-purple-600 mt-1">+ Agregar retazo</button>
-								</div>
-							</div>
-							` : ''}
 						</div>
 					</div>
 					<input type="hidden" id="recv-material-id-${idx}" value="${material ? material.id : ''}">
@@ -4127,8 +4114,17 @@ function renderRetazosRecepcion(idx) {
             document.querySelectorAll('.recepcion-row').forEach(row => {
                 const codigo = row.dataset.codigo;
                 const descripcion = row.dataset.descripcion;
-                const cantidadSolicitada = parseFloat(row.dataset.cantidad);
-                const yaRecibido = parseFloat(row.dataset.yaRecibido || 0);
+                
+                // Buscar cantidad solicitada en la orden
+                const materialOrden = orden.materiales.find(m => m.codigo === codigo);
+                const cantidadSolicitada = materialOrden ? materialOrden.cantidad : 0;
+                
+                // Calcular ya recibido
+                const yaRecibido = (orden.recepciones || []).reduce((sum, r) => {
+                    const mat = r.materiales.find(rm => rm.codigo === codigo);
+                    return sum + (mat ? mat.cantidad : 0);
+                }, 0);
+                
                 const cantidadPendiente = cantidadSolicitada - yaRecibido;
                 
                 let recibido = parseFloat(row.querySelector('.recepcion-cantidad').value);
@@ -4142,12 +4138,12 @@ function renderRetazosRecepcion(idx) {
                 }
 
                 // Si es recepción completa y no hay valor en el input, usar cantidad pendiente
-                if (esCompleta && (!recibido || recibido <= 0)) {
+                if (esCompleta && (!recibido || recibido <= 0 || isNaN(recibido))) {
                     recibido = cantidadPendiente;
                 }
                 
-                // Si sigue sin haber cantidad, skip esta fila
-                if (!recibido || recibido <= 0) return;
+                // Si sigue sin haber cantidad válida, skip esta fila
+                if (!recibido || recibido <= 0 || isNaN(recibido)) return;
 
                 const material = state.catalogo.find(c => c.codigo === codigo);
 
