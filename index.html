@@ -2313,72 +2313,52 @@ function filtrarPorUbicacion(ubicacion) {
         
         // RETIROS
         function openRetiroObraModal() {
-            // Filtrar órdenes cerradas que tengan stock disponible para retirar
+            // Filtrar órdenes cerradas que tengan stock/retazos propios pendientes o reservas activas
             const ordenesDisponibles = state.ordenes.filter(o => {
                 // Debe estar cerrada
                 if (o.estado !== 'cerrado') return false;
                 
-                // Verificar si tiene stock disponible para sus materiales
-                const tieneStock = o.materiales.some(m => {
-                    const material = state.catalogo.find(c => 
-                        (m.codigo && c.codigo === m.codigo) || 
-                        c.descripcion.toLowerCase().trim() === m.descripcion.toLowerCase().trim()
-                    );
-                    
-                    if (material && material.tipoControl === 'retazos') {
-                        // Verificar retazos disponibles de este material
-                        const retazosDisp = state.retazos.filter(r => 
-                            r.materialId === material.id && 
-                            r.estado === 'disponible'
-                        );
-                        return retazosDisp.length > 0;
-                    } else {
-                        // Verificar stock normal disponible
-                        const stockItems = state.stock.filter(s => 
-                            s.descripcion.toLowerCase().trim() === m.descripcion.toLowerCase().trim() &&
-                            s.unidad === m.unidad &&
-                            s.cantidad > 0
-                        );
-                        return stockItems.length > 0;
-                    }
-                });
-                
-                // O verificar si hay reservas activas para esta obra
+                // 1. Verificar si hay reservas activas para esta obra
                 const tieneReservas = state.reservas.some(r => 
-                    r.estado === 'activa' && 
-                    r.destino === o.destino
+                    r.estado === 'activa' && r.destino === o.destino
                 );
+                if (tieneReservas) return true;
                 
-                return tieneStock || tieneReservas;
+                // 2. Verificar stock disponible que provenga ESPECÍFICAMENTE de esta orden
+                const stockDeOrden = state.stock.filter(s => 
+                    s.origen && s.origen.includes(`Orden #${o.id}`) && s.cantidad > 0
+                );
+                if (stockDeOrden.length > 0) return true;
+                
+                // 3. Verificar retazos disponibles que provengan ESPECÍFICAMENTE de esta orden
+                const retazosDeOrden = state.retazos.filter(r => 
+                    r.origen && r.origen.includes(`Orden #${o.id}`) && r.estado === 'disponible'
+                );
+                if (retazosDeOrden.length > 0) return true;
+                
+                return false;
             });
             
             if (ordenesDisponibles.length === 0) {
-                alert('No hay órdenes cerradas con stock disponible para retirar');
+                alert('No hay órdenes con stock pendiente de retiro');
                 return;
             }
 
             const select = document.getElementById('select-obra');
             select.innerHTML = '<option value="">Seleccione...</option>';
             ordenesDisponibles.forEach(o => {
-                // Contar cuánto hay disponible
+                // Contar cuánto hay disponible específicamente de esta orden
                 let itemsDisp = 0;
-                o.materiales.forEach(m => {
-                    const material = state.catalogo.find(c => 
-                        (m.codigo && c.codigo === m.codigo) || 
-                        c.descripcion.toLowerCase().trim() === m.descripcion.toLowerCase().trim()
-                    );
-                    if (material && material.tipoControl === 'retazos') {
-                        itemsDisp += state.retazos.filter(r => 
-                            r.materialId === material.id && r.estado === 'disponible'
-                        ).length;
-                    } else {
-                        itemsDisp += state.stock.filter(s => 
-                            s.descripcion.toLowerCase().trim() === m.descripcion.toLowerCase().trim() &&
-                            s.unidad === m.unidad &&
-                            s.cantidad > 0
-                        ).length;
-                    }
-                });
+                
+                // Contar stock de esta orden
+                itemsDisp += state.stock.filter(s => 
+                    s.origen && s.origen.includes(`Orden #${o.id}`) && s.cantidad > 0
+                ).length;
+                
+                // Contar retazos de esta orden
+                itemsDisp += state.retazos.filter(r => 
+                    r.origen && r.origen.includes(`Orden #${o.id}`) && r.estado === 'disponible'
+                ).length;
                 
                 const reservasCount = state.reservas.filter(r => 
                     r.estado === 'activa' && r.destino === o.destino
