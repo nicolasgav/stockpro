@@ -4238,7 +4238,7 @@ function renderRetazosRecepcion(idx) {
 
             // Si no hay nada que procesar, salir sin mostrar error
             if (materialesRecibidos.length === 0) {
-                closeModal('recepcion-orden');
+                closeModal('recepcion');
                 return;
             }
 
@@ -4353,7 +4353,7 @@ function renderRetazosRecepcion(idx) {
             }
 
             await saveToCloud();
-            closeModal('recepcion-orden');
+            closeModal('recepcion');
             renderOrdenes();
             renderStock();
             updateDashboard();
