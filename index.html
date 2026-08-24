@@ -2313,16 +2313,82 @@ function filtrarPorUbicacion(ubicacion) {
         
         // RETIROS
         function openRetiroObraModal() {
-            const ordenesCerradas = state.ordenes.filter(o => o.estado === 'cerrado');
-            if (ordenesCerradas.length === 0) {
-                alert('No hay órdenes cerradas disponibles');
+            // Filtrar órdenes cerradas que tengan stock disponible para retirar
+            const ordenesDisponibles = state.ordenes.filter(o => {
+                // Debe estar cerrada
+                if (o.estado !== 'cerrado') return false;
+                
+                // Verificar si tiene stock disponible para sus materiales
+                const tieneStock = o.materiales.some(m => {
+                    const material = state.catalogo.find(c => 
+                        (m.codigo && c.codigo === m.codigo) || 
+                        c.descripcion.toLowerCase().trim() === m.descripcion.toLowerCase().trim()
+                    );
+                    
+                    if (material && material.tipoControl === 'retazos') {
+                        // Verificar retazos disponibles de este material
+                        const retazosDisp = state.retazos.filter(r => 
+                            r.materialId === material.id && 
+                            r.estado === 'disponible'
+                        );
+                        return retazosDisp.length > 0;
+                    } else {
+                        // Verificar stock normal disponible
+                        const stockItems = state.stock.filter(s => 
+                            s.descripcion.toLowerCase().trim() === m.descripcion.toLowerCase().trim() &&
+                            s.unidad === m.unidad &&
+                            s.cantidad > 0
+                        );
+                        return stockItems.length > 0;
+                    }
+                });
+                
+                // O verificar si hay reservas activas para esta obra
+                const tieneReservas = state.reservas.some(r => 
+                    r.estado === 'activa' && 
+                    r.destino === o.destino
+                );
+                
+                return tieneStock || tieneReservas;
+            });
+            
+            if (ordenesDisponibles.length === 0) {
+                alert('No hay órdenes cerradas con stock disponible para retirar');
                 return;
             }
 
             const select = document.getElementById('select-obra');
             select.innerHTML = '<option value="">Seleccione...</option>';
-            ordenesCerradas.forEach(o => {
-                select.innerHTML += `<option value="${o.id}">#${o.id} - ${o.destino} (${o.creadoPor || 'Sin usuario'})</option>`;
+            ordenesDisponibles.forEach(o => {
+                // Contar cuánto hay disponible
+                let itemsDisp = 0;
+                o.materiales.forEach(m => {
+                    const material = state.catalogo.find(c => 
+                        (m.codigo && c.codigo === m.codigo) || 
+                        c.descripcion.toLowerCase().trim() === m.descripcion.toLowerCase().trim()
+                    );
+                    if (material && material.tipoControl === 'retazos') {
+                        itemsDisp += state.retazos.filter(r => 
+                            r.materialId === material.id && r.estado === 'disponible'
+                        ).length;
+                    } else {
+                        itemsDisp += state.stock.filter(s => 
+                            s.descripcion.toLowerCase().trim() === m.descripcion.toLowerCase().trim() &&
+                            s.unidad === m.unidad &&
+                            s.cantidad > 0
+                        ).length;
+                    }
+                });
+                
+                const reservasCount = state.reservas.filter(r => 
+                    r.estado === 'activa' && r.destino === o.destino
+                ).length;
+                
+                let extra = '';
+                if (itemsDisp > 0) extra += ` (${itemsDisp} items disponibles)`;
+                if (reservasCount > 0) extra += ` [${reservasCount} reservas]`;
+                
+                select.innerHTML += `<option value="${o.id}">#${o.id} - ${o.destino}${extra}</option>`;
             });
 
             document.getElementById('materiales-obra-container').classList.add('hidden');
