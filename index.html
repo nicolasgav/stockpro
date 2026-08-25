@@ -5952,7 +5952,7 @@ function filtrarPorUbicacion(ubicacion) {
                     <title>Etiqueta ${retazo.id}</title>
                     <style>
                         @page { 
-                            size: 60mm 40mm; 
+                            size: 40mm 60mm; 
                             margin: 0; 
                         }
                         * { 
@@ -5961,31 +5961,42 @@ function filtrarPorUbicacion(ubicacion) {
                             box-sizing: border-box; 
                         }
                         html, body { 
-                            width: 60mm; 
-                            height: 40mm; 
+                            width: 40mm; 
+                            height: 60mm; 
                             overflow: hidden;
                             font-family: Arial, sans-serif;
-                            font-weight: bold;
                             position: relative;
                         }
-                        .etiqueta {
+                        /* MARCO DE CORTE */
+                        .marco-corte {
                             position: absolute;
                             top: 0;
                             left: 0;
-                            width: 60mm;
-                            height: 40mm;
+                            width: 40mm;
+                            height: 60mm;
+                            border: 1px dashed #9ca3af;
+                            pointer-events: none;
+                            z-index: 100;
+                        }
+                        .etiqueta {
+                            position: absolute;
+                            top: 1.5mm;
+                            left: 1.5mm;
+                            width: 37mm;
+                            height: 57mm;
                             padding: 1.5mm 2mm;
                             display: flex;
                             flex-direction: column;
                             justify-content: space-between;
+                            background: white;
                         }
                         .etiqueta-header {
-                            border-bottom: 0.4px solid #e5e7eb;
-                            padding-bottom: 0.5mm;
+                            border-bottom: 0.5px solid #d1d5db;
+                            padding-bottom: 1mm;
                             flex-shrink: 0;
                         }
                         .etiqueta-tipo {
-                            font-size: 7pt;
+                            font-size: 8pt;
                             font-weight: bold;
                             color: #111827;
                             letter-spacing: 0.3px;
@@ -5995,25 +6006,24 @@ function filtrarPorUbicacion(ubicacion) {
                             display: flex;
                             flex-direction: column;
                             justify-content: center;
-                            gap: 0.3mm;
+                            gap: 1mm;
                             min-height: 0;
                             overflow: hidden;
                         }
                         .etiqueta-desc {
-                            font-size: 7.5pt;
+                            font-size: 9pt;
                             font-weight: bold;
                             color: #111827;
-                            line-height: 1.05;
-                            white-space: nowrap;
-                            overflow: hidden;
-                            text-overflow: ellipsis;
+                            line-height: 1.15;
+                            word-wrap: break-word;
+                            overflow-wrap: break-word;
                         }
                         .etiqueta-codigo {
-                            font-size: 6pt;
+                            font-size: 7pt;
                             color: #374151;
                         }
                         .etiqueta-id {
-                            font-size: 6pt;
+                            font-size: 7pt;
                             font-family: monospace;
                             color: #6b7280;
                         }
@@ -6022,43 +6032,39 @@ function filtrarPorUbicacion(ubicacion) {
                             justify-content: space-between;
                             align-items: center;
                             gap: 1mm;
-                            margin-top: 0.5mm;
+                            margin-top: 1mm;
                         }
                         .etiqueta-medida {
-                            font-size: 12pt;
+                            font-size: 14pt;
                             font-weight: bold;
                             color: #2563eb;
                         }
                         .etiqueta-qr-img {
-                            width: 13mm;
-                            height: 13mm;
-                            border: 0.4px solid #d1d5db;
-                            border-radius: 0.5mm;
+                            width: 14mm;
+                            height: 14mm;
+                            border: 0.5px solid #d1d5db;
+                            border-radius: 1mm;
                             object-fit: contain;
                             flex-shrink: 0;
                         }
                         .etiqueta-footer {
-                            border-top: 0.4px solid #e5e7eb;
-                            padding-top: 0.5mm;
+                            border-top: 0.5px solid #d1d5db;
+                            padding-top: 1mm;
                             display: flex;
-                            justify-content: space-between;
-                            align-items: center;
+                            flex-direction: column;
+                            gap: 0.5mm;
                             flex-shrink: 0;
-                            gap: 1mm;
                         }
                         .etiqueta-obra {
-                            font-size: 5.5pt;
+                            font-size: 6.5pt;
                             color: #374151;
-                            white-space: nowrap;
-                            overflow: hidden;
-                            text-overflow: ellipsis;
-                            max-width: 32mm;
+                            word-wrap: break-word;
+                            overflow-wrap: break-word;
+                            line-height: 1.1;
                         }
                         .etiqueta-fecha {
-                            font-size: 5.5pt;
+                            font-size: 6pt;
                             color: #6b7280;
-                            white-space: nowrap;
-                            flex-shrink: 0;
                         }
                         @media print {
                             .no-print { 
@@ -6068,24 +6074,32 @@ function filtrarPorUbicacion(ubicacion) {
                                 -webkit-print-color-adjust: exact;
                                 print-color-adjust: exact;
                             }
+                            .marco-corte {
+                                border: 1px dashed #9ca3af !important;
+                            }
                         }
                         .no-print {
                             position: fixed;
                             bottom: 5mm;
                             left: 2mm;
+                            z-index: 200;
                         }
                         .no-print button {
-                            padding: 4px 12px;
+                            padding: 5px 14px;
                             background: #2563eb;
                             color: white;
                             border: none;
-                            border-radius: 3px;
+                            border-radius: 4px;
                             cursor: pointer;
-                            font-size: 9px;
+                            font-size: 10px;
+                            font-weight: bold;
                         }
                     </style>
                 </head>
                 <body>
+                    <!-- MARCO DE CORTE GUÍA -->
+                    <div class="marco-corte"></div>
+                    
                     <div class="etiqueta">
                         <div class="etiqueta-header">
                             <span class="etiqueta-tipo">Infraestructura</span>
@@ -6121,7 +6135,7 @@ function filtrarPorUbicacion(ubicacion) {
             `);
             
             ventana.document.close();
-        }           
+        }          
 		
 		function limpiarBusquedaTareas() {
 			document.getElementById('search-tareas').value = '';
@@ -6219,3 +6233,5 @@ function filtrarPorUbicacion(ubicacion) {
     </script>
 </body>
 </html>
+
+						
