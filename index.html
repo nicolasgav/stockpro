@@ -5956,78 +5956,77 @@ function filtrarPorUbicacion(ubicacion) {
                         body { 
                             width: 60mm; 
                             height: 40mm; 
-                            font-family: 'Segoe UI', Arial, sans-serif;
-                            padding: 3mm;
+                            font-family: Arial, sans-serif;
+                            font-weight: bold;
+                            padding: 2mm;
                             display: flex;
                             flex-direction: column;
                             justify-content: space-between;
+                            align-items: flex-start;
                         }
                         .etiqueta-header {
-                            display: flex;
-                            justify-content: space-between;
-                            align-items: center;
-                            border-bottom: 1px solid #e5e7eb;
-                            padding-bottom: 2mm;
+                            width: 100%;
+                            border-bottom: 0.5px solid #e5e7eb;
+                            padding-bottom: 1mm;
                         }
                         .etiqueta-tipo {
-                            font-size: 8pt;
+                            font-size: 9pt;
                             font-weight: bold;
-                            color: ${esReservado ? '#ea580c' : '#2563eb'};
-                            background: ${esReservado ? '#fff7ed' : '#eff6ff'};
-                            padding: 1mm 2mm;
-                            border-radius: 2mm;
+                            color: #111827;
+                        }
+                        .etiqueta-body {
+                            width: 100%;
+                            flex: 1;
+                            display: flex;
+                            flex-direction: column;
+                            justify-content: center;
+                            gap: 1mm;
+                        }
+                        .etiqueta-desc {
+                            font-size: 9pt;
+                            font-weight: bold;
+                            color: #111827;
+                            line-height: 1.1;
+                        }
+                        .etiqueta-codigo {
+                            font-size: 7pt;
+                            color: #374151;
                         }
                         .etiqueta-id {
                             font-size: 7pt;
                             font-family: monospace;
                             color: #6b7280;
                         }
-                        .etiqueta-body {
-                            flex: 1;
+                        .etiqueta-flex {
+                            width: 100%;
                             display: flex;
-                            flex-direction: column;
-                            justify-content: center;
-                            gap: 1.5mm;
-                        }
-                        .etiqueta-desc {
-                            font-size: 10pt;
-                            font-weight: bold;
-                            color: #111827;
-                            line-height: 1.2;
-                        }
-                        .etiqueta-codigo {
-                            font-size: 7pt;
-                            color: #6b7280;
+                            justify-content: space-between;
+                            align-items: center;
+                            gap: 2mm;
                         }
                         .etiqueta-medida {
-                            font-size: 12pt;
+                            font-size: 14pt;
                             font-weight: bold;
                             color: #2563eb;
                         }
-                        .etiqueta-qr {
-                            width: 18mm;
-                            height: 18mm;
-                            border: 1px solid #d1d5db;
+                        .etiqueta-qr-img {
+                            width: 16mm;
+                            height: 16mm;
+                            border: 0.5px solid #d1d5db;
                             border-radius: 1mm;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            font-size: 6pt;
-                            color: #9ca3af;
-                            text-align: center;
-                            word-break: break-all;
-                            padding: 1mm;
+                            object-fit: contain;
                         }
                         .etiqueta-footer {
-                            border-top: 1px solid #e5e7eb;
-                            padding-top: 2mm;
+                            width: 100%;
+                            border-top: 0.5px solid #e5e7eb;
+                            padding-top: 1mm;
                             display: flex;
                             justify-content: space-between;
                             align-items: center;
                         }
                         .etiqueta-obra {
                             font-size: 6pt;
-                            color: #6b7280;
+                            color: #374151;
                             max-width: 35mm;
                             overflow: hidden;
                             text-overflow: ellipsis;
@@ -6035,56 +6034,46 @@ function filtrarPorUbicacion(ubicacion) {
                         }
                         .etiqueta-fecha {
                             font-size: 6pt;
-                            color: #9ca3af;
-                        }
-                        .etiqueta-flex {
-                            display: flex;
-                            gap: 2mm;
-                            align-items: center;
-                        }
-                        .etiqueta-qr-img {
-                            width: 18mm;
-                            height: 18mm;
-                            border: 1px solid #d1d5db;
-                            border-radius: 1mm;
-                            object-fit: contain;
+                            color: #6b7280;
                         }
                         @media print {
-                            body { width: 60mm; height: 40mm; }
+                            body { 
+                                width: 60mm; 
+                                height: 40mm; 
+                                margin: 0;
+                                padding: 2mm;
+                            }
                             .no-print { display: none; }
                         }
                     </style>
                 </head>
                 <body>
                     <div class="etiqueta-header">
-                        <span class="etiqueta-tipo">📏 Infraestructura</span>
-                        <span class="etiqueta-id">${retazo.id}</span>
+                        <span class="etiqueta-tipo">Infraestructura</span>
                     </div>
                     
                     <div class="etiqueta-body">
-                        <div>
-                            <div class="etiqueta-desc">${retazo.descripcionMaterial}</div>
-                            <div class="etiqueta-codigo">${retazo.codigoMaterial}</div>
-                        </div>
+                        <div class="etiqueta-desc">${retazo.descripcionMaterial}</div>
+                        <div class="etiqueta-codigo">${retazo.codigoMaterial}</div>
+                        <div class="etiqueta-id">${retazo.id}</div>
                         
                         <div class="etiqueta-flex">
                             <div class="etiqueta-medida">${retazo.medida} ${retazo.unidad}</div>
                             <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(retazo.id)}" 
                                  alt="${retazo.id}" 
-                                 class="etiqueta-qr-img" 
-                                 style="width: 18mm; height: 18mm; border: 1px solid #d1d5db; border-radius: 1mm;">                            
+                                 class="etiqueta-qr-img">
                         </div>
                     </div>
                     
                     <div class="etiqueta-footer">
-                        <span class="etiqueta-obra">🏗️ ${retazo.destino || retazo.origen || 'Sin obra'}</span>
+                        <span class="etiqueta-obra">📍 ${retazo.ubicacion || 'Sin ubicación'}</span>
                         <span class="etiqueta-fecha">${new Date(retazo.fechaIngreso).toLocaleDateString()}</span>
                     </div>
                     
-                    <div class="no-print" style="margin-top: 10px; text-align: center;">
+                    <div class="no-print" style="margin-top: 10px; text-align: left;">
                         <button onclick="window.print(); setTimeout(() => window.close(), 500)" 
-                            style="padding: 8px 20px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px;">
-                            🖨️ Imprimir Etiqueta
+                            style="padding: 6px 16px; background: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">
+                            🖨️ Imprimir
                         </button>
                     </div>
                 </body>
