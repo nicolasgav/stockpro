@@ -5943,7 +5943,7 @@ function filtrarPorUbicacion(ubicacion) {
             const material = state.catalogo.find(c => c.id === retazo.materialId);
             const esReservado = retazo.estado === 'reservado';
             
-            const ventana = window.open('', '_blank', 'width=400,height=300');
+            const ventana = window.open('', '_blank');
             
             ventana.document.write(`
                 <!DOCTYPE html>
@@ -5951,128 +5951,168 @@ function filtrarPorUbicacion(ubicacion) {
                 <head>
                     <title>Etiqueta ${retazo.id}</title>
                     <style>
-                        @page { size: 60mm 40mm; margin: 0; }
-                        * { margin: 0; padding: 0; box-sizing: border-box; }
-                        body { 
+                        @page { 
+                            size: 60mm 40mm; 
+                            margin: 0; 
+                        }
+                        * { 
+                            margin: 0; 
+                            padding: 0; 
+                            box-sizing: border-box; 
+                        }
+                        html, body { 
                             width: 60mm; 
                             height: 40mm; 
+                            overflow: hidden;
                             font-family: Arial, sans-serif;
                             font-weight: bold;
-                            padding: 2mm;
+                            position: relative;
+                        }
+                        .etiqueta {
+                            position: absolute;
+                            top: 0;
+                            left: 0;
+                            width: 60mm;
+                            height: 40mm;
+                            padding: 1.5mm 2mm;
                             display: flex;
                             flex-direction: column;
                             justify-content: space-between;
-                            align-items: flex-start;
                         }
                         .etiqueta-header {
-                            width: 100%;
-                            border-bottom: 0.5px solid #e5e7eb;
-                            padding-bottom: 1mm;
+                            border-bottom: 0.4px solid #e5e7eb;
+                            padding-bottom: 0.5mm;
+                            flex-shrink: 0;
                         }
                         .etiqueta-tipo {
-                            font-size: 9pt;
+                            font-size: 7pt;
                             font-weight: bold;
                             color: #111827;
+                            letter-spacing: 0.3px;
                         }
                         .etiqueta-body {
-                            width: 100%;
                             flex: 1;
                             display: flex;
                             flex-direction: column;
                             justify-content: center;
-                            gap: 1mm;
+                            gap: 0.3mm;
+                            min-height: 0;
+                            overflow: hidden;
                         }
                         .etiqueta-desc {
-                            font-size: 9pt;
+                            font-size: 7.5pt;
                             font-weight: bold;
                             color: #111827;
-                            line-height: 1.1;
+                            line-height: 1.05;
+                            white-space: nowrap;
+                            overflow: hidden;
+                            text-overflow: ellipsis;
                         }
                         .etiqueta-codigo {
-                            font-size: 7pt;
+                            font-size: 6pt;
                             color: #374151;
                         }
                         .etiqueta-id {
-                            font-size: 7pt;
+                            font-size: 6pt;
                             font-family: monospace;
                             color: #6b7280;
                         }
                         .etiqueta-flex {
-                            width: 100%;
                             display: flex;
                             justify-content: space-between;
                             align-items: center;
-                            gap: 2mm;
+                            gap: 1mm;
+                            margin-top: 0.5mm;
                         }
                         .etiqueta-medida {
-                            font-size: 14pt;
+                            font-size: 12pt;
                             font-weight: bold;
                             color: #2563eb;
                         }
                         .etiqueta-qr-img {
-                            width: 16mm;
-                            height: 16mm;
-                            border: 0.5px solid #d1d5db;
-                            border-radius: 1mm;
+                            width: 13mm;
+                            height: 13mm;
+                            border: 0.4px solid #d1d5db;
+                            border-radius: 0.5mm;
                             object-fit: contain;
+                            flex-shrink: 0;
                         }
                         .etiqueta-footer {
-                            width: 100%;
-                            border-top: 0.5px solid #e5e7eb;
-                            padding-top: 1mm;
+                            border-top: 0.4px solid #e5e7eb;
+                            padding-top: 0.5mm;
                             display: flex;
                             justify-content: space-between;
                             align-items: center;
+                            flex-shrink: 0;
+                            gap: 1mm;
                         }
                         .etiqueta-obra {
-                            font-size: 6pt;
+                            font-size: 5.5pt;
                             color: #374151;
-                            max-width: 35mm;
+                            white-space: nowrap;
                             overflow: hidden;
                             text-overflow: ellipsis;
-                            white-space: nowrap;
+                            max-width: 32mm;
                         }
                         .etiqueta-fecha {
-                            font-size: 6pt;
+                            font-size: 5.5pt;
                             color: #6b7280;
+                            white-space: nowrap;
+                            flex-shrink: 0;
                         }
                         @media print {
-                            body { 
-                                width: 60mm; 
-                                height: 40mm; 
-                                margin: 0;
-                                padding: 2mm;
+                            .no-print { 
+                                display: none !important; 
                             }
-                            .no-print { display: none; }
+                            body {
+                                -webkit-print-color-adjust: exact;
+                                print-color-adjust: exact;
+                            }
+                        }
+                        .no-print {
+                            position: fixed;
+                            bottom: 5mm;
+                            left: 2mm;
+                        }
+                        .no-print button {
+                            padding: 4px 12px;
+                            background: #2563eb;
+                            color: white;
+                            border: none;
+                            border-radius: 3px;
+                            cursor: pointer;
+                            font-size: 9px;
                         }
                     </style>
                 </head>
                 <body>
-                    <div class="etiqueta-header">
-                        <span class="etiqueta-tipo">Infraestructura</span>
-                    </div>
-                    
-                    <div class="etiqueta-body">
-                        <div class="etiqueta-desc">${retazo.descripcionMaterial}</div>
-                        <div class="etiqueta-codigo">${retazo.codigoMaterial}</div>
-                        <div class="etiqueta-id">${retazo.id}</div>
+                    <div class="etiqueta">
+                        <div class="etiqueta-header">
+                            <span class="etiqueta-tipo">Infraestructura</span>
+                        </div>
                         
-                        <div class="etiqueta-flex">
-                            <div class="etiqueta-medida">${retazo.medida} ${retazo.unidad}</div>
-                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(retazo.id)}" 
-                                 alt="${retazo.id}" 
-                                 class="etiqueta-qr-img">
+                        <div class="etiqueta-body">
+                            <div class="etiqueta-desc">${retazo.descripcionMaterial}</div>
+                            <div class="etiqueta-codigo">${retazo.codigoMaterial}</div>
+                            <div class="etiqueta-id">${retazo.id}</div>
+                            
+                            <div class="etiqueta-flex">
+                                <div class="etiqueta-medida">${retazo.medida} ${retazo.unidad}</div>
+                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(retazo.id)}" 
+                                     alt="${retazo.id}" 
+                                     class="etiqueta-qr-img"
+                                     onerror="this.style.display='none'">
+                            </div>
+                        </div>
+                        
+                        <div class="etiqueta-footer">
+                            <span class="etiqueta-obra">📍 ${retazo.ubicacion || 'Sin ubicación'}</span>
+                            <span class="etiqueta-fecha">${new Date(retazo.fechaIngreso).toLocaleDateString()}</span>
                         </div>
                     </div>
                     
-                    <div class="etiqueta-footer">
-                        <span class="etiqueta-obra">📍 ${retazo.ubicacion || 'Sin ubicación'}</span>
-                        <span class="etiqueta-fecha">${new Date(retazo.fechaIngreso).toLocaleDateString()}</span>
-                    </div>
-                    
-                    <div class="no-print" style="margin-top: 10px; text-align: left;">
-                        <button onclick="window.print(); setTimeout(() => window.close(), 500)" 
-                            style="padding: 6px 16px; background: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">
+                    <div class="no-print">
+                        <button onclick="window.print(); setTimeout(() => window.close(), 800)">
                             🖨️ Imprimir
                         </button>
                     </div>
@@ -6081,7 +6121,7 @@ function filtrarPorUbicacion(ubicacion) {
             `);
             
             ventana.document.close();
-        }        
+        }           
 		
 		function limpiarBusquedaTareas() {
 			document.getElementById('search-tareas').value = '';
