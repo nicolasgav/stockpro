@@ -5965,6 +5965,7 @@ function filtrarPorUbicacion(ubicacion) {
                             height: 60mm; 
                             overflow: hidden;
                             font-family: Arial, sans-serif;
+                            font-weight: bold;
                             position: relative;
                         }
                         /* MARCO DE CORTE */
@@ -5994,12 +5995,14 @@ function filtrarPorUbicacion(ubicacion) {
                             border-bottom: 0.5px solid #d1d5db;
                             padding-bottom: 1mm;
                             flex-shrink: 0;
+                            text-align: center;
                         }
                         .etiqueta-tipo {
-                            font-size: 8pt;
-                            font-weight: bold;
+                            font-size: 10pt;
+                            font-weight: 900;
                             color: #111827;
-                            letter-spacing: 0.3px;
+                            letter-spacing: 0.5px;
+                            display: block;
                         }
                         .etiqueta-body {
                             flex: 1;
@@ -6020,10 +6023,12 @@ function filtrarPorUbicacion(ubicacion) {
                         }
                         .etiqueta-codigo {
                             font-size: 7pt;
+                            font-weight: bold;
                             color: #374151;
                         }
                         .etiqueta-id {
                             font-size: 7pt;
+                            font-weight: bold;
                             font-family: monospace;
                             color: #6b7280;
                         }
@@ -6036,7 +6041,7 @@ function filtrarPorUbicacion(ubicacion) {
                         }
                         .etiqueta-medida {
                             font-size: 14pt;
-                            font-weight: bold;
+                            font-weight: 900;
                             color: #2563eb;
                         }
                         .etiqueta-qr-img {
@@ -6057,6 +6062,7 @@ function filtrarPorUbicacion(ubicacion) {
                         }
                         .etiqueta-obra {
                             font-size: 6.5pt;
+                            font-weight: bold;
                             color: #374151;
                             word-wrap: break-word;
                             overflow-wrap: break-word;
@@ -6064,6 +6070,7 @@ function filtrarPorUbicacion(ubicacion) {
                         }
                         .etiqueta-fecha {
                             font-size: 6pt;
+                            font-weight: bold;
                             color: #6b7280;
                         }
                         @media print {
@@ -6135,7 +6142,7 @@ function filtrarPorUbicacion(ubicacion) {
             `);
             
             ventana.document.close();
-        }          
+        }     
 		
 		function limpiarBusquedaTareas() {
 			document.getElementById('search-tareas').value = '';
@@ -6233,5 +6240,3 @@ function filtrarPorUbicacion(ubicacion) {
     </script>
 </body>
 </html>
-
-						
