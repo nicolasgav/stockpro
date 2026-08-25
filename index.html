@@ -2283,7 +2283,7 @@ function filtrarPorUbicacion(ubicacion) {
 }
 
         async function ajustarStock(id) {
-            const item = state.stock.find(s => s.id === id);
+            const item = state.stock.find(s => String(s.id) === String(id));
             if (!item) return;
 
             const nuevaCantidad = prompt(`Ajustar "${item.descripcion}"\nActual: ${item.cantidad}\n\nNueva cantidad:`, item.cantidad);
@@ -2673,7 +2673,7 @@ function filtrarPorUbicacion(ubicacion) {
                         return;
                     }
 
-                    const stockItem = state.stock.find(s => s.id === stockId);
+                    const stockItem = state.stock.find(s => String(s.id) === String(stockId));
                     
                     if (!stockItem) {
                         alert(`Material no encontrado en stock: ${desc}`);
@@ -3055,7 +3055,7 @@ function filtrarPorUbicacion(ubicacion) {
                         return;
                     }
                     
-                    const stockItem = state.stock.find(s => s.id === stockItemId);
+                    const stockItem = state.stock.find(s => String(s.id) === String(stockItemId));
                     
                     if (!stockItem) {
                         alert(`Material no encontrado en stock: ${material.descripcion}`);
@@ -3647,7 +3647,7 @@ function filtrarPorUbicacion(ubicacion) {
                     stockItemAfectado = existente;
                 } else {
                     stockItemAfectado = {
-                        id: Date.now() + Math.random(),
+                        id: Date.now().toString() + Math.random(),
                         materialId: material ? material.id : null,
                         codigo: material ? material.codigo : (m.codigo || 'SIN-COD'),
                         descripcion: m.descripcion,
@@ -3841,7 +3841,7 @@ function filtrarPorUbicacion(ubicacion) {
                         stockItemAfectado = existente;
                     } else {
                         stockItemAfectado = {
-                            id: Date.now() + Math.random(),
+                            id: Date.now().toString() + Math.random(),
                             materialId: material ? material.id : null,
                             codigo: material ? material.codigo : (m.codigo || 'SIN-COD'),
                             descripcion: m.descripcion,
@@ -4348,7 +4348,7 @@ function filtrarPorUbicacion(ubicacion) {
                         stockItemAfectado = existente;
                     } else {
                         stockItemAfectado = {
-                            id: Date.now() + Math.random(),
+                            id: Date.now().toString() + Math.random(),
                             materialId: material ? material.id : null,
                             codigo: material ? material.codigo : (codigo || 'SIN-COD'),
                             descripcion,
@@ -5874,7 +5874,7 @@ function filtrarPorUbicacion(ubicacion) {
 		// ========== EDICIÓN DE UBICACIONES ==========
 
 		function editarInfoStock(id) {
-			const item = state.stock.find(s => s.id === id);
+			const item = state.stock.find(s => String(s.id) === String(id));
 			if (!item) return;
     
 			document.getElementById('edit-stock-id').value = id;
@@ -5889,7 +5889,7 @@ function filtrarPorUbicacion(ubicacion) {
 		async function guardarEdicionStock(e) {
 			e.preventDefault();
 			const id = document.getElementById('edit-stock-id').value;
-			const item = state.stock.find(s => s.id === id);
+			const item = state.stock.find(s => String(s.id) === String(id));
 			if (!item) return;
     
 			const oldUbi = item.ubicacion || 'Sin especificar';
@@ -5936,216 +5936,216 @@ function filtrarPorUbicacion(ubicacion) {
 			}
 		}
         
-        function imprimirEtiquetaRetazo(retazoId) {
-            const retazo = state.retazos.find(r => r.id === retazoId);
-            if (!retazo) return alert('Retazo no encontrado');
-            
-            const material = state.catalogo.find(c => c.id === retazo.materialId);
-            const esReservado = retazo.estado === 'reservado';
-            
-            // QR con ID del retazo + CÓDIGO del material (ej: RET-MO8Q18FED6G | CAB004)
-            const qrData = `${retazo.id} | ${retazo.codigoMaterial || ''}`;
-            
-            const ventana = window.open('', '_blank');
-            
-            ventana.document.write(`
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <title>Etiqueta ${retazo.id}</title>
-                    <style>
-                        @page { 
-                            size: 40mm 60mm; 
-                            margin: 0; 
+    function imprimirEtiquetaRetazo(retazoId) {
+        const retazo = state.retazos.find(r => r.id === retazoId);
+        if (!retazo) return alert('Retazo no encontrado');
+        
+        const material = state.catalogo.find(c => c.id === retazo.materialId);
+        const esReservado = retazo.estado === 'reservado';
+        
+        // QR con ID del retazo + CÓDIGO del material (ej: RET-MO8Q18FED6G | CAB004)
+        const qrData = `${retazo.id} | ${retazo.codigoMaterial || ''}`;
+        
+        const ventana = window.open('', '_blank');
+        
+        ventana.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Etiqueta ${retazo.id}</title>
+                <style>
+                    @page { 
+                        size: 40mm 60mm; 
+                        margin: 0; 
+                    }
+                    * { 
+                        margin: 0; 
+                        padding: 0; 
+                        box-sizing: border-box; 
+                    }
+                    html, body { 
+                        width: 40mm; 
+                        height: 60mm; 
+                        overflow: hidden;
+                        font-family: Arial, sans-serif;
+                        font-weight: bold;
+                        position: relative;
+                    }
+                    /* MARCO DE CORTE */
+                    .marco-corte {
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        width: 40mm;
+                        height: 60mm;
+                        border: 1px dashed #9ca3af;
+                        pointer-events: none;
+                        z-index: 100;
+                    }
+                    .etiqueta {
+                        position: absolute;
+                        top: 1.5mm;
+                        left: 1.5mm;
+                        width: 37mm;
+                        height: 57mm;
+                        padding: 1.5mm 2mm;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: space-between;
+                        background: white;
+                    }
+                    .etiqueta-header {
+                        border-bottom: 0.5px solid #d1d5db;
+                        padding-bottom: 1mm;
+                        flex-shrink: 0;
+                        text-align: center;
+                    }
+                    .etiqueta-tipo {
+                        font-size: 10pt;
+                        font-weight: 900;
+                        color: #111827;
+                        letter-spacing: 0.5px;
+                        display: block;
+                    }
+                    .etiqueta-body {
+                        flex: 1;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                        gap: 1mm;
+                        min-height: 0;
+                        overflow: hidden;
+                    }
+                    .etiqueta-desc {
+                        font-size: 9pt;
+                        font-weight: bold;
+                        color: #111827;
+                        line-height: 1.15;
+                        word-wrap: break-word;
+                        overflow-wrap: break-word;
+                    }
+                    .etiqueta-codigo {
+                        font-size: 7pt;
+                        font-weight: bold;
+                        color: #374151;
+                    }
+                    .etiqueta-id {
+                        font-size: 7pt;
+                        font-weight: bold;
+                        font-family: monospace;
+                        color: #6b7280;
+                    }
+                    .etiqueta-flex {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        gap: 1mm;
+                        margin-top: 1mm;
+                    }
+                    .etiqueta-medida {
+                        font-size: 14pt;
+                        font-weight: 900;
+                        color: #2563eb;
+                    }
+                    .etiqueta-qr-img {
+                        width: 14mm;
+                        height: 14mm;
+                        border: 0.5px solid #d1d5db;
+                        border-radius: 1mm;
+                        object-fit: contain;
+                        flex-shrink: 0;
+                    }
+                    .etiqueta-footer {
+                        border-top: 0.5px solid #d1d5db;
+                        padding-top: 1mm;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 0.5mm;
+                        flex-shrink: 0;
+                    }
+                    .etiqueta-obra {
+                        font-size: 6.5pt;
+                        font-weight: bold;
+                        color: #374151;
+                        word-wrap: break-word;
+                        overflow-wrap: break-word;
+                        line-height: 1.1;
+                    }
+                    .etiqueta-fecha {
+                        font-size: 6pt;
+                        font-weight: bold;
+                        color: #6b7280;
+                    }
+                    @media print {
+                        .no-print { 
+                            display: none !important; 
                         }
-                        * { 
-                            margin: 0; 
-                            padding: 0; 
-                            box-sizing: border-box; 
+                        body {
+                            -webkit-print-color-adjust: exact;
+                            print-color-adjust: exact;
                         }
-                        html, body { 
-                            width: 40mm; 
-                            height: 60mm; 
-                            overflow: hidden;
-                            font-family: Arial, sans-serif;
-                            font-weight: bold;
-                            position: relative;
-                        }
-                        /* MARCO DE CORTE */
                         .marco-corte {
-                            position: absolute;
-                            top: 0;
-                            left: 0;
-                            width: 40mm;
-                            height: 60mm;
-                            border: 1px dashed #9ca3af;
-                            pointer-events: none;
-                            z-index: 100;
+                            border: 1px dashed #9ca3af !important;
                         }
-                        .etiqueta {
-                            position: absolute;
-                            top: 1.5mm;
-                            left: 1.5mm;
-                            width: 37mm;
-                            height: 57mm;
-                            padding: 1.5mm 2mm;
-                            display: flex;
-                            flex-direction: column;
-                            justify-content: space-between;
-                            background: white;
-                        }
-                        .etiqueta-header {
-                            border-bottom: 0.5px solid #d1d5db;
-                            padding-bottom: 1mm;
-                            flex-shrink: 0;
-                            text-align: center;
-                        }
-                        .etiqueta-tipo {
-                            font-size: 10pt;
-                            font-weight: 900;
-                            color: #111827;
-                            letter-spacing: 0.5px;
-                            display: block;
-                        }
-                        .etiqueta-body {
-                            flex: 1;
-                            display: flex;
-                            flex-direction: column;
-                            justify-content: center;
-                            gap: 1mm;
-                            min-height: 0;
-                            overflow: hidden;
-                        }
-                        .etiqueta-desc {
-                            font-size: 9pt;
-                            font-weight: bold;
-                            color: #111827;
-                            line-height: 1.15;
-                            word-wrap: break-word;
-                            overflow-wrap: break-word;
-                        }
-                        .etiqueta-codigo {
-                            font-size: 7pt;
-                            font-weight: bold;
-                            color: #374151;
-                        }
-                        .etiqueta-id {
-                            font-size: 7pt;
-                            font-weight: bold;
-                            font-family: monospace;
-                            color: #6b7280;
-                        }
-                        .etiqueta-flex {
-                            display: flex;
-                            justify-content: space-between;
-                            align-items: center;
-                            gap: 1mm;
-                            margin-top: 1mm;
-                        }
-                        .etiqueta-medida {
-                            font-size: 14pt;
-                            font-weight: 900;
-                            color: #2563eb;
-                        }
-                        .etiqueta-qr-img {
-                            width: 14mm;
-                            height: 14mm;
-                            border: 0.5px solid #d1d5db;
-                            border-radius: 1mm;
-                            object-fit: contain;
-                            flex-shrink: 0;
-                        }
-                        .etiqueta-footer {
-                            border-top: 0.5px solid #d1d5db;
-                            padding-top: 1mm;
-                            display: flex;
-                            flex-direction: column;
-                            gap: 0.5mm;
-                            flex-shrink: 0;
-                        }
-                        .etiqueta-obra {
-                            font-size: 6.5pt;
-                            font-weight: bold;
-                            color: #374151;
-                            word-wrap: break-word;
-                            overflow-wrap: break-word;
-                            line-height: 1.1;
-                        }
-                        .etiqueta-fecha {
-                            font-size: 6pt;
-                            font-weight: bold;
-                            color: #6b7280;
-                        }
-                        @media print {
-                            .no-print { 
-                                display: none !important; 
-                            }
-                            body {
-                                -webkit-print-color-adjust: exact;
-                                print-color-adjust: exact;
-                            }
-                            .marco-corte {
-                                border: 1px dashed #9ca3af !important;
-                            }
-                        }
-                        .no-print {
-                            position: fixed;
-                            bottom: 5mm;
-                            left: 2mm;
-                            z-index: 200;
-                        }
-                        .no-print button {
-                            padding: 5px 14px;
-                            background: #2563eb;
-                            color: white;
-                            border: none;
-                            border-radius: 4px;
-                            cursor: pointer;
-                            font-size: 10px;
-                            font-weight: bold;
-                        }
-                    </style>
-                </head>
-                <body>
-                    <!-- MARCO DE CORTE GUÍA -->
-                    <div class="marco-corte"></div>
+                    }
+                    .no-print {
+                        position: fixed;
+                        bottom: 5mm;
+                        left: 2mm;
+                        z-index: 200;
+                    }
+                    .no-print button {
+                        padding: 5px 14px;
+                        background: #2563eb;
+                        color: white;
+                        border: none;
+                        border-radius: 4px;
+                        cursor: pointer;
+                        font-size: 10px;
+                        font-weight: bold;
+                    }
+                </style>
+            </head>
+            <body>
+                <!-- MARCO DE CORTE GUÍA -->
+                <div class="marco-corte"></div>
+                
+                <div class="etiqueta">
+                    <div class="etiqueta-header">
+                        <span class="etiqueta-tipo">Infraestructura</span>
+                    </div>
                     
-                    <div class="etiqueta">
-                        <div class="etiqueta-header">
-                            <span class="etiqueta-tipo">Infraestructura</span>
-                        </div>
+                    <div class="etiqueta-body">
+                        <div class="etiqueta-desc">${retazo.descripcionMaterial}</div>
+                        <div class="etiqueta-codigo">${retazo.codigoMaterial}</div>
+                        <div class="etiqueta-id">${retazo.id}</div>
                         
-                        <div class="etiqueta-body">
-                            <div class="etiqueta-desc">${retazo.descripcionMaterial}</div>
-                            <div class="etiqueta-codigo">${retazo.codigoMaterial}</div>
-                            <div class="etiqueta-id">${retazo.id}</div>
-                            
-                            <div class="etiqueta-flex">
-                                <div class="etiqueta-medida">${retazo.medida} ${retazo.unidad}</div>
-                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(qrData)}" 
-                                     alt="${qrData}" 
-                                     class="etiqueta-qr-img"
-                                     onerror="this.style.display='none'">
-                            </div>
-                        </div>
-                        
-                        <div class="etiqueta-footer">
-                            <span class="etiqueta-obra">📍 ${retazo.ubicacion || 'Sin ubicación'}</span>
-                            <span class="etiqueta-fecha">${new Date(retazo.fechaIngreso).toLocaleDateString()}</span>
+                        <div class="etiqueta-flex">
+                            <div class="etiqueta-medida">${retazo.medida} ${retazo.unidad}</div>
+                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(qrData)}" 
+                                 alt="${qrData}" 
+                                 class="etiqueta-qr-img"
+                                 onerror="this.style.display='none'">
                         </div>
                     </div>
                     
-                    <div class="no-print">
-                        <button onclick="window.print(); setTimeout(() => window.close(), 800)">
-                            🖨️ Imprimir
-                        </button>
+                    <div class="etiqueta-footer">
+                        <span class="etiqueta-obra">📍 ${retazo.ubicacion || 'Sin ubicación'}</span>
+                        <span class="etiqueta-fecha">${new Date(retazo.fechaIngreso).toLocaleDateString()}</span>
                     </div>
-                </body>
-                </html>
-            `);
-            
-            ventana.document.close();
-        }
+                </div>
+                
+                <div class="no-print">
+                    <button onclick="window.print(); setTimeout(() => window.close(), 800)">
+                        🖨️ Imprimir
+                    </button>
+                </div>
+            </body>
+            </html>
+        `);
+        
+        ventana.document.close();
+    }
 		
 		function limpiarBusquedaTareas() {
 			document.getElementById('search-tareas').value = '';
