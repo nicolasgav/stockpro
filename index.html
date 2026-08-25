@@ -6042,6 +6042,13 @@ function filtrarPorUbicacion(ubicacion) {
                             gap: 2mm;
                             align-items: center;
                         }
+                        .etiqueta-qr-img {
+                            width: 18mm;
+                            height: 18mm;
+                            border: 1px solid #d1d5db;
+                            border-radius: 1mm;
+                            object-fit: contain;
+                        }
                         @media print {
                             body { width: 60mm; height: 40mm; }
                             .no-print { display: none; }
@@ -6062,9 +6069,10 @@ function filtrarPorUbicacion(ubicacion) {
                         
                         <div class="etiqueta-flex">
                             <div class="etiqueta-medida">${retazo.medida} ${retazo.unidad}</div>
-                            <div class="etiqueta-qr">
-                                ${retazo.id}
-                            </div>
+                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(retazo.id)}" 
+                                 alt="${retazo.id}" 
+                                 class="etiqueta-qr-img" 
+                                 style="width: 18mm; height: 18mm; border: 1px solid #d1d5db; border-radius: 1mm;">                            
                         </div>
                     </div>
                     
