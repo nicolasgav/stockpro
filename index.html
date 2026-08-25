@@ -5943,6 +5943,9 @@ function filtrarPorUbicacion(ubicacion) {
             const material = state.catalogo.find(c => c.id === retazo.materialId);
             const esReservado = retazo.estado === 'reservado';
             
+            // Datos del QR: ID del retazo + ID del material
+            const qrData = `${retazo.id}|${retazo.materialId || ''}`;
+            
             const ventana = window.open('', '_blank');
             
             ventana.document.write(`
@@ -6119,8 +6122,8 @@ function filtrarPorUbicacion(ubicacion) {
                             
                             <div class="etiqueta-flex">
                                 <div class="etiqueta-medida">${retazo.medida} ${retazo.unidad}</div>
-                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(retazo.id)}" 
-                                     alt="${retazo.id}" 
+                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(qrData)}" 
+                                     alt="${qrData}" 
                                      class="etiqueta-qr-img"
                                      onerror="this.style.display='none'">
                             </div>
