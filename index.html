@@ -5943,8 +5943,8 @@ function filtrarPorUbicacion(ubicacion) {
             const material = state.catalogo.find(c => c.id === retazo.materialId);
             const esReservado = retazo.estado === 'reservado';
             
-            // Datos del QR: ID del retazo + ID del material
-            const qrData = `${retazo.id}|${retazo.materialId || ''}`;
+            // QR con ID del retazo + CÓDIGO del material (ej: RET-MO8Q18FED6G | CAB004)
+            const qrData = `${retazo.id} | ${retazo.codigoMaterial || ''}`;
             
             const ventana = window.open('', '_blank');
             
@@ -6145,7 +6145,7 @@ function filtrarPorUbicacion(ubicacion) {
             `);
             
             ventana.document.close();
-        }     
+        }
 		
 		function limpiarBusquedaTareas() {
 			document.getElementById('search-tareas').value = '';
