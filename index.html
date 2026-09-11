@@ -1066,6 +1066,7 @@
             usuarios: [],
             audit_log: [],
 			reservas: [],
+            movimientos: [],
             currentDate: new Date(),
             selectedDate: new Date().toISOString().split('T')[0],
             currentFilter: 'all',
@@ -1138,7 +1139,7 @@
             }
         }
 		
-		        function showApp() {
+		function showApp() {
             document.getElementById('config-screen').classList.add('hidden');
             document.getElementById('login-screen')?.classList.add('hidden');
             document.getElementById('app-container').classList.remove('hidden');
@@ -1180,11 +1181,11 @@
 
         // CARGAR Y GUARDAR DATOS
 		        // RUTA ÚNICA EN FIRESTORE: cada usuario tiene su propio documento
-			function getUserDocRef() {
+		function getUserDocRef() {
 				if (!CONFIG.currentUser) return null;
 				// ID compartido para todos los usuarios de la empresa
 				return window.firebaseFns.doc(db, 'stockpro_data', 'empresa_principal');
-			}
+		}
 
         // CARGAR DATOS (una sola vez al iniciar)
         async function loadData() {
@@ -1204,6 +1205,7 @@
                     state.usuarios = data.usuarios || [];
                     state.audit_log = data.audit_log || [];
                     state.reservas = data.reservas || [];
+                    state.movimientos = data.movimientos || [];
                 } else {
                     // Primer uso: crear documento vacío
                     await window.firebaseFns.setDoc(docRef, {
@@ -1242,6 +1244,7 @@
                     state.usuarios = data.usuarios || state.usuarios;
                     state.audit_log = data.audit_log || state.audit_log;
                     state.reservas = data.reservas || state.reservas;
+                    state.movimientos = data.movimientos || state.movimientos;
                     
                     updateAll();
                     updateLastSync();
@@ -1302,7 +1305,8 @@
 					retazos: state.retazos,
 					usuarios: state.usuarios,
 					audit_log: state.audit_log,
-					reservas: state.reservas,                    
+					reservas: state.reservas, 
+                    movimientos: state.movimientos,                    
 					lastUpdate: new Date().toISOString(),
 					updatedBy: CONFIG.currentUserName
 				});
@@ -1365,6 +1369,140 @@
             showSection('ordenes');
             setTimeout(() => filterOrders('abierto'), 100);
         }
+        
+        //Historial Stock
+        
+        function registrarMovimiento(datos) {
+            const mov = {
+                id: 'MOV-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 4).toUpperCase(),
+                tipo: datos.tipo || 'stock', // 'stock' o 'retazo'
+                materialId: datos.materialId || null,
+                stockItemId: datos.stockItemId || null,
+                retazoId: datos.retazoId || null,
+                accion: datos.accion || 'ingreso', // 'ingreso', 'egreso', 'ajuste'
+                cantidad: parseFloat(datos.cantidad) || 0,
+                cantidadAnterior: parseFloat(datos.cantidadAnterior) || 0,
+                cantidadResultante: parseFloat(datos.cantidadResultante) || 0,
+                fecha: new Date().toISOString(),
+                usuario: datos.usuario || CONFIG.currentUserName || 'Sistema',
+                procedencia: datos.procedencia || '-',
+                destino: datos.destino || null,
+                referencia: datos.referencia || '',
+                observaciones: datos.observaciones || ''
+            };
+            state.movimientos.push(mov);
+        }
+
+        // Funciones para abrir el historial
+        function verHistorialMaterial(materialId, stockItemId) {
+            const material = state.catalogo.find(c => c.id === materialId);
+            const movs = state.movimientos.filter(m => 
+                m.tipo === 'stock' && m.materialId === materialId && m.stockItemId === stockItemId
+            ).sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+            
+            const stockItem = state.stock.find(s => s.id === stockItemId);
+            
+            let html = '';
+            if (movs.length === 0) {
+                html = `<p class="text-gray-400 text-center py-8">Sin movimientos registrados para este material.</p>`;
+            } else {
+                let stockAcumulado = 0;
+                html = `<div class="space-y-2">`;
+                movs.forEach((m, i) => {
+                    const esIngreso = m.accion === 'ingreso';
+                    const esAjuste = m.accion === 'ajuste';
+                    const colorCantidad = esIngreso ? 'text-green-600' : (esAjuste ? 'text-yellow-600' : 'text-red-600');
+                    const signo = esIngreso ? '+' : (esAjuste ? '±' : '-');
+                    const bgFila = esIngreso ? 'bg-green-50 border-green-200' : (esAjuste ? 'bg-yellow-50 border-yellow-200' : 'bg-red-50 border-red-200');
+                    
+                    html += `
+                    <div class="border rounded-xl p-3 ${bgFila}">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="text-xs px-2 py-0.5 rounded-full ${esIngreso ? 'bg-green-200 text-green-800' : (esAjuste ? 'bg-yellow-200 text-yellow-800' : 'bg-red-200 text-red-800')} font-bold uppercase">
+                                        ${esIngreso ? 'INGRESO' : (esAjuste ? 'AJUSTE' : 'EGRESO')}
+                                    </span>
+                                    <span class="text-xs text-gray-500">${new Date(m.fecha).toLocaleDateString()} ${new Date(m.fecha).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                </div>
+                                <div class="flex items-baseline gap-2">
+                                    <span class="text-lg font-bold ${colorCantidad}">${signo}${m.cantidad}</span>
+                                    <span class="text-xs text-gray-500">${stockItem?.unidad || 'unid'}</span>
+                                </div>
+                                <div class="text-xs text-gray-600 mt-1">
+                                    <span class="text-gray-400">Antes:</span> ${m.cantidadAnterior} → <span class="text-gray-400">Después:</span> <strong>${m.cantidadResultante}</strong>
+                                </div>
+                                ${m.procedencia && m.procedencia !== '-' ? `<div class="text-xs text-gray-500 mt-1">🏭 ${m.procedencia}</div>` : ''}
+                                ${m.destino ? `<div class="text-xs text-gray-500 mt-0.5">📍 Destino: ${m.destino}</div>` : ''}
+                                ${m.referencia ? `<div class="text-xs text-blue-600 mt-0.5">📋 ${m.referencia}</div>` : ''}
+                                ${m.observaciones ? `<div class="text-xs text-gray-400 mt-0.5 italic">"${m.observaciones}"</div>` : ''}
+                            </div>
+                            <div class="text-right">
+                                <span class="user-badge bg-blue-100 text-blue-700 text-xs">${m.usuario}</span>
+                            </div>
+                        </div>
+                    </div>
+                    `;
+                });
+                html += `</div>`;
+            }
+            
+            document.getElementById('historial-titulo').textContent = `Historial: ${material?.descripcion || 'Material'}`;
+            document.getElementById('historial-subtitulo').textContent = `${stockItem?.codigo || ''} | 📍 ${stockItem?.ubicacion || 'Sin ubicación'} | Stock actual: ${stockItem?.cantidad || 0} ${stockItem?.unidad || ''}`;
+            document.getElementById('historial-contenido').innerHTML = html;
+            document.getElementById('modal-historial').classList.remove('hidden');
+        }
+
+        function verHistorialRetazo(retazoId) {
+            const retazo = state.retazos.find(r => r.id === retazoId);
+            const material = state.catalogo.find(c => c.id === retazo?.materialId);
+            
+            const movs = state.movimientos.filter(m => 
+                m.tipo === 'retazo' && m.retazoId === retazoId
+            ).sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+            
+            let html = '';
+            if (movs.length === 0) {
+                html = `<p class="text-gray-400 text-center py-8">Sin movimientos registrados para este retazo.</p>`;
+            } else {
+                html = `<div class="space-y-2">`;
+                movs.forEach(m => {
+                    const esIngreso = m.accion === 'ingreso';
+                    const bgFila = esIngreso ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200';
+                    
+                    html += `
+                    <div class="border rounded-xl p-3 ${bgFila}">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="text-xs px-2 py-0.5 rounded-full ${esIngreso ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'} font-bold uppercase">
+                                        ${esIngreso ? 'INGRESO' : 'EGRESO'}
+                                    </span>
+                                    <span class="text-xs text-gray-500">${new Date(m.fecha).toLocaleDateString()} ${new Date(m.fecha).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                </div>
+                                <div class="flex items-baseline gap-2">
+                                    <span class="text-lg font-bold ${esIngreso ? 'text-green-600' : 'text-red-600'}">${esIngreso ? '+' : '-'}${m.cantidad}</span>
+                                    <span class="text-xs text-gray-500">${m.cantidadResultante || retazo?.unidad || 'm'}</span>
+                                </div>
+                                ${m.procedencia && m.procedencia !== '-' ? `<div class="text-xs text-gray-500 mt-1">🏭 ${m.procedencia}</div>` : ''}
+                                ${m.destino ? `<div class="text-xs text-gray-500 mt-0.5">📍 Destino: ${m.destino}</div>` : ''}
+                                ${m.referencia ? `<div class="text-xs text-blue-600 mt-0.5">📋 ${m.referencia}</div>` : ''}
+                            </div>
+                            <div class="text-right">
+                                <span class="user-badge bg-blue-100 text-blue-700 text-xs">${m.usuario}</span>
+                            </div>
+                        </div>
+                    </div>
+                    `;
+                });
+                html += `</div>`;
+            }
+            
+            document.getElementById('historial-titulo').textContent = `Historial Retazo: ${material?.descripcion || ''}`;
+            document.getElementById('historial-subtitulo').textContent = `${retazo?.id} | ${retazo?.medida} ${retazo?.unidad} | Estado: ${retazo?.estado || '-'}`;
+            document.getElementById('historial-contenido').innerHTML = html;
+            document.getElementById('modal-historial').classList.remove('hidden');
+        }        
 
         
         // CATÁLOGO
@@ -1573,436 +1711,483 @@
 		document.getElementById('btn-import').disabled = state.pendingImport.length === 0;
 	}
 
-    async function processImport() {
-		let importados = 0;
-		let actualizados = 0;
+        async function processImport() {
+            let importados = 0;
+            let actualizados = 0;
 
-		state.pendingImport.forEach(item => {
-			const existente = state.catalogo.find(c => c.codigo === item.codigo);
-			if (existente) {
-				Object.assign(existente, item);
-				actualizados++;
-			} else {
-				item.id = Date.now().toString() + Math.random();
-				item.activo = true;
-				item.fechaCreacion = new Date().toISOString();
-				state.catalogo.push(item);
-				importados++;
-			}
-		});
+            state.pendingImport.forEach(item => {
+                const existente = state.catalogo.find(c => c.codigo === item.codigo);
+                if (existente) {
+                    Object.assign(existente, item);
+                    actualizados++;
+                } else {
+                    item.id = Date.now().toString() + Math.random();
+                    item.activo = true;
+                    item.fechaCreacion = new Date().toISOString();
+                    state.catalogo.push(item);
+                    importados++;
+                }
+            });
 
-		addAuditLog('IMPORTACION', 'CATALOGO', '', `Importados ${importados} nuevos, ${actualizados} actualizados`);
+            addAuditLog('IMPORTACION', 'CATALOGO', '', `Importados ${importados} nuevos, ${actualizados} actualizados`);
 
-		// 🔴 AHORA VERIFICAMOS QUE REALMENTE SE GUARDÓ
-		const guardado = await saveToCloud();
-    
-		if (!guardado) {
-			// Si falló el guardado, NO cerrar modal ni mostrar éxito
-			alert('⚠️ Los materiales se cargaron en pantalla pero NO se guardaron en la nube.\n\nRevisa:\n• Tu conexión a internet\n• Que el archivo no sea muy grande\n• Tu sesión de Firebase esté activa');
-			return;
-		}
+            // 🔴 AHORA VERIFICAMOS QUE REALMENTE SE GUARDÓ
+            const guardado = await saveToCloud();
+        
+            if (!guardado) {
+                // Si falló el guardado, NO cerrar modal ni mostrar éxito
+                alert('⚠️ Los materiales se cargaron en pantalla pero NO se guardaron en la nube.\n\nRevisa:\n• Tu conexión a internet\n• Que el archivo no sea muy grande\n• Tu sesión de Firebase esté activa');
+                return;
+            }
 
-		closeModal('import');
-		renderCatalogo();
-		updateDashboard();
-		alert(`✅ Importación completada y guardada:\n• ${importados} nuevos\n• ${actualizados} actualizados`);
-	}
+            closeModal('import');
+            renderCatalogo();
+            updateDashboard();
+            alert(`✅ Importación completada y guardada:\n• ${importados} nuevos\n• ${actualizados} actualizados`);
+        }
 
 		// INGRESO DIRECTO - MULTI-MATERIAL
 
-function initIngresoForm() {
-    document.getElementById('ingreso-materiales-container').innerHTML = '';
-    addIngresoMaterialRow();
-}
-
-function addIngresoMaterialRow() {
-    const container = document.getElementById('ingreso-materiales-container');
-    const idx = container.children.length;
-    
-    const div = document.createElement('div');
-    div.className = 'ingreso-material-row bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-3';
-    div.dataset.index = idx;
-    
-    div.innerHTML = `
-        <div class="flex justify-between items-start">
-            <h4 class="text-sm font-semibold text-gray-600">Material #${idx + 1}</h4>
-            <button type="button" onclick="this.closest('.ingreso-material-row').remove()" class="text-red-500 hover:text-red-700 text-sm" title="Eliminar">✕</button>
-        </div>
-        
-        <div class="relative">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Material del Catálogo *</label>
-            <input type="text" placeholder="Escribí para buscar o crear..." 
-                   class="ingreso-autocomplete w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500" 
-                   autocomplete="off" required>
-            <div class="autocomplete-results hidden"></div>
-            <input type="hidden" class="ingreso-material-id">
-            <input type="hidden" class="ingreso-material-codigo">
-            <input type="hidden" class="ingreso-material-es-nuevo" value="false">
-            <div class="ingreso-material-indicador mt-1 text-xs hidden"></div>
-            <p class="text-xs text-gray-500 mt-1 tipo-control-hint"></p>
-        </div>
-
-        <!-- Sección Normal -->
-        <div class="ingreso-normal-section hidden grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Cantidad</label>
-                <input type="number" min="1" class="ingreso-cantidad w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500" placeholder="0">
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Unidad</label>
-                <input type="text" class="ingreso-unidad w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-100" readonly>
-            </div>
-        </div>
-
-        <!-- Sección Retazos -->
-        <div class="ingreso-retazos-section hidden space-y-2">
-            <div class="flex justify-between items-center">
-                <label class="block text-sm font-medium text-gray-700">Medidas de cada retazo</label>
-                <button type="button" onclick="addIngresoRetazoRow(this.closest('.ingreso-retazos-section'))" class="text-sm text-blue-600 hover:underline">+ Agregar retazo</button>
-            </div>
-            <div class="ingreso-retazos-container space-y-2"></div>
-            <p class="text-xs text-gray-500">Ingresá la medida de cada cable/pieza individual. Ej: 4.5 metros</p>
-        </div>
-    `;
-    
-    container.appendChild(div);
-    setupIngresoAutocomplete(div);
-}
-
-function setupIngresoAutocomplete(row) {
-    const input = row.querySelector('.ingreso-autocomplete');
-    const resultsDiv = row.querySelector('.autocomplete-results');
-    const materialIdInput = row.querySelector('.ingreso-material-id');
-    const materialCodigoInput = row.querySelector('.ingreso-material-codigo');
-    const esNuevoInput = row.querySelector('.ingreso-material-es-nuevo');
-    const indicador = row.querySelector('.ingreso-material-indicador');
-    const tipoControlHint = row.querySelector('.tipo-control-hint');
-    const normalSection = row.querySelector('.ingreso-normal-section');
-    const retazosSection = row.querySelector('.ingreso-retazos-section');
-    const unidadInput = row.querySelector('.ingreso-unidad');
-    
-    input.addEventListener('input', (e) => {
-        const value = e.target.value.toLowerCase();
-        
-        if (value.length < 1) {
-            resultsDiv.classList.add('hidden');
-            return;
+        function initIngresoForm() {
+            document.getElementById('ingreso-materiales-container').innerHTML = '';
+            addIngresoMaterialRow();
         }
 
-        const matches = state.catalogo.filter(c => 
-            c.activo !== false && (
-                c.codigo.toLowerCase().includes(value) || 
-                c.descripcion.toLowerCase().includes(value)
-            )
-        ).slice(0, 5);
-
-        if (matches.length > 0) {
-            resultsDiv.innerHTML = matches.map(m => `
-                <div class="autocomplete-item" 
-                     data-id="${m.id}" 
-                     data-codigo="${m.codigo}" 
-                     data-desc="${m.descripcion}" 
-                     data-tipo="${m.tipoControl || 'normal'}"
-                     data-unidad="${m.unidad}"
-                     data-detalles="${m.detalles || ''}">
-                    <div class="font-medium">${m.descripcion}</div>
-                    <div class="text-xs text-gray-500">${m.codigo} • ${m.unidad}${m.detalles ? ' • ' + m.detalles : ''} ${m.tipoControl === 'retazos' ? '📏' : ''}</div>
-                </div>
-            `).join('');
+        function addIngresoMaterialRow() {
+            const container = document.getElementById('ingreso-materiales-container');
+            const idx = container.children.length;
             
-            resultsDiv.innerHTML += `
-                <div class="autocomplete-item bg-blue-50 text-blue-700 font-medium border-t border-blue-100" onclick="crearNuevoMaterialIngresoRow(this.closest('.ingreso-material-row'))">
-                    <div class="flex items-center gap-2">
-                        <span class="text-lg">+</span>
-                        <span>Crear "${input.value}" como nuevo</span>
+            const div = document.createElement('div');
+            div.className = 'ingreso-material-row bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-3';
+            div.dataset.index = idx;
+            
+            div.innerHTML = `
+                <div class="flex justify-between items-start">
+                    <h4 class="text-sm font-semibold text-gray-600">Material #${idx + 1}</h4>
+                    <button type="button" onclick="this.closest('.ingreso-material-row').remove()" class="text-red-500 hover:text-red-700 text-sm" title="Eliminar">✕</button>
+                </div>
+                
+                <div class="relative">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Material del Catálogo *</label>
+                    <input type="text" placeholder="Escribí para buscar o crear..." 
+                           class="ingreso-autocomplete w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500" 
+                           autocomplete="off" required>
+                    <div class="autocomplete-results hidden"></div>
+                    <input type="hidden" class="ingreso-material-id">
+                    <input type="hidden" class="ingreso-material-codigo">
+                    <input type="hidden" class="ingreso-material-es-nuevo" value="false">
+                    <div class="ingreso-material-indicador mt-1 text-xs hidden"></div>
+                    <p class="text-xs text-gray-500 mt-1 tipo-control-hint"></p>
+                </div>
+
+                <!-- Sección Normal -->
+                <div class="ingreso-normal-section hidden grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Cantidad</label>
+                        <input type="number" min="1" class="ingreso-cantidad w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500" placeholder="0">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Unidad</label>
+                        <input type="text" class="ingreso-unidad w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-100" readonly>
                     </div>
                 </div>
-            `;
-        } else {
-            resultsDiv.innerHTML = `
-                <div class="autocomplete-item bg-blue-50 text-blue-700 font-medium p-3" onclick="crearNuevoMaterialIngresoRow(this.closest('.ingreso-material-row'))">
-                    <div class="flex items-center gap-2">
-                        <span class="text-lg">+</span>
-                        <div>
-                            <div>Crear "${input.value}" como nuevo material</div>
-                            <div class="text-xs text-blue-500">Se agregará al catálogo y luego al stock</div>
-                        </div>
+
+                <!-- Sección Retazos -->
+                <div class="ingreso-retazos-section hidden space-y-2">
+                    <div class="flex justify-between items-center">
+                        <label class="block text-sm font-medium text-gray-700">Medidas de cada retazo</label>
+                        <button type="button" onclick="addIngresoRetazoRow(this.closest('.ingreso-retazos-section'))" class="text-sm text-blue-600 hover:underline">+ Agregar retazo</button>
                     </div>
+                    <div class="ingreso-retazos-container space-y-2"></div>
+                    <p class="text-xs text-gray-500">Ingresá la medida de cada cable/pieza individual. Ej: 4.5 metros</p>
                 </div>
             `;
+            
+            container.appendChild(div);
+            setupIngresoAutocomplete(div);
         }
-        resultsDiv.classList.remove('hidden');
 
-        resultsDiv.querySelectorAll('.autocomplete-item:not(.bg-blue-50)').forEach(item => {
-            item.addEventListener('click', () => {
-                const tipoControl = item.dataset.tipo;
-                const unidad = item.dataset.unidad;
-                const detalles = item.dataset.detalles;
+        function setupIngresoAutocomplete(row) {
+            const input = row.querySelector('.ingreso-autocomplete');
+            const resultsDiv = row.querySelector('.autocomplete-results');
+            const materialIdInput = row.querySelector('.ingreso-material-id');
+            const materialCodigoInput = row.querySelector('.ingreso-material-codigo');
+            const esNuevoInput = row.querySelector('.ingreso-material-es-nuevo');
+            const indicador = row.querySelector('.ingreso-material-indicador');
+            const tipoControlHint = row.querySelector('.tipo-control-hint');
+            const normalSection = row.querySelector('.ingreso-normal-section');
+            const retazosSection = row.querySelector('.ingreso-retazos-section');
+            const unidadInput = row.querySelector('.ingreso-unidad');
+            
+            input.addEventListener('input', (e) => {
+                const value = e.target.value.toLowerCase();
                 
-                input.value = item.dataset.desc;
-                materialIdInput.value = item.dataset.id;
-                materialCodigoInput.value = item.dataset.codigo;
-                esNuevoInput.value = "false";
-                resultsDiv.classList.add('hidden');
-                
-                // Mostrar indicador
-                indicador.classList.remove('hidden');
-                let html = tipoControl === 'retazos' 
-                    ? '<span class="text-purple-600 font-medium">📏 Control por Retazos</span>'
-                    : '<span class="text-gray-600">∑ Control Normal</span>';
-                if (detalles) {
-                    html += `<div class="mt-1 text-blue-700 bg-blue-50 px-2 py-1 rounded text-xs">📋 ${detalles}</div>`;
+                if (value.length < 1) {
+                    resultsDiv.classList.add('hidden');
+                    return;
                 }
-                indicador.innerHTML = html;
-                
-                tipoControlHint.textContent = tipoControl === 'retazos' 
-                    ? '💡 Modo Retazos: Ingresá cada pieza individual con su medida exacta' 
-                    : '💡 Modo Normal: Se suma la cantidad al stock existente';
 
-                if (tipoControl === 'retazos') {
-                    normalSection.classList.add('hidden');
-                    retazosSection.classList.remove('hidden');
-                    unidadInput.value = unidad;
-                    const retazosContainer = retazosSection.querySelector('.ingreso-retazos-container');
-                    retazosContainer.innerHTML = '';
-                    addIngresoRetazoRow(retazosSection);
+                const matches = state.catalogo.filter(c => 
+                    c.activo !== false && (
+                        c.codigo.toLowerCase().includes(value) || 
+                        c.descripcion.toLowerCase().includes(value)
+                    )
+                ).slice(0, 5);
+
+                if (matches.length > 0) {
+                    resultsDiv.innerHTML = matches.map(m => `
+                        <div class="autocomplete-item" 
+                             data-id="${m.id}" 
+                             data-codigo="${m.codigo}" 
+                             data-desc="${m.descripcion}" 
+                             data-tipo="${m.tipoControl || 'normal'}"
+                             data-unidad="${m.unidad}"
+                             data-detalles="${m.detalles || ''}">
+                            <div class="font-medium">${m.descripcion}</div>
+                            <div class="text-xs text-gray-500">${m.codigo} • ${m.unidad}${m.detalles ? ' • ' + m.detalles : ''} ${m.tipoControl === 'retazos' ? '📏' : ''}</div>
+                        </div>
+                    `).join('');
+                    
+                    resultsDiv.innerHTML += `
+                        <div class="autocomplete-item bg-blue-50 text-blue-700 font-medium border-t border-blue-100" onclick="crearNuevoMaterialIngresoRow(this.closest('.ingreso-material-row'))">
+                            <div class="flex items-center gap-2">
+                                <span class="text-lg">+</span>
+                                <span>Crear "${input.value}" como nuevo</span>
+                            </div>
+                        </div>
+                    `;
                 } else {
-                    retazosSection.classList.add('hidden');
-                    normalSection.classList.remove('hidden');
-                    unidadInput.value = unidad;
+                    resultsDiv.innerHTML = `
+                        <div class="autocomplete-item bg-blue-50 text-blue-700 font-medium p-3" onclick="crearNuevoMaterialIngresoRow(this.closest('.ingreso-material-row'))">
+                            <div class="flex items-center gap-2">
+                                <span class="text-lg">+</span>
+                                <div>
+                                    <div>Crear "${input.value}" como nuevo material</div>
+                                    <div class="text-xs text-blue-500">Se agregará al catálogo y luego al stock</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                resultsDiv.classList.remove('hidden');
+
+                resultsDiv.querySelectorAll('.autocomplete-item:not(.bg-blue-50)').forEach(item => {
+                    item.addEventListener('click', () => {
+                        const tipoControl = item.dataset.tipo;
+                        const unidad = item.dataset.unidad;
+                        const detalles = item.dataset.detalles;
+                        
+                        input.value = item.dataset.desc;
+                        materialIdInput.value = item.dataset.id;
+                        materialCodigoInput.value = item.dataset.codigo;
+                        esNuevoInput.value = "false";
+                        resultsDiv.classList.add('hidden');
+                        
+                        // Mostrar indicador
+                        indicador.classList.remove('hidden');
+                        let html = tipoControl === 'retazos' 
+                            ? '<span class="text-purple-600 font-medium">📏 Control por Retazos</span>'
+                            : '<span class="text-gray-600">∑ Control Normal</span>';
+                        if (detalles) {
+                            html += `<div class="mt-1 text-blue-700 bg-blue-50 px-2 py-1 rounded text-xs">📋 ${detalles}</div>`;
+                        }
+                        indicador.innerHTML = html;
+                        
+                        tipoControlHint.textContent = tipoControl === 'retazos' 
+                            ? '💡 Modo Retazos: Ingresá cada pieza individual con su medida exacta' 
+                            : '💡 Modo Normal: Se suma la cantidad al stock existente';
+
+                        if (tipoControl === 'retazos') {
+                            normalSection.classList.add('hidden');
+                            retazosSection.classList.remove('hidden');
+                            unidadInput.value = unidad;
+                            const retazosContainer = retazosSection.querySelector('.ingreso-retazos-container');
+                            retazosContainer.innerHTML = '';
+                            addIngresoRetazoRow(retazosSection);
+                        } else {
+                            retazosSection.classList.add('hidden');
+                            normalSection.classList.remove('hidden');
+                            unidadInput.value = unidad;
+                        }
+                    });
+                });
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!row.contains(e.target)) {
+                    resultsDiv.classList.add('hidden');
                 }
             });
-        });
-    });
+        }
 
-    document.addEventListener('click', (e) => {
-        if (!row.contains(e.target)) {
+        function crearNuevoMaterialIngresoRow(row) {
+            const input = row.querySelector('.ingreso-autocomplete');
+            const materialIdInput = row.querySelector('.ingreso-material-id');
+            const materialCodigoInput = row.querySelector('.ingreso-material-codigo');
+            const esNuevoInput = row.querySelector('.ingreso-material-es-nuevo');
+            const resultsDiv = row.querySelector('.autocomplete-results');
+            const indicador = row.querySelector('.ingreso-material-indicador');
+            const tipoControlHint = row.querySelector('.tipo-control-hint');
+            const normalSection = row.querySelector('.ingreso-normal-section');
+            const retazosSection = row.querySelector('.ingreso-retazos-section');
+            const unidadInput = row.querySelector('.ingreso-unidad');
+            
+            const descripcion = input.value.trim();
+            if (!descripcion) return alert('Ingresa una descripción primero');
+            
+            // Generar código automático
+            const palabras = descripcion.trim().split(' ');
+            let codigo = '';
+            if (palabras.length >= 2) {
+                codigo = (palabras[0].substring(0, 3) + palabras[1].substring(0, 2)).toUpperCase();
+            } else {
+                codigo = descripcion.substring(0, 5).toUpperCase();
+            }
+            codigo += Math.floor(Math.random() * 900) + 100;
+            
+            materialIdInput.value = 'nuevo_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+            materialCodigoInput.value = codigo;
+            esNuevoInput.value = 'true';
+            input.classList.add('bg-yellow-50');
+            input.readOnly = true;
             resultsDiv.classList.add('hidden');
+            
+            indicador.classList.remove('hidden');
+            indicador.innerHTML = `<span class="text-yellow-700 font-medium">[NUEVO MATERIAL]</span> Código: ${codigo}`;
+            
+            retazosSection.classList.add('hidden');
+            normalSection.classList.remove('hidden');
+            unidadInput.value = 'unidades';
+            tipoControlHint.textContent = '💡 Material nuevo: Se creará en el catálogo con control Normal (puedes cambiarlo después)';
         }
-    });
-}
 
-function crearNuevoMaterialIngresoRow(row) {
-    const input = row.querySelector('.ingreso-autocomplete');
-    const materialIdInput = row.querySelector('.ingreso-material-id');
-    const materialCodigoInput = row.querySelector('.ingreso-material-codigo');
-    const esNuevoInput = row.querySelector('.ingreso-material-es-nuevo');
-    const resultsDiv = row.querySelector('.autocomplete-results');
-    const indicador = row.querySelector('.ingreso-material-indicador');
-    const tipoControlHint = row.querySelector('.tipo-control-hint');
-    const normalSection = row.querySelector('.ingreso-normal-section');
-    const retazosSection = row.querySelector('.ingreso-retazos-section');
-    const unidadInput = row.querySelector('.ingreso-unidad');
-    
-    const descripcion = input.value.trim();
-    if (!descripcion) return alert('Ingresa una descripción primero');
-    
-    // Generar código automático
-    const palabras = descripcion.trim().split(' ');
-    let codigo = '';
-    if (palabras.length >= 2) {
-        codigo = (palabras[0].substring(0, 3) + palabras[1].substring(0, 2)).toUpperCase();
-    } else {
-        codigo = descripcion.substring(0, 5).toUpperCase();
-    }
-    codigo += Math.floor(Math.random() * 900) + 100;
-    
-    materialIdInput.value = 'nuevo_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-    materialCodigoInput.value = codigo;
-    esNuevoInput.value = 'true';
-    input.classList.add('bg-yellow-50');
-    input.readOnly = true;
-    resultsDiv.classList.add('hidden');
-    
-    indicador.classList.remove('hidden');
-    indicador.innerHTML = `<span class="text-yellow-700 font-medium">[NUEVO MATERIAL]</span> Código: ${codigo}`;
-    
-    retazosSection.classList.add('hidden');
-    normalSection.classList.remove('hidden');
-    unidadInput.value = 'unidades';
-    tipoControlHint.textContent = '💡 Material nuevo: Se creará en el catálogo con control Normal (puedes cambiarlo después)';
-}
-
-function addIngresoRetazoRow(retazosSection) {
-    const container = retazosSection.querySelector('.ingreso-retazos-container');
-    const div = document.createElement('div');
-    div.className = 'flex gap-2 items-center';
-    div.innerHTML = `
-        <input type="number" step="0.01" min="0.01" placeholder="Medida (ej: 4.5)" class="retazo-medida flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm" required>
-        <span class="text-sm text-gray-500 unidad-label">metros</span>
-        <input type="text" placeholder="Obs. (opcional)" class="retazo-obs flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm">
-        <button type="button" onclick="this.parentElement.remove()" class="text-red-500 hover:bg-red-50 p-2 rounded">✕</button>
-    `;
-    container.appendChild(div);
-}
-
-function resetIngresoForm() {
-    document.getElementById('ingreso-materiales-container').innerHTML = '';
-    document.getElementById('ingreso-origen').value = '';
-    document.getElementById('ingreso-ubicacion').value = '';
-    document.getElementById('ingreso-observaciones').value = '';
-    addIngresoMaterialRow();
-}
-
-async function handleIngresoDirecto(e) {
-    e.preventDefault();
-    
-    const origen = document.getElementById('ingreso-origen').value.trim();
-    const ubicacion = document.getElementById('ingreso-ubicacion').value.trim();
-    const observacionesGenerales = document.getElementById('ingreso-observaciones').value.trim();
-    
-    const materialesProcesados = [];
-    const nuevosMateriales = [];
-    let hayError = false;
-    
-    document.querySelectorAll('.ingreso-material-row').forEach(row => {
-        const materialId = row.querySelector('.ingreso-material-id').value;
-        const esNuevo = row.querySelector('.ingreso-material-es-nuevo').value === 'true';
-        const codigo = row.querySelector('.ingreso-material-codigo').value;
-        const descripcion = row.querySelector('.ingreso-autocomplete').value;
-        
-        if (!materialId || !descripcion) {
-            alert('Completa todos los materiales');
-            hayError = true;
-            return;
+        function addIngresoRetazoRow(retazosSection) {
+            const container = retazosSection.querySelector('.ingreso-retazos-container');
+            const div = document.createElement('div');
+            div.className = 'flex gap-2 items-center';
+            div.innerHTML = `
+                <input type="number" step="0.01" min="0.01" placeholder="Medida (ej: 4.5)" class="retazo-medida flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm" required>
+                <span class="text-sm text-gray-500 unidad-label">metros</span>
+                <input type="text" placeholder="Obs. (opcional)" class="retazo-obs flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                <button type="button" onclick="this.parentElement.remove()" class="text-red-500 hover:bg-red-50 p-2 rounded">✕</button>
+            `;
+            container.appendChild(div);
         }
-        
-        let material;
-        
-        if (esNuevo) {
-            material = {
-                id: materialId.replace('nuevo_', ''),
-                codigo: codigo,
-                descripcion: descripcion,
-                tipoControl: 'normal',
-                unidad: 'unidades',
-                stockMinimo: 3,
-                activo: true,
-                fechaCreacion: new Date().toISOString()
-            };
-            nuevosMateriales.push(material);
-        } else {
-            material = state.catalogo.find(c => c.id === materialId);
+
+        function resetIngresoForm() {
+            document.getElementById('ingreso-materiales-container').innerHTML = '';
+            document.getElementById('ingreso-origen').value = '';
+            document.getElementById('ingreso-ubicacion').value = '';
+            document.getElementById('ingreso-observaciones').value = '';
+            addIngresoMaterialRow();
         }
-        
-        if (!material) {
-            alert(`Material no encontrado: ${descripcion}`);
-            hayError = true;
-            return;
-        }
-        
-        if (material.tipoControl === 'retazos') {
-            const retazos = [];
-            row.querySelectorAll('.ingreso-retazos-container > div').forEach(div => {
-                const medida = parseFloat(div.querySelector('.retazo-medida').value);
-                const obs = div.querySelector('.retazo-obs').value.trim();
-                if (medida > 0) {
-                    retazos.push({
-                        id: 'RET-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 5).toUpperCase(),
-                        materialId: material.id,
-                        codigoMaterial: material.codigo,
-                        descripcionMaterial: material.descripcion,
-                        medida: medida,
-                        unidad: material.unidad,
-                        estado: 'disponible',
-                        ubicacion: ubicacion || 'Sin especificar',
-                        usuarioIngreso: CONFIG.currentUserName,
-                        fechaIngreso: new Date().toISOString(),
+
+        async function handleIngresoDirecto(e) {
+            e.preventDefault();
+            
+            const origen = document.getElementById('ingreso-origen').value.trim();
+            const ubicacion = document.getElementById('ingreso-ubicacion').value.trim();
+            const observacionesGenerales = document.getElementById('ingreso-observaciones').value.trim();
+            
+            const materialesProcesados = [];
+            const nuevosMateriales = [];
+            let hayError = false;
+            
+            document.querySelectorAll('.ingreso-material-row').forEach(row => {
+                const materialId = row.querySelector('.ingreso-material-id').value;
+                const esNuevo = row.querySelector('.ingreso-material-es-nuevo').value === 'true';
+                const codigo = row.querySelector('.ingreso-material-codigo').value;
+                const descripcion = row.querySelector('.ingreso-autocomplete').value;
+                
+                if (!materialId || !descripcion) {
+                    alert('Completa todos los materiales');
+                    hayError = true;
+                    return;
+                }
+                
+                let material;
+                
+                if (esNuevo) {
+                    material = {
+                        id: materialId.replace('nuevo_', ''),
+                        codigo: codigo,
+                        descripcion: descripcion,
+                        tipoControl: 'normal',
+                        unidad: 'unidades',
+                        stockMinimo: 3,
+                        activo: true,
+                        fechaCreacion: new Date().toISOString()
+                    };
+                    nuevosMateriales.push(material);
+                } else {
+                    material = state.catalogo.find(c => c.id === materialId);
+                }
+                
+                if (!material) {
+                    alert(`Material no encontrado: ${descripcion}`);
+                    hayError = true;
+                    return;
+                }
+                
+                if (material.tipoControl === 'retazos') {
+                    const retazos = [];
+                    row.querySelectorAll('.ingreso-retazos-container > div').forEach(div => {
+                        const medida = parseFloat(div.querySelector('.retazo-medida').value);
+                        const obs = div.querySelector('.retazo-obs').value.trim();
+                        if (medida > 0) {
+                            retazos.push({
+                                id: 'RET-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 5).toUpperCase(),
+                                materialId: material.id,
+                                codigoMaterial: material.codigo,
+                                descripcionMaterial: material.descripcion,
+                                medida: medida,
+                                unidad: material.unidad,
+                                estado: 'disponible',
+                                ubicacion: ubicacion || 'Sin especificar',
+                                usuarioIngreso: CONFIG.currentUserName,
+                                fechaIngreso: new Date().toISOString(),
+                                origen: origen || 'Ingreso directo',
+                                observaciones: obs || observacionesGenerales || 'Ingreso directo'
+                            });
+                        }
+                    });
+                    
+                    if (retazos.length === 0) {
+                        alert(`Ingresa al menos una medida para ${material.descripcion}`);
+                        hayError = true;
+                        return;
+                    }
+                    
+                    materialesProcesados.push({ tipo: 'retazos', material, retazos, count: retazos.length });
+                } else {
+                    const cantidad = parseInt(row.querySelector('.ingreso-cantidad').value);
+                    if (!cantidad || cantidad < 1) {
+                        alert(`Ingresa una cantidad válida para ${material.descripcion}`);
+                        hayError = true;
+                        return;
+                    }
+                    
+                    materialesProcesados.push({ 
+                        tipo: 'normal', 
+                        material, 
+                        cantidad,
                         origen: origen || 'Ingreso directo',
-                        observaciones: obs || observacionesGenerales || 'Ingreso directo'
+                        ubicacion: ubicacion || 'Sin especificar',
+                        observaciones: observacionesGenerales
                     });
                 }
             });
             
-            if (retazos.length === 0) {
-                alert(`Ingresa al menos una medida para ${material.descripcion}`);
-                hayError = true;
-                return;
-            }
+            if (hayError) return;
+            if (materialesProcesados.length === 0) return alert('Agrega al menos un material');
             
-            materialesProcesados.push({ tipo: 'retazos', material, retazos, count: retazos.length });
-        } else {
-            const cantidad = parseInt(row.querySelector('.ingreso-cantidad').value);
-            if (!cantidad || cantidad < 1) {
-                alert(`Ingresa una cantidad válida para ${material.descripcion}`);
-                hayError = true;
-                return;
-            }
-            
-            materialesProcesados.push({ 
-                tipo: 'normal', 
-                material, 
-                cantidad,
-                origen: origen || 'Ingreso directo',
-                ubicacion: ubicacion || 'Sin especificar',
-                observaciones: observacionesGenerales
+            nuevosMateriales.forEach(mat => {
+                state.catalogo.push(mat);
+                addAuditLog('CREACION', 'CATALOGO', mat.id, `Material creado desde ingreso directo: ${mat.codigo} - ${mat.descripcion}`);
             });
-        }
-    });
-    
-    if (hayError) return;
-    if (materialesProcesados.length === 0) return alert('Agrega al menos un material');
-    
-    nuevosMateriales.forEach(mat => {
-        state.catalogo.push(mat);
-        addAuditLog('CREACION', 'CATALOGO', mat.id, `Material creado desde ingreso directo: ${mat.codigo} - ${mat.descripcion}`);
-    });
-    
-    let totalRetazos = 0;
-    let totalNormales = 0;
-    
-    materialesProcesados.forEach(item => {
-        if (item.tipo === 'retazos') {
-            item.retazos.forEach(r => state.retazos.push(r));
-            totalRetazos += item.count;
-            addAuditLog('INGRESO', 'RETAZOS', item.material.id, `Ingresados ${item.count} retazos de ${item.material.codigo} | Origen: ${item.retazos[0].origen} | Ubicación: ${item.retazos[0].ubicacion}`);
-        } else {
-            // ✅ BUSCAR POR materialId + ubicación exacta
-            const existente = state.stock.find(s => 
-                s.materialId === item.material.id && 
-                s.ubicacion === item.ubicacion
-            );
             
-            if (existente) {
-                existente.cantidad += item.cantidad;
-                existente.ultimoIngreso = new Date().toISOString();
-                existente.usuarioIngreso = CONFIG.currentUserName;
-                existente.observaciones = item.observaciones || existente.observaciones;
-                // Si el origen cambia, guardamos el más reciente o concatenamos
-                if (item.origen) existente.origen = item.origen;
-            } else {
-                state.stock.push({
-                    id: Date.now().toString() + Math.random(),
-                    materialId: item.material.id,
-                    codigo: item.material.codigo,
-                    descripcion: item.material.descripcion,
-                    detalles: item.material.detalles || '',
-                    cantidad: item.cantidad,
-                    unidad: item.material.unidad,
-                    stockMinimo: item.material.stockMinimo,
-                    usuarioIngreso: CONFIG.currentUserName,
-                    fechaIngreso: new Date().toISOString(),
-                    origen: item.origen,
-                    ubicacion: item.ubicacion,
-                    observaciones: item.observaciones
-                });
-            }
-            totalNormales++;
-            addAuditLog('INGRESO', 'STOCK', item.material.id, `Ingresados ${item.cantidad} ${item.material.unidad} de ${item.material.codigo} | Origen: ${item.origen} | Ubicación: ${item.ubicacion}`);
+            let totalRetazos = 0;
+            let totalNormales = 0;
+            
+            materialesProcesados.forEach(item => {
+                if (item.tipo === 'retazos') {
+                    item.retazos.forEach(r => {
+                        state.retazos.push(r);
+                        // REGISTRAR MOVIMIENTO DE RETAZO
+                        registrarMovimiento({
+                            tipo: 'retazo',
+                            materialId: item.material.id,
+                            retazoId: r.id,
+                            accion: 'ingreso',
+                            cantidad: r.medida,
+                            cantidadAnterior: 0,
+                            cantidadResultante: r.medida,
+                            usuario: CONFIG.currentUserName,
+                            procedencia: r.origen || 'Ingreso directo',
+                            referencia: 'Ingreso directo - Retazo',
+                            observaciones: r.observaciones
+                        });
+                    });
+                    totalRetazos += item.count;
+                    addAuditLog('INGRESO', 'RETAZOS', item.material.id, `Ingresados ${item.count} retazos de ${item.material.codigo} | Origen: ${item.retazos[0].origen} | Ubicación: ${item.retazos[0].ubicacion}`);
+                } else {
+                    // ✅ BUSCAR POR materialId + ubicación exacta
+                    const existente = state.stock.find(s => 
+                        s.materialId === item.material.id && 
+                        s.ubicacion === item.ubicacion
+                    );
+                    
+                    if (existente) {
+                        const cantAntes = existente.cantidad;
+                        existente.cantidad += item.cantidad;
+                        existente.ultimoIngreso = new Date().toISOString();
+                        existente.usuarioIngreso = CONFIG.currentUserName;
+                        existente.observaciones = item.observaciones || existente.observaciones;
+                        if (item.origen) existente.origen = item.origen;
+                        
+                        // REGISTRAR MOVIMIENTO INGRESO (existente)
+                        registrarMovimiento({
+                            tipo: 'stock',
+                            materialId: item.material.id,
+                            stockItemId: existente.id,
+                            accion: 'ingreso',
+                            cantidad: item.cantidad,
+                            cantidadAnterior: cantAntes,
+                            cantidadResultante: existente.cantidad,
+                            usuario: CONFIG.currentUserName,
+                            procedencia: item.origen || 'Ingreso directo',
+                            referencia: 'Ingreso directo',
+                            observaciones: item.observaciones
+                        });
+                    } else {
+                        const nuevoId = Date.now().toString() + Math.random();
+                        state.stock.push({
+                            id: nuevoId,
+                            materialId: item.material.id,
+                            codigo: item.material.codigo,
+                            descripcion: item.material.descripcion,
+                            detalles: item.material.detalles || '',
+                            cantidad: item.cantidad,
+                            unidad: item.material.unidad,
+                            stockMinimo: item.material.stockMinimo,
+                            usuarioIngreso: CONFIG.currentUserName,
+                            fechaIngreso: new Date().toISOString(),
+                            origen: item.origen,
+                            ubicacion: item.ubicacion,
+                            observaciones: item.observaciones
+                        });
+                        
+                        // REGISTRAR MOVIMIENTO INGRESO (nuevo)
+                        registrarMovimiento({
+                            tipo: 'stock',
+                            materialId: item.material.id,
+                            stockItemId: nuevoId,
+                            accion: 'ingreso',
+                            cantidad: item.cantidad,
+                            cantidadAnterior: 0,
+                            cantidadResultante: item.cantidad,
+                            usuario: CONFIG.currentUserName,
+                            procedencia: item.origen || 'Ingreso directo',
+                            referencia: 'Ingreso directo',
+                            observaciones: item.observaciones
+                        });
+                    }
+                    totalNormales++;
+                    addAuditLog('INGRESO', 'STOCK', item.material.id, `Ingresados ${item.cantidad} ${item.material.unidad} de ${item.material.codigo} | Origen: ${item.origen} | Ubicación: ${item.ubicacion}`);
+                }
+            });
+            
+            await saveToCloud();
+            resetIngresoForm();
+            updateDashboard();
+            
+            let mensaje = '✅ Ingreso completado:\n';
+            if (totalNormales > 0) mensaje += `📦 ${totalNormales} material(es) normal(es)\n`;
+            if (totalRetazos > 0) mensaje += `📏 ${totalRetazos} retazo(s)\n`;
+            if (nuevosMateriales.length > 0) mensaje += `🆕 ${nuevosMateriales.length} material(es) nuevo(s) en catálogo`;
+            
+            alert(mensaje);
         }
-    });
-    
-    await saveToCloud();
-    resetIngresoForm();
-    updateDashboard();
-    
-    let mensaje = '✅ Ingreso completado:\n';
-    if (totalNormales > 0) mensaje += `📦 ${totalNormales} material(es) normal(es)\n`;
-    if (totalRetazos > 0) mensaje += `📏 ${totalRetazos} retazo(s)\n`;
-    if (nuevosMateriales.length > 0) mensaje += `🆕 ${nuevosMateriales.length} material(es) nuevo(s) en catálogo`;
-    
-    alert(mensaje);
-}
 
 // ============================================================
 // REEMPLAZAR la función renderStock completa
@@ -2126,6 +2311,7 @@ async function handleIngresoDirecto(e) {
                                         </div>
                                         <button onclick="imprimirEtiquetaRetazo('${r.id}')" class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200" title="Imprimir etiqueta">🖨️</button>
                                         <button onclick="editarUbicacionRetazo('${r.id}')" class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200" title="Editar ubicación">✏️</button>
+                                        <button onclick="verHistorialRetazo('${r.id}')" class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded hover:bg-purple-200" title="Ver historial de movimientos">📊</button>
                                     </div>
                                 </div>
                             `).join('')}
@@ -2245,6 +2431,7 @@ async function handleIngresoDirecto(e) {
                     
                     <div class="flex justify-end gap-3 pt-2 border-t">
                         <button onclick="ajustarStockPorMaterial('${m.id}')" class="text-sm text-blue-600 hover:underline font-medium">Ajustar Cant.</button>
+                        <button onclick="verHistorialMaterial('${m.id}', '${item.id}')" class="text-sm text-purple-600 hover:underline font-medium" title="Ver historial de movimientos">📊 Historial</button>
                     </div>
                 </div>
                 `;
@@ -2290,7 +2477,22 @@ function filtrarPorUbicacion(ubicacion) {
             if (nuevaCantidad !== null && !isNaN(nuevaCantidad) && nuevaCantidad >= 0) {
                 const oldCantidad = item.cantidad;
                 item.cantidad = parseInt(nuevaCantidad);
-                addAuditLog('AJUSTE', 'STOCK', id, `Ajuste manual: ${oldCantidad} → ${item.cantidad} ${item.unidad}`);
+                
+                // REGISTRAR MOVIMIENTO AJUSTE
+                registrarMovimiento({
+                    tipo: 'stock',
+                    materialId: item.materialId,
+                    stockItemId: item.id,
+                    accion: 'ajuste',
+                    cantidad: Math.abs(item.cantidad - oldCantidad),
+                    cantidadAnterior: oldCantidad,
+                    cantidadResultante: item.cantidad,
+                    usuario: CONFIG.currentUserName,
+                    referencia: 'Ajuste manual',
+                    observaciones: `Ajuste manual de ${oldCantidad} a ${item.cantidad} ${item.unidad}`
+                });
+                
+                addAuditLog('AJUSTE', 'STOCK', item.materialId, `Stock ajustado manualmente...`);
                 await saveToCloud();
                 renderStock();
                 updateDashboard();
@@ -2610,7 +2812,23 @@ function filtrarPorUbicacion(ubicacion) {
                         return;
                     }
                     
+                    const cantAntes = stockItem.cantidad;
                     stockItem.cantidad -= reserva.cantidad;
+                    
+                    // REGISTRAR MOVIMIENTO EGRESO (reserva)
+                    registrarMovimiento({
+                        tipo: 'stock',
+                        materialId: reserva.materialId,
+                        stockItemId: stockItem.id,
+                        accion: 'egreso',
+                        cantidad: reserva.cantidad,
+                        cantidadAnterior: cantAntes,
+                        cantidadResultante: stockItem.cantidad,
+                        usuario: CONFIG.currentUserName,
+                        destino: orden.destino,
+                        referencia: `Retiro por obra - Orden #${orden.id}`,
+                        observaciones: `Retirado por obra ${orden.destino}`
+                    });
                     
                     reserva.estado = 'entregada';
                     reserva.fechaSalida = new Date().toISOString();
@@ -2690,8 +2908,25 @@ function filtrarPorUbicacion(ubicacion) {
                         return;
                     }
 
+                    const cantAntes = stockItem.cantidad;
                     stockItem.cantidad -= cantidad;
-                    materialesRetiro.push({ 
+                    
+                    // REGISTRAR MOVIMIENTO EGRESO (adicional)
+                    registrarMovimiento({
+                        tipo: 'stock',
+                        materialId: material ? material.id : null,
+                        stockItemId: stockItem.id,
+                        accion: 'egreso',
+                        cantidad: cantidad,
+                        cantidadAnterior: cantAntes,
+                        cantidadResultante: stockItem.cantidad,
+                        usuario: CONFIG.currentUserName,
+                        destino: orden.destino,
+                        referencia: `Retiro por obra - Orden #${orden.id}`,
+                        observaciones: `Material adicional retirado por obra ${orden.destino}`
+                    });
+                    
+                    materialesRetiro.push({  
                         descripcion: desc, 
                         detalles: detalles, 
                         cantidad, 
@@ -3078,7 +3313,24 @@ function filtrarPorUbicacion(ubicacion) {
                         return;
                     }
 
+                    const cantAntes = stockItem.cantidad;
                     stockItem.cantidad -= cantidad;
+                    
+                    // REGISTRAR MOVIMIENTO EGRESO
+                    registrarMovimiento({
+                        tipo: 'stock',
+                        materialId: material.id,
+                        stockItemId: stockItem.id,
+                        accion: 'egreso',
+                        cantidad: cantidad,
+                        cantidadAnterior: cantAntes,
+                        cantidadResultante: stockItem.cantidad,
+                        usuario: CONFIG.currentUserName,
+                        destino: destino,
+                        referencia: 'Retiro individual',
+                        observaciones: `Retirado por ${CONFIG.currentUserName}`
+                    });
+                    
                     materiales.push({
                         descripcion: material.descripcion,
                         detalles: stockItem.detalles || '',
@@ -3643,22 +3895,53 @@ function filtrarPorUbicacion(ubicacion) {
                 
                 let stockItemAfectado;
                 if (existente) {
+                    const cantAntes = existente.cantidad;
                     existente.cantidad += m.cantidad;
                     stockItemAfectado = existente;
-                } else {
-                    stockItemAfectado = {
-                        id: Date.now().toString() + Math.random(),
+                    
+                    registrarMovimiento({
+                        tipo: 'stock',
                         materialId: material ? material.id : null,
-                        codigo: material ? material.codigo : (m.codigo || 'SIN-COD'),
+                        stockItemId: existente.id,
+                        accion: 'ingreso',
+                        cantidad: m.cantidad,
+                        cantidadAnterior: cantAntes,
+                        cantidadResultante: existente.cantidad,
+                        usuario: CONFIG.currentUserName,
+                        procedencia: `Orden #${orden.id} - ${orden.destino}`,
+                        referencia: `Cierre orden #${orden.id}`,
+                        observaciones: 'Ingreso por cierre de orden (con retazos)'
+                    });
+                } else {
+                    const nuevoId = Date.now().toString() + Math.random();
+                    stockItemAfectado = {
+                        id: nuevoId,
+                        materialId: material ? material.id : null,
+                        codigo: material ? material.codigo : 'SIN-CODIGO',
                         descripcion: m.descripcion,
+                        detalles: m.detalles || '',
                         cantidad: m.cantidad,
                         unidad: m.unidad,
-                        stockMinimo: material ? material.stockMinimo : 3,
+                        stockMinimo: m.stockMinimo,
                         usuarioIngreso: CONFIG.currentUserName,
                         fechaIngreso: new Date().toISOString(),
                         origen: `Orden #${orden.id} - ${orden.destino}`
                     };
                     state.stock.push(stockItemAfectado);
+                    
+                    registrarMovimiento({
+                        tipo: 'stock',
+                        materialId: material ? material.id : null,
+                        stockItemId: nuevoId,
+                        accion: 'ingreso',
+                        cantidad: m.cantidad,
+                        cantidadAnterior: 0,
+                        cantidadResultante: m.cantidad,
+                        usuario: CONFIG.currentUserName,
+                        procedencia: `Orden #${orden.id} - ${orden.destino}`,
+                        referencia: `Cierre orden #${orden.id}`,
+                        observaciones: 'Ingreso por cierre de orden (con retazos)'
+                    });
                 }
                 
                 materialesAfectados.push({
@@ -3837,22 +4120,55 @@ function filtrarPorUbicacion(ubicacion) {
                     
                     let stockItemAfectado;
                     if (existente) {
+                        const cantAntes = existente.cantidad;
                         existente.cantidad += m.cantidad;
                         stockItemAfectado = existente;
-                    } else {
-                        stockItemAfectado = {
-                            id: Date.now().toString() + Math.random(),
+                        
+                        // REGISTRAR MOVIMIENTO INGRESO (existente)
+                        registrarMovimiento({
+                            tipo: 'stock',
                             materialId: material ? material.id : null,
-                            codigo: material ? material.codigo : (m.codigo || 'SIN-COD'),
+                            stockItemId: existente.id,
+                            accion: 'ingreso',
+                            cantidad: m.cantidad,
+                            cantidadAnterior: cantAntes,
+                            cantidadResultante: existente.cantidad,
+                            usuario: CONFIG.currentUserName,
+                            procedencia: `Orden #${orden.id} - ${orden.destino}`,
+                            referencia: `Cierre orden #${orden.id}`,
+                            observaciones: 'Ingreso por cierre de orden'
+                        });
+                    } else {
+                        const nuevoId = Date.now().toString() + Math.random();
+                        stockItemAfectado = {
+                            id: nuevoId,
+                            materialId: material ? material.id : null,
+                            codigo: material ? material.codigo : 'SIN-CODIGO',
                             descripcion: m.descripcion,
+                            detalles: m.detalles || '',
                             cantidad: m.cantidad,
                             unidad: m.unidad,
-                            stockMinimo: material ? material.stockMinimo : 3,
+                            stockMinimo: m.stockMinimo,
                             usuarioIngreso: CONFIG.currentUserName,
                             fechaIngreso: new Date().toISOString(),
                             origen: `Orden #${orden.id} - ${orden.destino}`
                         };
                         state.stock.push(stockItemAfectado);
+                        
+                        // REGISTRAR MOVIMIENTO INGRESO (nuevo)
+                        registrarMovimiento({
+                            tipo: 'stock',
+                            materialId: material ? material.id : null,
+                            stockItemId: nuevoId,
+                            accion: 'ingreso',
+                            cantidad: m.cantidad,
+                            cantidadAnterior: 0,
+                            cantidadResultante: m.cantidad,
+                            usuario: CONFIG.currentUserName,
+                            procedencia: `Orden #${orden.id} - ${orden.destino}`,
+                            referencia: `Cierre orden #${orden.id}`,
+                            observaciones: 'Ingreso por cierre de orden'
+                        });
                     }
                     
                     materialesAfectados.push({
@@ -4344,22 +4660,53 @@ function filtrarPorUbicacion(ubicacion) {
                     
                     let stockItemAfectado;
                     if (existente) {
+                        const cantAntes = existente.cantidad;
                         existente.cantidad += recibido;
                         stockItemAfectado = existente;
-                    } else {
-                        stockItemAfectado = {
-                            id: Date.now().toString() + Math.random(),
+                        
+                        registrarMovimiento({
+                            tipo: 'stock',
                             materialId: material ? material.id : null,
-                            codigo: material ? material.codigo : (codigo || 'SIN-COD'),
-                            descripcion,
+                            stockItemId: existente.id,
+                            accion: 'ingreso',
                             cantidad: recibido,
-                            unidad,
-                            stockMinimo: material ? material.stockMinimo : 3,
+                            cantidadAnterior: cantAntes,
+                            cantidadResultante: existente.cantidad,
+                            usuario: CONFIG.currentUserName,
+                            procedencia: `Orden #${orden.id} - ${orden.destino} (Recepción)`,
+                            referencia: `Recepción orden #${orden.id}`,
+                            observaciones: observacionesGenerales || 'Recepción de material'
+                        });
+                    } else {
+                        const nuevoId = Date.now().toString() + Math.random();
+                        stockItemAfectado = {
+                            id: nuevoId,
+                            materialId: material ? material.id : null,
+                            codigo: material ? material.codigo : 'SIN-CODIGO',
+                            descripcion: descripcion,
+                            detalles: detalles || '',
+                            cantidad: recibido,
+                            unidad: unidad,
+                            stockMinimo: stockMinimo,
                             usuarioIngreso: CONFIG.currentUserName,
                             fechaIngreso: new Date().toISOString(),
                             origen: `Orden #${orden.id} - ${orden.destino} (Recepción)`
                         };
                         state.stock.push(stockItemAfectado);
+                        
+                        registrarMovimiento({
+                            tipo: 'stock',
+                            materialId: material ? material.id : null,
+                            stockItemId: nuevoId,
+                            accion: 'ingreso',
+                            cantidad: recibido,
+                            cantidadAnterior: 0,
+                            cantidadResultante: recibido,
+                            usuario: CONFIG.currentUserName,
+                            procedencia: `Orden #${orden.id} - ${orden.destino} (Recepción)`,
+                            referencia: `Recepción orden #${orden.id}`,
+                            observaciones: observacionesGenerales || 'Recepción de material'
+                        });
                     }
                     
                     materialesRecibidos.push({
@@ -5593,7 +5940,23 @@ function filtrarPorUbicacion(ubicacion) {
                     return;
                 }
                 
+                const cantAntes = stockItem.cantidad;
                 stockItem.cantidad -= reserva.cantidad;
+                
+                // REGISTRAR MOVIMIENTO EGRESO
+                registrarMovimiento({
+                    tipo: 'stock',
+                    materialId: reserva.materialId,
+                    stockItemId: stockItem.id,
+                    accion: 'egreso',
+                    cantidad: reserva.cantidad,
+                    cantidadAnterior: cantAntes,
+                    cantidadResultante: stockItem.cantidad,
+                    usuario: CONFIG.currentUserName,
+                    destino: reserva.destino,
+                    referencia: 'Salida de reserva',
+                    observaciones: `Reserva ${reserva.id}`
+                });
                 
                 reserva.estado = 'entregada';
                 reserva.fechaSalida = new Date().toISOString();
@@ -5695,7 +6058,23 @@ function filtrarPorUbicacion(ubicacion) {
                         continue;
                     }
                     
+                    const cantAntes = stockItem.cantidad;
                     stockItem.cantidad -= reserva.cantidad;
+                    
+                    // REGISTRAR MOVIMIENTO EGRESO
+                    registrarMovimiento({
+                        tipo: 'stock',
+                        materialId: reserva.materialId,
+                        stockItemId: stockItem.id,
+                        accion: 'egreso',
+                        cantidad: reserva.cantidad,
+                        cantidadAnterior: cantAntes,
+                        cantidadResultante: stockItem.cantidad,
+                        usuario: CONFIG.currentUserName,
+                        destino: reserva.destino,
+                        referencia: 'Salida completa por obra',
+                        observaciones: `Reserva ${reserva.id}`
+                    });
                     
                     reserva.estado = 'entregada';
                     reserva.fechaSalida = new Date().toISOString();
@@ -6140,6 +6519,24 @@ function filtrarPorUbicacion(ubicacion) {
                         🖨️ Imprimir
                     </button>
                 </div>
+                <!-- MODAL HISTORIAL DE MOVIMIENTOS -->
+                <div id="modal-historial" class="fixed inset-0 bg-black bg-opacity-50 hidden z-[70] flex items-center justify-center p-4">
+                    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+                        <div class="p-6 border-b border-gray-100 bg-blue-50 flex-shrink-0 flex justify-between items-center">
+                            <div>
+                                <h3 class="text-xl font-bold text-blue-900" id="historial-titulo">Historial</h3>
+                                <p class="text-sm text-blue-700 mt-1" id="historial-subtitulo">-</p>
+                            </div>
+                            <button onclick="closeModal('historial')" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">✕</button>
+                        </div>
+                        <div class="flex-1 overflow-y-auto p-6" id="historial-contenido">
+                            <!-- Se genera dinámicamente -->
+                        </div>
+                        <div class="p-6 border-t border-gray-100 flex justify-end flex-shrink-0 bg-white">
+                            <button onclick="closeModal('historial')" class="px-6 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-medium">Cerrar</button>
+                        </div>
+                    </div>
+                </div>
             </body>
             </html>
         `);
@@ -6222,7 +6619,8 @@ function filtrarPorUbicacion(ubicacion) {
 						state.retazos = data.retazos || [];
 						state.usuarios = data.usuarios || [];
 						state.audit_log = data.audit_log || [];
-						state.reservas = data.reservas || [];                        
+						state.reservas = data.reservas || [];  
+                        state.movimientos = data.movimientos || [];                        
                 
 						// Guardar en Firebase
 						saveToCloud().then(() => {
