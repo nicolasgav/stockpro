@@ -1645,7 +1645,8 @@
             return state.catalogo.filter(c => materialMatchesQuery(c, q)).slice(0, limite);
         }
 
-        // CATÁLOGO {
+        // CATÁLOGO
+        function renderCatalogo() {
             const search = (document.getElementById('search-catalogo')?.value || '').toLowerCase().trim();
             const filtered = state.catalogo
                 .filter(c => materialMatchesQuery(c, search))
