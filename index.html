@@ -1095,6 +1095,7 @@
 
                 // INICIALIZACIÓN
         document.addEventListener('DOMContentLoaded', () => {
+            console.log('%cStockPro v2026-11-19 (búsqueda unificada)', 'color:#2563eb;font-weight:bold');
             initFirebase();
             setupDragAndDrop();
         });
@@ -1627,14 +1628,28 @@
         }        
 
         
-        // CATÁLOGO
-        function renderCatalogo() {
-            const search = document.getElementById('search-catalogo')?.value.toLowerCase() || '';
-            const filtered = state.catalogo.filter(c => 
-                c.codigo.toLowerCase().includes(search) || 
-                c.descripcion.toLowerCase().includes(search) ||
-				(c.detalles || '').toLowerCase().includes(search)
-            ).sort((a, b) => a.codigo.localeCompare(b.codigo));
+        // ===== BÚSQUEDA UNIFICADA DE MATERIALES (misma que el catálogo) =====
+        // Excluye materiales desactivados y protege contra campos vacíos/undefined
+        function materialMatchesQuery(m, query) {
+            if (!m || m.activo === false) return false;
+            const q = (query || '').toLowerCase().trim();
+            if (!q) return true;
+            return (m.codigo || '').toLowerCase().includes(q) ||
+                   (m.descripcion || '').toLowerCase().includes(q) ||
+                   (m.detalles || '').toLowerCase().includes(q);
+        }
+
+        function buscarMateriales(query, limite = 5) {
+            const q = (query || '').toLowerCase().trim();
+            if (!q) return [];
+            return state.catalogo.filter(c => materialMatchesQuery(c, q)).slice(0, limite);
+        }
+
+        // CATÁLOGO {
+            const search = (document.getElementById('search-catalogo')?.value || '').toLowerCase().trim();
+            const filtered = state.catalogo
+                .filter(c => materialMatchesQuery(c, search))
+                .sort((a, b) => (a.codigo || '').localeCompare(b.codigo || ''));
 
             const tbody = document.getElementById('catalogo-table');
             const empty = document.getElementById('catalogo-empty');
@@ -1949,12 +1964,7 @@
                     return;
                 }
 
-                const matches = state.catalogo.filter(c => 
-                    c.activo !== false && (
-                        c.codigo.toLowerCase().includes(value) || 
-                        c.descripcion.toLowerCase().includes(value)
-                    )
-                ).slice(0, 5);
+                const matches = buscarMateriales(value);
 
                 if (matches.length > 0) {
                     resultsDiv.innerHTML = matches.map(m => `
@@ -2320,7 +2330,7 @@
 
             // ✅ COINCIDENCIA EXACTA DE CÓDIGO
             const codigoExacto = search ? state.catalogo.find(c =>
-                c.activo !== false && c.codigo.toLowerCase() === search
+                c.activo !== false && (c.codigo || '').toLowerCase() === search
             ) : null;
 
             // Ubicaciones únicas
@@ -2375,8 +2385,8 @@
                     if (!tieneAhi) return false;
                 }
                 if (!search) return true;
-                if (codigoExacto && c.codigo.toLowerCase() === search) return true;
-                if (c.descripcion.toLowerCase().includes(search)) return true;
+                if (codigoExacto && (c.codigo || '').toLowerCase() === search) return true;
+                if ((c.descripcion || '').toLowerCase().includes(search)) return true;
                 if ((c.detalles || '').toLowerCase().includes(search)) return true;
                 // búsqueda a nivel retazo individual (ID, origen, observaciones)
                 return state.retazos.some(r => r.materialId === c.id &&
@@ -2391,8 +2401,8 @@
 
                 // ✅ FIX: si el material matcheó por sus propios campos, NO filtrar los retazos por texto
                 if (search) {
-                    const materialMatchea = (codigoExacto && m.codigo.toLowerCase() === search) ||
-                        m.descripcion.toLowerCase().includes(search) ||
+                    const materialMatchea = (codigoExacto && (m.codigo || '').toLowerCase() === search) ||
+                        (m.descripcion || '').toLowerCase().includes(search) ||
                         (m.detalles || '').toLowerCase().includes(search);
                     if (!materialMatchea) {
                         retazos = retazos.filter(r =>
@@ -2402,7 +2412,7 @@
                     }
                 }
 
-                if (retazos.length === 0 && (ubicacionFilter || search)) return;
+                if (retazos.length === 0 && ubicacionFilter) return;
 
                 const totalMedida = retazos.reduce((sum, r) => sum + r.medida, 0);
                 const isCritical = retazos.length <= (m.stockMinimo || 3);
@@ -2464,8 +2474,8 @@
                 if (c.activo === false) return false;
                 if (c.tipoControl === 'retazos') return false;
                 if (!search) return true;
-                if (codigoExacto && c.codigo.toLowerCase() === search) return true;
-                if (c.descripcion.toLowerCase().includes(search)) return true;
+                if (codigoExacto && (c.codigo || '').toLowerCase() === search) return true;
+                if ((c.descripcion || '').toLowerCase().includes(search)) return true;
                 if ((c.detalles || '').toLowerCase().includes(search)) return true;
                 return state.stock.some(s => s.materialId === c.id &&
                     ((s.origen || '').toLowerCase().includes(search) ||
@@ -2481,8 +2491,8 @@
 
                 // ✅ FIX: si el material matcheó por sus campos, mostrar todos sus items; si no, solo los que matchean
                 if (search) {
-                    const materialMatchea = (codigoExacto && m.codigo.toLowerCase() === search) ||
-                        m.descripcion.toLowerCase().includes(search) ||
+                    const materialMatchea = (codigoExacto && (m.codigo || '').toLowerCase() === search) ||
+                        (m.descripcion || '').toLowerCase().includes(search) ||
                         (m.detalles || '').toLowerCase().includes(search);
                     if (!materialMatchea) {
                         items = items.filter(s =>
@@ -2491,8 +2501,8 @@
                     }
                 }
 
-                // Sin stock y sin filtro: tarjeta en 0
-                if (items.length === 0 && !ubicacionFilter && !search) {
+                // Sin stock: tarjeta en 0 (también durante búsqueda, igual que catálogo)
+                if (items.length === 0 && !ubicacionFilter) {
                     html += `
                     <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 opacity-70">
                         <div class="mb-2">
@@ -2516,7 +2526,7 @@
                     return;
                 }
 
-                if (items.length === 0) return;
+                if (items.length === 0) return; // hay filtro de ubicación y no hay stock ahí
 
                 const totalCantidad = items.reduce((sum, s) => sum + s.cantidad, 0);
                 const totalReservado = items.reduce((sum, s) => sum + calcularReservado(s.id), 0);
@@ -3205,12 +3215,7 @@ function filtrarPorUbicacion(ubicacion) {
                 return;
             }
             
-            const matches = state.catalogo.filter(c => 
-                c.activo !== false && (
-                    c.codigo.toLowerCase().includes(value) || 
-                    c.descripcion.toLowerCase().includes(value)
-                )
-            ).slice(0, 5);
+            const matches = buscarMateriales(value);
             
             if (matches.length > 0) {
                 resultsDiv.innerHTML = matches.map(m => `
@@ -3638,12 +3643,7 @@ function filtrarPorUbicacion(ubicacion) {
             return;
         }
 
-        const matches = state.catalogo.filter(c => 
-            c.activo !== false && (
-                c.codigo.toLowerCase().includes(value) || 
-                c.descripcion.toLowerCase().includes(value)
-            )
-        ).slice(0, 5);
+        const matches = buscarMateriales(value);
 
         if (matches.length > 0) {
             resultsDiv.innerHTML = matches.map(m => `
